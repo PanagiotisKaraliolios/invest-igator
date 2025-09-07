@@ -1,6 +1,7 @@
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import type { DefaultSession, NextAuthConfig } from "next-auth";
 import DiscordProvider from "next-auth/providers/discord";
+import EmailProvider from "next-auth/providers/nodemailer";
 
 import { db } from "@/server/db";
 
@@ -33,9 +34,19 @@ declare module "next-auth" {
 export const authConfig = {
 	pages: {
 		signIn: "/login",
+		verifyRequest: "/verify-request", // (used for check email message)
 	},
 	providers: [
 		DiscordProvider,
+		EmailProvider({
+			server: process.env.EMAIL_SERVER,
+			from: process.env.EMAIL_FROM,
+			// sendVerificationRequest: (props) => {
+			// 	// Define your email sending logic here.
+			// 	console.log("🚀 ~ sendVerificationRequest ~ props:", props);
+			// },
+			// maxAge: 24 * 60 * 60, // How long email links are valid for (default 24h)
+		}),
 		/**
 		 * ...add more providers here.
 		 *

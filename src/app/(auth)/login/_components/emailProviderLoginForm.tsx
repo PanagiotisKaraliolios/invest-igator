@@ -18,7 +18,7 @@ import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 
 const formSchema = z.object({
-	email: z.string().email(),
+	email: z.email(),
 });
 
 export function EmailProviderLoginForm() {
@@ -39,8 +39,10 @@ export function EmailProviderLoginForm() {
 		// Do something with the form values.
 		// ✅ This will be type-safe and validated.
 		// console.log(values);
-
-		await signIn("email", { email: values.email, callbackUrl });
+		await signIn("nodemailer", {
+			email: values.email,
+			callbackUrl,
+		});
 	}
 
 	return (
