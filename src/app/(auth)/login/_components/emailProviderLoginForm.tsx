@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { useCheckEmailMutation } from "../_mutations/useCheckEmail";
+import { api } from "@/trpc/react";
 
 const formSchema = z.object({
 	email: z.email(),
@@ -38,7 +38,7 @@ export function EmailProviderLoginForm() {
 
 	const [info, setInfo] = useState<string | null>(null);
 
-	const checkEmailMutation = useCheckEmailMutation();
+	const checkEmailMutation = api.auth.checkEmail.useMutation();
 
 	// 2. Define a submit handler.
 	async function onSubmit(values: z.infer<typeof formSchema>) {

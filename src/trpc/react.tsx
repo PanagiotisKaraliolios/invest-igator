@@ -69,7 +69,7 @@ export function TRPCReactProvider(props: { children: React.ReactNode }) {
 				{props.children}
 			</api.Provider>
 			{process.env.NODE_ENV === "development" ? (
-				<ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />
+				<ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-right" />
 			) : null}
 		</QueryClientProvider>
 	);

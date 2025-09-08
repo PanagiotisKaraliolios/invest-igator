@@ -22,7 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useSignupMutation } from "../_mutations/useSignup";
+import { api } from "@/trpc/react";
 
 const schema = z
 	.object({
@@ -47,7 +47,7 @@ export function SignUpForm() {
 
 	const [info, setInfo] = useState<string | null>(null);
 
-	const signupMutation = useSignupMutation();
+	const signupMutation = api.auth.signup.useMutation();
 
 	async function onSubmit(values: z.infer<typeof schema>) {
 		setInfo(null);
