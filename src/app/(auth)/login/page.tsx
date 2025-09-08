@@ -1,10 +1,8 @@
-
 import { env } from "@/env";
 import { GalleryVerticalEnd } from "lucide-react";
 import { LoginForm } from "./_components/login-form";
 import { auth } from "@/server/auth";
 import { redirect } from "next/navigation";
-
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -13,7 +11,9 @@ export const metadata = {
 	icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 
-export default async function LoginPage() {
+export default async function LoginPage({
+	searchParams,
+}: { searchParams?: Record<string, string | string[] | undefined> }) {
 	const session = await auth();
 
 	if (session?.user) redirect("/");
@@ -27,7 +27,13 @@ export default async function LoginPage() {
 					</div>
 					Acme Inc.
 				</a>
-				<LoginForm />
+				<LoginForm
+					errorCode={
+						Array.isArray(searchParams?.error)
+							? searchParams?.error?.[0]
+							: searchParams?.error
+					}
+				/>
 			</div>
 		</div>
 	);

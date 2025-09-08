@@ -2,8 +2,11 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import type { DefaultSession, NextAuthConfig } from "next-auth";
 import DiscordProvider from "next-auth/providers/discord";
 import EmailProvider from "next-auth/providers/nodemailer";
+// Nodemailer doesn't ship full TypeScript types in this project; import as any to satisfy usage.
 
 import { db } from "@/server/db";
+import { createTransport } from "nodemailer"
+import { sendVerificationRequest } from "./send-verification-request";
 
 /**
  * Module augmentation for `next-auth` types. Allows us to add custom properties to the `session`
@@ -34,17 +37,21 @@ declare module "next-auth" {
 export const authConfig = {
 	pages: {
 		signIn: "/login",
+		error: "/auth-error",
 		verifyRequest: "/verify-request", // (used for check email message)
 	},
 	providers: [
-		DiscordProvider,
+		DiscordProvider({
+			// allowDangerousEmailAccountLinking: true,
+		}),
 		EmailProvider({
 			server: process.env.EMAIL_SERVER,
 			from: process.env.EMAIL_FROM,
-			// sendVerificationRequest: (props) => {
-			// 	// Define your email sending logic here.
-			// 	console.log("🚀 ~ sendVerificationRequest ~ props:", props);
-			// },
+			/**
+			 * Before sending a magic link, ensure a user exists for the email.
+			 * If not, raise an error that includes a link to the signup page.
+			 */
+			sendVerificationRequest,
 			// maxAge: 24 * 60 * 60, // How long email links are valid for (default 24h)
 		}),
 		/**

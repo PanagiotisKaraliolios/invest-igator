@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
+import { useState } from "react";
 
 const formSchema = z.object({
 	email: z.email(),
@@ -34,20 +35,46 @@ export function EmailProviderLoginForm() {
 		},
 	});
 
+		const [submitting, setSubmitting] = useState(false);
+		const [info, setInfo] = useState<string | null>(null);
+
 	// 2. Define a submit handler.
-	async function onSubmit(values: z.infer<typeof formSchema>) {
-		// Do something with the form values.
-		// ✅ This will be type-safe and validated.
-		// console.log(values);
-		await signIn("nodemailer", {
-			email: values.email,
-			callbackUrl,
-		});
-	}
+		async function onSubmit(values: z.infer<typeof formSchema>) {
+			setInfo(null);
+			setSubmitting(true);
+			try {
+				// Pre-check email existence via API
+				const res = await fetch(`/api/auth/check-email?email=${encodeURIComponent(values.email)}`);
+				if (!res.ok) {
+					throw new Error("Failed to validate email");
+				}
+				const data = (await res.json()) as { exists?: boolean };
+				if (!data.exists) {
+					form.setError("email", { type: "manual", message: "No account found for this email. Create an account first." });
+					return;
+				}
+
+				// Proceed with magic link flow without immediate redirect
+				const result = await signIn("nodemailer", {
+					email: values.email,
+					callbackUrl,
+					redirect: false,
+				});
+				if (result && "error" in result && result.error) {
+					form.setError("email", { type: "manual", message: result.error });
+					return;
+				}
+				setInfo("Check your email for the sign-in link.");
+			} catch (e) {
+				form.setError("email", { type: "manual", message: "Something went wrong. Please try again." });
+			} finally {
+				setSubmitting(false);
+			}
+		}
 
 	return (
 		<Form {...form}>
-			<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+					<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
 				<FormField
 					control={form.control}
 					name="email"
@@ -55,7 +82,7 @@ export function EmailProviderLoginForm() {
 						<FormItem>
 							<FormLabel>Email</FormLabel>
 							<FormControl>
-								<Input placeholder="m@example.com" {...field} />
+										<Input placeholder="m@example.com" {...field} />
 							</FormControl>
 							<FormMessage />
 						</FormItem>
@@ -63,10 +90,14 @@ export function EmailProviderLoginForm() {
 				/>
 				<Button
 					className="h-auto w-full whitespace-normal break-words leading-tight"
-					type="submit"
+							type="submit"
+							disabled={submitting}
 				>
-					Get one-time login link
+							{submitting ? "Sending…" : "Get one-time login link"}
 				</Button>
+						{info ? (
+							<div className="rounded bg-muted/50 p-3 text-sm">{info}</div>
+						) : null}
 			</form>
 		</Form>
 	);
