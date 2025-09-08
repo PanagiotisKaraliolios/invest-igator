@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
+import {
+	createTRPCRouter,
+	publicProcedure,
+	protectedProcedure,
+} from "@/server/api/trpc";
 import { env } from "@/env";
 import * as bcrypt from "bcryptjs";
 

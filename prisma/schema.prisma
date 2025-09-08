@@ -61,6 +61,7 @@ model User {
     emailVerified DateTime?
     image         String?
     passwordHash  String?
+    theme         Theme     @default(LIGHT)
     accounts      Account[]
     sessions      Session[]
     posts         Post[]
@@ -72,4 +73,9 @@ model VerificationToken {
     expires    DateTime
 
     @@unique([identifier, token])
+}
+
+enum Theme {
+    LIGHT
+    DARK
 }

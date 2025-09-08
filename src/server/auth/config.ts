@@ -144,15 +144,22 @@ export const authConfig = {
 			return token;
 		},
 		session: ({ session, token }) => {
-			const t = token as { sub?: string; id?: string; emailVerified?: string | null };
+			const t = token as {
+				sub?: string;
+				id?: string;
+				emailVerified?: string | null;
+			};
 			const id = t.sub ?? t.id;
 			if (session.user) {
 				// Assign through a cast to avoid TS narrowing issues from module augmentation
-				const u = session.user as unknown as { id?: string; emailVerified?: string | null };
+				const u = session.user as unknown as {
+					id?: string;
+					emailVerified?: string | null;
+				};
 				if (id) u.id = id;
 				u.emailVerified = t.emailVerified ?? null;
 			}
-			console.log('🚀 ~ config.ts:155 ~ session:', session);
+			console.log("🚀 ~ config.ts: ~ session:", session);
 			return session;
 		},
 	},

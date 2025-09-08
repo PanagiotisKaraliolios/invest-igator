@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 
 import { TRPCReactProvider } from "@/trpc/react";
+import { cookies } from "next/headers";
 
 export const metadata: Metadata = {
 	title: "Create T3 App",
@@ -16,12 +17,17 @@ const geist = Geist({
 	variable: "--font-geist-sans",
 });
 
-export default function RootLayout({
+export default async function RootLayout({
 	children,
 }: Readonly<{ children: React.ReactNode }>) {
+	// Determine theme on the server using a cookie set by the client/API
+	const cookieStore = await cookies();
+	const themeCookie = cookieStore.get("ui-theme")?.value;
+	const isDark = themeCookie ? themeCookie === "dark" : true;
+
 	return (
-		<html lang="en" className={`${geist.variable}`}>
-			<body className="min-h-screen" suppressHydrationWarning>
+		<html lang="en" className={`${geist.variable} ${isDark ? "dark" : ""}`}>
+			<body className="min-h-screen bg-background" suppressHydrationWarning>
 				<TRPCReactProvider>{children}</TRPCReactProvider>
 			</body>
 		</html>

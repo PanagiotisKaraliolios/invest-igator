@@ -15,15 +15,21 @@ import {
 } from "@/components/ui/sidebar";
 import { auth } from "@/server/auth";
 import { redirect } from "next/navigation";
+import ThemeSwitch from "./_components/theme-switch";
 
 export default async function Page() {
 	const session = await auth();
 
 	if (!session?.user) redirect("/login");
-	
+	const me = {
+		name: session.user.name ?? session.user.email ?? "User",
+		email: session.user.email ?? "",
+		avatar: session.user.image ?? null,
+	};
+
 	return (
 		<SidebarProvider>
-			<AppSidebar />
+			<AppSidebar user={me} />
 			<SidebarInset>
 				<header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
 					<div className="flex items-center gap-2 px-4">
@@ -35,16 +41,19 @@ export default async function Page() {
 						<Breadcrumb>
 							<BreadcrumbList>
 								<BreadcrumbItem className="hidden md:block">
-									<BreadcrumbLink href="#">
-										Building Your Application
+									<BreadcrumbLink href="/dashboard">
+										Dashboard
 									</BreadcrumbLink>
 								</BreadcrumbItem>
 								<BreadcrumbSeparator className="hidden md:block" />
 								<BreadcrumbItem>
-									<BreadcrumbPage>Data Fetching</BreadcrumbPage>
+									<BreadcrumbPage>ETFs</BreadcrumbPage>
 								</BreadcrumbItem>
 							</BreadcrumbList>
 						</Breadcrumb>
+					</div>
+					<div className="mr-4 ml-auto">
+						<ThemeSwitch />
 					</div>
 				</header>
 				<div className="flex flex-1 flex-col gap-4 p-4 pt-0">
