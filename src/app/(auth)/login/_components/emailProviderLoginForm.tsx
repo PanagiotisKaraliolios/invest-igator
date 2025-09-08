@@ -26,7 +26,7 @@ const formSchema = z.object({
 export function EmailProviderLoginForm() {
 	const searchParams = useSearchParams();
 
-	const callbackUrl = searchParams.get("callbackUrl") ?? "/";
+	const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
 
 	// 1. Define your form.
 	const form = useForm<z.infer<typeof formSchema>>({

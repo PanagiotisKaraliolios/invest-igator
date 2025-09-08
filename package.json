@@ -49,7 +49,7 @@
 		"@radix-ui/react-toggle-group": "^1.1.11",
 		"@radix-ui/react-tooltip": "^1.2.8",
 		"@t3-oss/env-nextjs": "^0.12.0",
-		"@tanstack/react-query": "^5.69.0",
+		"@tanstack/react-query": "^5.87.1",
 		"@trpc/client": "^11.0.0",
 		"@trpc/react-query": "^11.0.0",
 		"@trpc/server": "^11.0.0",
@@ -83,6 +83,7 @@
 	"devDependencies": {
 		"@biomejs/biome": "1.9.4",
 		"@tailwindcss/postcss": "^4.0.15",
+		"@tanstack/react-query-devtools": "^5.87.3",
 		"@types/node": "^20.14.10",
 		"@types/react": "^19.0.0",
 		"@types/react-dom": "^19.0.0",

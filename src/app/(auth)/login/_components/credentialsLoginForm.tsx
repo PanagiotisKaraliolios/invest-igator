@@ -11,7 +11,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 export function CredentialsLoginForm() {
 	const router = useRouter();
 	const sp = useSearchParams();
-	const callbackUrl = sp.get("callbackUrl") ?? "/";
+	const callbackUrl = sp.get("callbackUrl") ?? "/dashboard";
 
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");

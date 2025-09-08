@@ -17,7 +17,7 @@ const providerIcons: Record<string, IconType> = {
 export default function ProviderLoginButton({ provider }: { provider: string }) {
 	const searchParams = useSearchParams();
 
-	const callbackUrl = searchParams.get('callbackUrl') ?? '/';
+	const callbackUrl = searchParams.get('callbackUrl') ?? '/dashboard';
 
 	const Icon = providerIcons[provider];
 

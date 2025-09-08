@@ -16,7 +16,7 @@ export default async function LoginPage({
 }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
 	const session = await auth();
 
-	if (session?.user) redirect("/");
+	if (session?.user) redirect("/dashboard");
 	const sp = await searchParams;
 
 	return (
