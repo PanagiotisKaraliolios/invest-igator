@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { api } from "@/trpc/react";
+import { Eye, EyeOff } from "lucide-react";
 
 const schema = z
 	.object({
@@ -46,6 +47,8 @@ export function SignUpForm() {
 	});
 
 	const [info, setInfo] = useState<string | null>(null);
+	const [showPassword, setShowPassword] = useState(false);
+	const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
 	const signupMutation = api.auth.signup.useMutation();
 
@@ -107,7 +110,22 @@ export function SignUpForm() {
 								<FormItem>
 									<FormLabel>Password</FormLabel>
 									<FormControl>
-										<Input type="password" placeholder="••••••••" {...field} />
+										<div className="relative">
+											<Input
+												type={showPassword ? "text" : "password"}
+												placeholder="••••••••"
+												className="pr-10"
+												{...field}
+											/>
+											<button
+												type="button"
+												className="absolute inset-y-0 right-2 flex items-center text-muted-foreground hover:text-foreground"
+												onClick={() => setShowPassword((s) => !s)}
+												aria-label={showPassword ? "Hide password" : "Show password"}
+											>
+												{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+											</button>
+										</div>
 									</FormControl>
 									<FormMessage />
 								</FormItem>
@@ -120,7 +138,26 @@ export function SignUpForm() {
 								<FormItem>
 									<FormLabel>Confirm password</FormLabel>
 									<FormControl>
-										<Input type="password" placeholder="••••••••" {...field} />
+										<div className="relative">
+											<Input
+												type={showConfirmPassword ? "text" : "password"}
+												placeholder="••••••••"
+												className="pr-10"
+												{...field}
+											/>
+											<button
+												type="button"
+												className="absolute inset-y-0 right-2 flex items-center text-muted-foreground hover:text-foreground"
+												onClick={() => setShowConfirmPassword((s) => !s)}
+												aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+											>
+												{showConfirmPassword ? (
+													<EyeOff className="h-4 w-4" />
+												) : (
+													<Eye className="h-4 w-4" />
+												)}
+											</button>
+										</div>
 									</FormControl>
 									<FormMessage />
 								</FormItem>

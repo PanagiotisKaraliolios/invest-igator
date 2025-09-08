@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Eye, EyeOff } from "lucide-react";
 
 export function CredentialsLoginForm() {
 	const router = useRouter();
@@ -15,6 +16,7 @@ export function CredentialsLoginForm() {
 
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
+	const [showPassword, setShowPassword] = useState(false);
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
@@ -87,14 +89,25 @@ export function CredentialsLoginForm() {
 							Forgot your password?
 						</a>
 					</div>
-					<Input
-						id="cred-password"
-						type="password"
-						value={password}
-						onChange={(e) => setPassword(e.target.value)}
-						disabled={submitting}
-						required
-					/>
+					<div className="relative">
+						<Input
+							id="cred-password"
+							type={showPassword ? "text" : "password"}
+							value={password}
+							onChange={(e) => setPassword(e.target.value)}
+							disabled={submitting}
+							required
+							className="pr-10"
+						/>
+						<button
+							type="button"
+							className="absolute inset-y-0 right-2 flex items-center text-muted-foreground hover:text-foreground"
+							onClick={() => setShowPassword((s) => !s)}
+							aria-label={showPassword ? "Hide password" : "Show password"}
+						>
+							{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+						</button>
+					</div>
 				</div>
 				<Button type="submit" className="w-full" disabled={submitting}>
 					{submitting ? "Logging in…" : "Login"}
