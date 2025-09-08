@@ -12,12 +12,13 @@ export const metadata = {
 	description: "Confirm your sign-in link",
 };
 
-export default function VerifyRequestPage({
+export default async function VerifyRequestPage({
 	searchParams,
 }: {
-	searchParams?: { [key: string]: string | string[] };
+	searchParams: Promise<{ [key: string]: string | string[] }>;
 }) {
-	const rawEmail = searchParams?.email;
+	const sp = await searchParams;
+	const rawEmail = sp?.email;
 	const email =
 		Array.isArray(rawEmail) && rawEmail.length > 0
 			? rawEmail[0]

@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 type Props = {
-	searchParams?: { [key: string]: string | string[] | undefined };
+	searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -17,9 +17,10 @@ function friendlyMessage(code?: string | string[]) {
 	return ERROR_MESSAGES[key] ?? `${ERROR_MESSAGES.Default} (${key})`;
 }
 
-export default function AuthErrorPage({ searchParams }: Props) {
-	const code = searchParams?.error;
-	const description = searchParams?.error_description as string | undefined;
+export default async function AuthErrorPage({ searchParams }: Props) {
+	const sp = await searchParams;
+	const code = sp?.error;
+	const description = sp?.error_description as string | undefined;
 
 	return (
 		<main className="flex min-h-screen items-center justify-center bg-background p-6">

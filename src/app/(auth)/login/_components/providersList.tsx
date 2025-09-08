@@ -34,7 +34,7 @@ export default function ProvidersList() {
 	return (
 		<div className="grid gap-4">
 			{providers
-				.filter((provider) => provider.type !== "email")
+				.filter((provider) => provider.type !== "email" && provider.id !== "credentials")
 				.map((provider) => (
 					<ProviderLoginButton key={provider.id} provider={provider.id} />
 				))}

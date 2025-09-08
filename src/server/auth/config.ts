@@ -1,11 +1,17 @@
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import type { DefaultSession, NextAuthConfig } from "next-auth";
+import {
+	CredentialsSignin,
+	type DefaultSession,
+	type NextAuthConfig,
+} from "next-auth";
 import DiscordProvider from "next-auth/providers/discord";
 import EmailProvider from "next-auth/providers/nodemailer";
+import Credentials from "next-auth/providers/credentials";
+import bcrypt from "bcryptjs";
+import { env } from "@/env";
 // Nodemailer doesn't ship full TypeScript types in this project; import as any to satisfy usage.
 
 import { db } from "@/server/db";
-import { createTransport } from "nodemailer"
 import { sendVerificationRequest } from "./send-verification-request";
 
 /**
@@ -18,6 +24,7 @@ declare module "next-auth" {
 	interface Session extends DefaultSession {
 		user: {
 			id: string;
+			emailVerified?: string | null;
 			// ...other properties
 			// role: UserRole;
 		} & DefaultSession["user"];
@@ -29,12 +36,19 @@ declare module "next-auth" {
 	// }
 }
 
+class InvalidLoginError extends CredentialsSignin {
+	code = "Invalid Email or Password";
+}
+
 /**
  * Options for NextAuth.js used to configure adapters, providers, callbacks, etc.
  *
  * @see https://next-auth.js.org/configuration/options
  */
 export const authConfig = {
+	session: {
+		strategy: "jwt",
+	},
 	pages: {
 		signIn: "/login",
 		error: "/auth-error",
@@ -54,6 +68,59 @@ export const authConfig = {
 			sendVerificationRequest,
 			// maxAge: 24 * 60 * 60, // How long email links are valid for (default 24h)
 		}),
+		Credentials({
+			credentials: {
+				email: { label: "Email", type: "email" },
+				password: { label: "Password", type: "password" },
+			},
+			authorize: async (credentials) => {
+				console.log("🚀 ~ config.ts:66 ~ credentials:", credentials);
+
+				// Basic input guards
+				const email = credentials?.email?.toString().trim().toLowerCase();
+				const password = credentials?.password?.toString();
+				if (!email || !password) return null;
+
+				// Fetch user and the stored hash
+				const user = await db.user.findUnique({
+					where: { email },
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						image: true,
+						emailVerified: true,
+						passwordHash: true,
+					},
+				});
+
+				console.log("🚀 ~ config.ts:85 ~ user:", user);
+
+				if (!user || !user.passwordHash) {
+					// No password set for this user (likely OAuth-only) or user not found
+					return null;
+				}
+
+				// Compare provided password + app-level pepper with stored bcrypt hash
+				const ok = await bcrypt.compare(
+					`${password}${env.PASSWORD_PEPPER}`,
+					user.passwordHash,
+				);
+
+				console.log("🚀 ~ config.ts:96 ~ ok:", ok);
+
+				if (!ok) throw new InvalidLoginError();
+
+				// Return a safe user object; NextAuth will include `id` in the session via callback
+				return {
+					id: user.id,
+					name: user.name,
+					email: user.email,
+					image: user.image,
+					emailVerified: user.emailVerified,
+				};
+			},
+		}),
 		/**
 		 * ...add more providers here.
 		 *
@@ -66,12 +133,27 @@ export const authConfig = {
 	],
 	adapter: PrismaAdapter(db),
 	callbacks: {
-		session: ({ session, user }) => ({
-			...session,
-			user: {
-				...session.user,
-				id: user.id,
-			},
-		}),
+		jwt({ token, user }) {
+			if (user) {
+				(token as { id?: string }).id = (user as { id: string }).id;
+				const ev = (user as { emailVerified?: Date | null }).emailVerified;
+				(token as { emailVerified?: string | null }).emailVerified = ev
+					? new Date(ev).toISOString()
+					: null;
+			}
+			return token;
+		},
+		session: ({ session, token }) => {
+			const t = token as { sub?: string; id?: string; emailVerified?: string | null };
+			const id = t.sub ?? t.id;
+			if (session.user) {
+				// Assign through a cast to avoid TS narrowing issues from module augmentation
+				const u = session.user as unknown as { id?: string; emailVerified?: string | null };
+				if (id) u.id = id;
+				u.emailVerified = t.emailVerified ?? null;
+			}
+			console.log('🚀 ~ config.ts:155 ~ session:', session);
+			return session;
+		},
 	},
 } satisfies NextAuthConfig;
