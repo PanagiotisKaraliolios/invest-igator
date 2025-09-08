@@ -1,4 +1,8 @@
 import Link from "next/link";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 type Props = {
 	searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -23,31 +27,41 @@ export default async function AuthErrorPage({ searchParams }: Props) {
 	const description = sp?.error_description as string | undefined;
 
 	return (
-		<main className="flex min-h-screen items-center justify-center bg-background p-6">
-			<div className="w-full max-w-lg rounded-lg bg-card p-8 shadow">
-				<h1 className="mb-2 font-semibold text-2xl">Authentication error</h1>
-				<p className="mb-4 text-muted-foreground">{friendlyMessage(code)}</p>
-				{code ? (
-					<div className="mb-4 text-muted-foreground text-xs">Error code: <strong>{Array.isArray(code) ? code[0] : code}</strong></div>
-				) : null}
-				{description ? (
-					<div className="mb-4 rounded bg-muted/50 p-3 text-sm">
-						{description}
-					</div>
-				) : null}
+		<div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
+			<Card className="mx-auto w-full max-w-lg">
+				<CardHeader>
+					<CardTitle>Authentication error</CardTitle>
+					<CardDescription>{friendlyMessage(code)}</CardDescription>
+				</CardHeader>
+				<CardContent className="space-y-4">
+					{code ? (
+						<Alert variant="destructive">
+							<AlertTitle>Error code</AlertTitle>
+							<AlertDescription>
+								<Badge variant="secondary" className="font-mono">
+									{Array.isArray(code) ? code[0] : code}
+								</Badge>
+							</AlertDescription>
+						</Alert>
+					) : null}
 
-				<div className="flex gap-3">
-					<Link
-						href="/login"
-						className="inline-block rounded bg-primary px-4 py-2 text-primary-foreground"
-					>
-						Back to sign in
-					</Link>
-					<Link href="/" className="inline-block rounded border px-4 py-2">
-						Home
-					</Link>
-				</div>
-			</div>
-		</main>
+					{description ? (
+						<Alert>
+							<AlertTitle>Details</AlertTitle>
+							<AlertDescription>{description}</AlertDescription>
+						</Alert>
+					) : null}
+
+				</CardContent>
+				<CardFooter className="flex gap-3">
+					<Button asChild>
+						<Link href="/login">Back to sign in</Link>
+					</Button>
+					<Button variant="outline" asChild>
+						<Link href="/">Home</Link>
+					</Button>
+				</CardFooter>
+			</Card>
+		</div>
 	);
 }

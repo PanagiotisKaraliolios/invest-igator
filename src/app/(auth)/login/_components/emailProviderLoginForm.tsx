@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { useCheckEmailMutation } from "../_mutations/useCheckEmail";
 
 const formSchema = z.object({
 	email: z.email(),
@@ -35,31 +36,22 @@ export function EmailProviderLoginForm() {
 		},
 	});
 
-	const [submitting, setSubmitting] = useState(false);
 	const [info, setInfo] = useState<string | null>(null);
+
+	const checkEmailMutation = useCheckEmailMutation();
 
 	// 2. Define a submit handler.
 	async function onSubmit(values: z.infer<typeof formSchema>) {
 		setInfo(null);
-		setSubmitting(true);
 		try {
-			// Pre-check email existence via API
-			const res = await fetch(
-				`/api/auth/check-email?email=${encodeURIComponent(values.email)}`,
-			);
-			if (!res.ok) {
-				throw new Error("Failed to validate email");
-			}
-			const data = (await res.json()) as { exists?: boolean };
-			if (!data.exists) {
+			const data = await checkEmailMutation.mutateAsync(values.email);
+			if (!data?.exists) {
 				form.setError("email", {
 					type: "manual",
 					message: "No account found for this email. Create an account first.",
 				});
 				return;
 			}
-
-			// Proceed with magic link flow without immediate redirect
 			await signIn("nodemailer", {
 				email: values.email,
 				callbackUrl,
@@ -67,10 +59,10 @@ export function EmailProviderLoginForm() {
 		} catch (e) {
 			form.setError("email", {
 				type: "manual",
-				message: "Something went wrong. Please try again.",
+				message:
+					(e as { message?: string })?.message ??
+					"Something went wrong. Please try again.",
 			});
-		} finally {
-			setSubmitting(false);
 		}
 	}
 
@@ -93,9 +85,11 @@ export function EmailProviderLoginForm() {
 				<Button
 					className="h-auto w-full whitespace-normal break-words leading-tight"
 					type="submit"
-					disabled={submitting}
+					disabled={checkEmailMutation.isPending}
 				>
-					{submitting ? "Sending…" : "Get one-time login link"}
+					{checkEmailMutation.isPending
+						? "Sending…"
+						: "Get one-time login link"}
 				</Button>
 				{info ? (
 					<div className="rounded bg-muted/50 p-3 text-sm">{info}</div>

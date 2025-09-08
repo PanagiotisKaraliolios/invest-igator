@@ -22,7 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useMutation } from "@tanstack/react-query";
+import { useSignupMutation } from "../_mutations/useSignup";
 
 const schema = z
 	.object({
@@ -47,21 +47,7 @@ export function SignUpForm() {
 
 	const [info, setInfo] = useState<string | null>(null);
 
-	const signupMutation = useMutation<{ ok?: boolean }, { message: string }, z.infer<typeof schema>>({
-		mutationFn: async (values: z.infer<typeof schema>) => {
-			const res = await fetch("/api/auth/signup", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ name: values.name, email: values.email, password: values.password }),
-			});
-			if (!res.ok) {
-				const data = (await res.json().catch(() => ({} as { error?: string }))) as { error?: string };
-				const message = data?.error ?? "Failed to create account";
-				throw { message };
-			}
-			return (await res.json()) as { ok?: boolean };
-		},
-	});
+	const signupMutation = useSignupMutation();
 
 	async function onSubmit(values: z.infer<typeof schema>) {
 		setInfo(null);
