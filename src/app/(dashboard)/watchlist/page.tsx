@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import MyWatchlist from './_components/my-watchlist';
 import SearchAssets from './_components/search-assets';
+import WatchlistCharts from './_components/watchlist-charts';
 
 export default function WatchlistPage() {
 	return (
@@ -24,6 +25,7 @@ export default function WatchlistPage() {
 					</DialogContent>
 				</Dialog>
 			</div>
+			<WatchlistCharts />
 			<MyWatchlist />
 		</div>
 	);
