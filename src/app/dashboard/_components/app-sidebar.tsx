@@ -38,16 +38,6 @@ const data = {
 			logo: GalleryVerticalEnd,
 			plan: "Enterprise",
 		},
-		{
-			name: "Acme Corp.",
-			logo: AudioWaveform,
-			plan: "Startup",
-		},
-		{
-			name: "Evil Corp.",
-			logo: Command,
-			plan: "Free",
-		},
 	],
 	navMain: [
 		{
@@ -157,11 +147,11 @@ const data = {
 
 type User = { name: string; email: string; avatar?: string | null };
 
-export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sidebar> & { user: User }) {
+export function AppSidebar({ user, applicationName, ...props }: React.ComponentProps<typeof Sidebar> & { user: User, applicationName: string }) {
 	return (
 		<Sidebar collapsible="icon" {...props}>
 			<SidebarHeader>
-				<TeamSwitcher teams={data.teams} />
+				<TeamSwitcher applicationName={applicationName} />
 			</SidebarHeader>
 			<SidebarContent>
 				<NavMain items={data.navMain} />
