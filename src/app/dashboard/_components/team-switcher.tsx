@@ -1,6 +1,5 @@
-import { FaMoneyBillWave } from "react-icons/fa";
 "use client";
-
+import { FaMoneyBillWave } from "react-icons/fa";
 
 import {
 	SidebarMenu,
@@ -8,7 +7,7 @@ import {
 	SidebarMenuItem
 } from "@/components/ui/sidebar";
 
-export function TeamSwitcher({
+export function ApplicationNameLogo({
 	applicationName,
 }: {
 	applicationName: string;
