@@ -1,4 +1,6 @@
 import { redirect } from 'next/navigation';
+import { AppSidebar } from '@/app/(dashboard)/_components/app-sidebar';
+import ThemeSwitch from '@/app/(dashboard)/_components/theme-switch';
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -11,13 +13,11 @@ import { Separator } from '@/components/ui/separator';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { env } from '@/env';
 import { auth } from '@/server/auth';
-import { AppSidebar } from './_components/app-sidebar';
-import ThemeSwitch from './_components/theme-switch';
 
-export default async function Page() {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
 	const session = await auth();
-
 	if (!session?.user) redirect('/login');
+
 	const me = {
 		avatar: session.user.image ?? null,
 		email: session.user.email ?? '',
@@ -39,7 +39,7 @@ export default async function Page() {
 								</BreadcrumbItem>
 								<BreadcrumbSeparator className='hidden md:block' />
 								<BreadcrumbItem>
-									<BreadcrumbPage>ETFs</BreadcrumbPage>
+									<BreadcrumbPage>Overview</BreadcrumbPage>
 								</BreadcrumbItem>
 							</BreadcrumbList>
 						</Breadcrumb>
@@ -48,14 +48,7 @@ export default async function Page() {
 						<ThemeSwitch />
 					</div>
 				</header>
-				<div className='flex flex-1 flex-col gap-4 p-4 pt-0'>
-					<div className='grid auto-rows-min gap-4 md:grid-cols-3'>
-						<div className='aspect-video rounded-xl bg-muted/50' />
-						<div className='aspect-video rounded-xl bg-muted/50' />
-						<div className='aspect-video rounded-xl bg-muted/50' />
-					</div>
-					<div className='min-h-[100vh] flex-1 rounded-xl bg-muted/50 md:min-h-min' />
-				</div>
+				<div className='flex flex-1 flex-col gap-4 p-4 pt-0'>{children}</div>
 			</SidebarInset>
 		</SidebarProvider>
 	);
