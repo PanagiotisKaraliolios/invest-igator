@@ -1,6 +1,7 @@
 'use client';
 
 import { Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -12,7 +13,13 @@ export default function MyWatchlist() {
 	const utils = api.useUtils();
 	const { data: items, isLoading } = api.watchlist.list.useQuery();
 	const remove = api.watchlist.remove.useMutation({
-		onSuccess: () => utils.watchlist.list.invalidate()
+		onError: (err) => {
+			toast.error(err.message || 'Failed to remove');
+		},
+		onSuccess: () => {
+			utils.watchlist.list.invalidate();
+			toast.success('Removed from watchlist');
+		}
 	});
 
 	return (

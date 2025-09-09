@@ -20,10 +20,11 @@ export const watchlistRouter = createTRPCRouter({
 				});
 			} catch (e) {
 				// upsert-like behavior for unique(userId,symbol)
-				return await ctx.db.watchlistItem.update({
-					data: { ...input },
-					where: { userId_symbol: { symbol: input.symbol, userId } }
-				});
+						await ctx.db.watchlistItem.update({
+							data: { ...input },
+							where: { userId_symbol: { symbol: input.symbol, userId } }
+						});
+						return { alreadyExists: true } as const;
 			}
 		}),
 	list: protectedProcedure.query(async ({ ctx }) => {

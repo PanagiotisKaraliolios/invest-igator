@@ -3,6 +3,7 @@ import '@/styles/globals.css';
 import type { Metadata } from 'next';
 import { Geist } from 'next/font/google';
 import { cookies } from 'next/headers';
+import { Toaster } from '@/components/ui/sonner';
 import { env } from '@/env';
 import { TRPCReactProvider } from '@/trpc/react';
 
@@ -27,6 +28,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
 		<html className={`${geist.variable} ${isDark ? 'dark' : ''}`} lang='en'>
 			<body className='min-h-screen bg-background' suppressHydrationWarning>
 				<TRPCReactProvider>{children}</TRPCReactProvider>
+				<Toaster position='top-right' richColors />
 			</body>
 		</html>
 	);

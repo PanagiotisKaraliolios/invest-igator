@@ -2,6 +2,7 @@
 
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -17,7 +18,17 @@ export default function SearchAssets() {
 	const utils = api.useUtils();
 	const search = api.watchlist.search.useQuery({ q: debounced }, { enabled: debounced.trim().length > 1 });
 	const add = api.watchlist.add.useMutation({
-		onSuccess: () => utils.watchlist.list.invalidate()
+		onError: (err) => {
+			toast.error(err.message || 'Failed to add');
+		},
+		onSuccess: (res) => {
+			utils.watchlist.list.invalidate();
+			if ((res as any)?.alreadyExists) {
+				toast.info('Already watching this symbol');
+			} else {
+				toast.success('Added to watchlist');
+			}
+		}
 	});
 
 	return (
