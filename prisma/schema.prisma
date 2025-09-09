@@ -65,6 +65,7 @@ model User {
     accounts      Account[]
     sessions      Session[]
     posts         Post[]
+    watchlist     WatchlistItem[]
 }
 
 model VerificationToken {
@@ -78,4 +79,19 @@ model VerificationToken {
 enum Theme {
     LIGHT
     DARK
+}
+
+model WatchlistItem {
+    id            String    @id @default(cuid())
+    user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId        String
+    symbol        String
+    displaySymbol String?
+    description   String?
+    type          String?
+    createdAt     DateTime @default(now())
+
+    @@unique([userId, symbol])
+    @@index([userId])
+    @@index([symbol])
 }

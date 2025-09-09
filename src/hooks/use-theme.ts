@@ -1,15 +1,15 @@
-"use client";
+'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { api } from "@/trpc/react";
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { api } from '@/trpc/react';
 
-type Theme = "light" | "dark";
+type Theme = 'light' | 'dark';
 
 function applyTheme(theme: Theme) {
-	if (typeof document === "undefined") return;
+	if (typeof document === 'undefined') return;
 	const root = document.documentElement;
-	if (theme === "dark") root.classList.add("dark");
-	else root.classList.remove("dark");
+	if (theme === 'dark') root.classList.add('dark');
+	else root.classList.remove('dark');
 }
 
 export function useThemeSwitch() {
@@ -23,19 +23,17 @@ export function useThemeSwitch() {
 		mutateRef.current = (t: Theme) => setThemeMutation.mutate(t);
 	}, [setThemeMutation]);
 	const getThemeQuery = api.theme.getTheme.useQuery(undefined, {
-		staleTime: 5 * 60 * 1000,
 		refetchOnWindowFocus: false,
 		retry: false,
+		staleTime: 5 * 60 * 1000
 	});
 
 	// Initialize from SSR-applied class which comes from the session
 	const [theme, _setTheme] = useState<Theme>(() => {
-		if (typeof document !== "undefined") {
-			return document.documentElement.classList.contains("dark")
-				? "dark"
-				: "light";
+		if (typeof document !== 'undefined') {
+			return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
 		}
-		return "dark"; // server fallback; will sync on mount
+		return 'dark'; // server fallback; will sync on mount
 	});
 
 	// Apply to DOM and debounce persistence to API
@@ -80,14 +78,14 @@ export function useThemeSwitch() {
 		}
 	}, [getThemeQuery.isSuccess, getThemeQuery.data?.theme, theme, setTheme]);
 
-	const isLight = useMemo(() => theme === "light", [theme]);
-	const setIsLight = useCallback((val: boolean) => {
-		setTheme(val ? "light" : "dark");
-	}, [setTheme]);
-	const toggle = useCallback(
-		() => setTheme(theme === "dark" ? "light" : "dark"),
-		[setTheme, theme],
+	const isLight = useMemo(() => theme === 'light', [theme]);
+	const setIsLight = useCallback(
+		(val: boolean) => {
+			setTheme(val ? 'light' : 'dark');
+		},
+		[setTheme]
 	);
+	const toggle = useCallback(() => setTheme(theme === 'dark' ? 'light' : 'dark'), [setTheme, theme]);
 
-	return { theme, setTheme, isLight, setIsLight, toggle, mounted } as const;
+	return { isLight, mounted, setIsLight, setTheme, theme, toggle } as const;
 }
