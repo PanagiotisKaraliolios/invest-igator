@@ -3,14 +3,12 @@
 import {
 	AudioWaveform,
 	BookOpen,
-	Bot,
 	Command,
 	Frame,
 	GalleryVerticalEnd,
 	Map as MapIcon,
 	PieChart,
 	Settings2,
-	SquareTerminal,
 } from "lucide-react";
 
 import { NavMain } from "./nav-main";
@@ -27,120 +25,61 @@ import {
 
 // This is sample data.
 const data = {
-	user: {
-		name: "shadcn",
-		email: "m@example.com",
-		avatar: "/avatars/shadcn.jpg",
-	},
-	teams: [
-		{
-			name: "Acme Inc",
-			logo: GalleryVerticalEnd,
-			plan: "Enterprise",
-		},
-	],
 	navMain: [
 		{
-			title: "Playground",
-			url: "#",
-			icon: SquareTerminal,
+			title: "Portfolio",
+			url: "/dashboard",
+			icon: PieChart,
 			isActive: true,
 			items: [
-				{
-					title: "History",
-					url: "#",
-				},
-				{
-					title: "Starred",
-					url: "#",
-				},
-				{
-					title: "Settings",
-					url: "#",
-				},
+				{ title: "Dashboard", url: "/dashboard" },
+				{ title: "Portfolio", url: "/portfolio" },
+				{ title: "Transactions", url: "/transactions" },
+				{ title: "Watchlist", url: "/watchlist" },
 			],
 		},
 		{
-			title: "Models",
-			url: "#",
-			icon: Bot,
+			title: "Analytics",
+			url: "/analytics",
+			icon: AudioWaveform,
 			items: [
-				{
-					title: "Genesis",
-					url: "#",
-				},
-				{
-					title: "Explorer",
-					url: "#",
-				},
-				{
-					title: "Quantum",
-					url: "#",
-				},
+				{ title: "Performance", url: "/analytics/performance" },
+				{ title: "Allocation", url: "/analytics/allocation" },
+				{ title: "Risk", url: "/analytics/risk" },
+				{ title: "Reports", url: "/analytics/reports" },
 			],
 		},
 		{
-			title: "Documentation",
-			url: "#",
+			title: "Research",
+			url: "/research",
 			icon: BookOpen,
 			items: [
-				{
-					title: "Introduction",
-					url: "#",
-				},
-				{
-					title: "Get Started",
-					url: "#",
-				},
-				{
-					title: "Tutorials",
-					url: "#",
-				},
-				{
-					title: "Changelog",
-					url: "#",
-				},
+				{ title: "Markets", url: "/research/markets" },
+				{ title: "ETFs", url: "/research/etfs" },
+				{ title: "Stocks", url: "/research/stocks" },
+				{ title: "News", url: "/research/news" },
 			],
 		},
 		{
-			title: "Settings",
-			url: "#",
+			title: "Tools",
+			url: "/tools",
+			icon: Command,
+			items: [
+				{ title: "Goals", url: "/tools/goals" },
+				{ title: "Simulations", url: "/tools/simulations" },
+				{ title: "Taxes", url: "/tools/taxes" },
+				{ title: "Notes", url: "/tools/notes" },
+			],
+		},
+		{
+			title: "Account",
+			url: "/account",
 			icon: Settings2,
 			items: [
-				{
-					title: "General",
-					url: "#",
-				},
-				{
-					title: "Team",
-					url: "#",
-				},
-				{
-					title: "Billing",
-					url: "#",
-				},
-				{
-					title: "Limits",
-					url: "#",
-				},
+				{ title: "Profile", url: "/account/profile" },
+				{ title: "Settings", url: "/account/settings" },
+				{ title: "Support", url: "/account/support" },
 			],
-		},
-	],
-	projects: [
-		{
-			name: "Design Engineering",
-			url: "#",
-			icon: Frame,
-		},
-		{
-			name: "Sales & Marketing",
-			url: "#",
-			icon: PieChart,
-		},
-		{
-			name: "Travel",
-			url: "#",
-			icon: MapIcon,
 		},
 	],
 };
@@ -155,10 +94,9 @@ export function AppSidebar({ user, applicationName, ...props }: React.ComponentP
 			</SidebarHeader>
 			<SidebarContent>
 				<NavMain items={data.navMain} />
-				<NavProjects projects={data.projects} />
 			</SidebarContent>
 			<SidebarFooter>
-				<NavUser user={user ?? data.user} />
+				<NavUser user={user} />
 			</SidebarFooter>
 			<SidebarRail />
 		</Sidebar>
