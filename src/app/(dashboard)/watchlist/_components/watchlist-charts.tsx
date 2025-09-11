@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
 import * as React from 'react';
-import { CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts';
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -19,7 +19,7 @@ import { api } from '@/trpc/react';
 type CombinedDatum = {
 	date: string;
 	// dynamic keys per symbol
-	[symbol: string]: string | number;
+	[cssKey: string]: string | number;
 };
 
 type SeriesDatum = { date: string; value: number };
@@ -65,20 +65,13 @@ function generateSeries(symbol: string, points = 30): SeriesDatum[] {
 	return out;
 }
 
-const palette = [
-	'#2563eb', // blue-600
-	'#10b981', // emerald-500
-	'#f59e0b', // amber-500
-	'#ef4444', // red-500
-	'#8b5cf6', // violet-500
-	'#22c55e', // green-500
-	'#eab308', // yellow-500
-	'#ec4899', // pink-500
-	'#06b6d4', // cyan-500
-	'#f97316', // orange-500
-	'#84cc16', // lime-500
-	'#a855f7', // purple-500
-];
+// Provide up to 12 color tokens that ChartContainer maps to CSS vars per series key.
+const colorTokens = Array.from({ length: 12 }, (_, i) => `var(--chart-${i + 1})`);
+
+// Sanitize a symbol to a safe CSS custom property key
+function toCssKey(sym: string) {
+	return sym.replace(/[^a-zA-Z0-9_-]/g, '_');
+}
 
 export default function WatchlistCharts() {
 	const { data: items } = api.watchlist.list.useQuery();
@@ -87,30 +80,35 @@ export default function WatchlistCharts() {
 
 	const [combined, setCombined] = React.useState(true);
 
-	// Build chart config mapping symbol -> color and label
+	// Build stable CSS keys for symbols (used for ChartContainer color mapping and gradient IDs)
+	const cssKeys = React.useMemo(() => symbols.map((s) => toCssKey(s)), [symbols]);
+
+	// Build chart config mapping cssKey -> color token and display label
 	const chartConfig: ChartConfig = React.useMemo(() => {
 		const cfg: ChartConfig = {};
-		symbols.forEach((sym) => {
-			cfg[sym] = { label: sym };
+		cssKeys.forEach((cssKey, idx) => {
+			cfg[cssKey] = { label: symbols[idx]!, color: colorTokens[idx % colorTokens.length] };
 		});
 		return cfg;
-	}, [symbols]);
+	}, [cssKeys, symbols]);
 
 	// Build combined dataset: one row per date with keys for each symbol
 	const combinedData: CombinedDatum[] = React.useMemo(() => {
-		const perSymbol = symbols.map((s) => ({ data: generateSeries(s), key: s }));
-		if (perSymbol.length === 0) return [];
+		const per = symbols.map((s, idx) => ({ cssKey: cssKeys[idx]!, data: generateSeries(s) }));
+		if (per.length === 0) return [];
 		const byIndex: CombinedDatum[] = [];
-		const len = perSymbol[0]!.data.length;
+		const len = per[0]!.data.length;
 		for (let i = 0; i < len; i++) {
-			const row: CombinedDatum = { date: perSymbol[0]!.data[i]!.date };
-			perSymbol.forEach(({ key, data }) => {
-				row[key] = data[i]?.value ?? 0;
+			const row: CombinedDatum = { date: per[0]!.data[i]!.date };
+			per.forEach(({ cssKey, data }) => {
+				row[cssKey] = data[i]?.value ?? 0;
 			});
 			byIndex.push(row);
 		}
 		return byIndex;
-	}, [symbols]);
+	}, [symbols, cssKeys]);
+
+	const toId = React.useCallback((sym: string) => sym.replace(/[^a-zA-Z0-9_-]/g, '_'), []);
 
 	return (
 		<Card>
@@ -123,50 +121,60 @@ export default function WatchlistCharts() {
 			</CardHeader>
 			<CardContent className='space-y-4'>
 				{combined ? (
-					<ChartContainer config={chartConfig}>
-						<LineChart data={combinedData} margin={{ bottom: 8, left: 12, right: 16, top: 8 }}>
-							<CartesianGrid strokeDasharray='3 3' vertical={false} />
-							<XAxis axisLine={false} dataKey='date' tickLine={false} />
-							<YAxis axisLine={false} tickLine={false} width={40} />
-							<ChartTooltip content={<ChartTooltipContent />} />
-							{symbols.map((sym, idx) => (
-								<Line
-									dataKey={sym}
-									dot={false}
-									isAnimationActive={false}
-									key={sym}
-									stroke={palette[idx % palette.length]}
+					<ChartContainer config={chartConfig} className="aspect-auto h-[220px] w-full sm:h-[260px]">
+						<AreaChart data={combinedData} margin={{ top: 8, right: 16, left: 12, bottom: 8 }}>
+							<defs>
+								{cssKeys.map((cssKey) => (
+									<linearGradient key={cssKey} id={`fill-${cssKey}`} x1="0" y1="0" x2="0" y2="1">
+										<stop offset="5%" stopColor={`var(--color-${cssKey})`} stopOpacity={0.8} />
+										<stop offset="95%" stopColor={`var(--color-${cssKey})`} stopOpacity={0.1} />
+									</linearGradient>
+								))}
+							</defs>
+							<CartesianGrid vertical={false} />
+							<XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} minTickGap={32} />
+							<YAxis tickLine={false} axisLine={false} width={40} />
+							<ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
+							{cssKeys.map((cssKey) => (
+								<Area
+									key={cssKey}
+									dataKey={cssKey}
+									type="natural"
+									fill={`url(#fill-${cssKey})`}
+									stroke={`var(--color-${cssKey})`}
 									strokeWidth={2}
-									type='monotone'
+									stackId="a"
 								/>
 							))}
 							<ChartLegend content={<ChartLegendContent />} />
-						</LineChart>
+						</AreaChart>
 					</ChartContainer>
 				) : (
 					<div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
 						{symbols.map((sym, idx) => {
 							const series = generateSeries(sym);
-							const cfg: ChartConfig = { [sym]: { label: sym } };
+							const cssKey = cssKeys[idx]!;
+							const cfg: ChartConfig = { [cssKey]: { label: sym, color: colorTokens[idx % colorTokens.length] } };
+							const id = `fill-${cssKey}`;
 							return (
-								<ChartContainer config={cfg} key={sym}>
-									<LineChart data={series} margin={{ bottom: 8, left: 12, right: 16, top: 8 }}>
-										<CartesianGrid strokeDasharray='3 3' vertical={false} />
-										<XAxis axisLine={false} dataKey='date' tickLine={false} />
-										<YAxis axisLine={false} tickLine={false} width={40} />
-										<ChartTooltip content={<ChartTooltipContent nameKey={sym} />} />
-										<Line
-											dataKey='value'
-											dot={false}
-											isAnimationActive={false}
-											name={sym}
-											stroke={palette[idx % palette.length]}
-											strokeWidth={2}
-											type='monotone'
-										/>
+								<div key={sym}>
+									<ChartContainer config={cfg} className="aspect-auto h-[140px] w-full sm:h-[160px]">
+									<AreaChart data={series} margin={{ top: 8, right: 16, left: 12, bottom: 8 }}>
+										<defs>
+										<linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+											<stop offset="5%" stopColor={`var(--color-${cssKey})`} stopOpacity={0.8} />
+											<stop offset="95%" stopColor={`var(--color-${cssKey})`} stopOpacity={0.1} />
+											</linearGradient>
+										</defs>
+										<CartesianGrid vertical={false} />
+										<XAxis dataKey='date' tickLine={false} axisLine={false} tickMargin={8} minTickGap={32} />
+										<ChartTooltip content={<ChartTooltipContent nameKey={sym} indicator="dot" />} cursor={false} />
+											<Area dataKey='value' type='natural' fill={`url(#${id})`} stroke={`var(--color-${cssKey})`} strokeWidth={2} stackId='a' />
 										<ChartLegend content={<ChartLegendContent nameKey={sym} />} />
-									</LineChart>
-								</ChartContainer>
+									</AreaChart>
+									</ChartContainer>
+									<div className="mt-1 text-center text-xs text-muted-foreground">{sym}</div>
+								</div>
 							);
 						})}
 					</div>
