@@ -78,6 +78,10 @@ export default function WatchlistCharts() {
 	const watchlistSymbols = items?.map((i) => i.symbol) ?? [];
 	const symbols = (watchlistSymbols.length ? watchlistSymbols : ['AAPL', 'MSFT', 'GOOGL']).slice(0, 6);
 
+	const { data: history, isLoading } = api.watchlist.history.useQuery({ symbols, days: 180, field: 'close' }, {
+		enabled: symbols.length > 0,
+	});
+
 	const [combined, setCombined] = React.useState(true);
 
 	// Build stable CSS keys for symbols (used for ChartContainer color mapping and gradient IDs)
@@ -92,12 +96,28 @@ export default function WatchlistCharts() {
 		return cfg;
 	}, [cssKeys, symbols]);
 
+	// Choose data source: prefer Influx history if available, otherwise fallback to mock.
+	const seriesBySymbol: Record<string, SeriesDatum[]> = React.useMemo(() => {
+		const out: Record<string, SeriesDatum[]> = {};
+		if (history?.series && Object.keys(history.series).length > 0) {
+			for (const sym of symbols) {
+				const points = history.series[sym] ?? [];
+				out[sym] = points.map((p) => ({ date: new Date(p.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }), value: p.value }));
+			}
+		} else {
+			for (const sym of symbols) out[sym] = generateSeries(sym);
+		}
+		return out;
+	}, [history, symbols]);
+
 	// Build combined dataset: one row per date with keys for each symbol
 	const combinedData: CombinedDatum[] = React.useMemo(() => {
-		const per = symbols.map((s, idx) => ({ cssKey: cssKeys[idx]!, data: generateSeries(s) }));
+		const per = symbols.map((s, idx) => ({ cssKey: cssKeys[idx]!, data: seriesBySymbol[s] ?? [] }));
 		if (per.length === 0) return [];
+		// Align by index; assume equal length for simplicity; using last series length
+		const len = Math.min(...per.map((p) => p.data.length).filter((n) => n > 0));
+		if (!Number.isFinite(len) || len <= 0) return [];
 		const byIndex: CombinedDatum[] = [];
-		const len = per[0]!.data.length;
 		for (let i = 0; i < len; i++) {
 			const row: CombinedDatum = { date: per[0]!.data[i]!.date };
 			per.forEach(({ cssKey, data }) => {
@@ -106,7 +126,7 @@ export default function WatchlistCharts() {
 			byIndex.push(row);
 		}
 		return byIndex;
-	}, [symbols, cssKeys]);
+	}, [symbols, cssKeys, seriesBySymbol]);
 
 	const toId = React.useCallback((sym: string) => sym.replace(/[^a-zA-Z0-9_-]/g, '_'), []);
 
@@ -152,7 +172,7 @@ export default function WatchlistCharts() {
 				) : (
 					<div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
 						{symbols.map((sym, idx) => {
-							const series = generateSeries(sym);
+							const series = seriesBySymbol[sym] ?? [];
 							const cssKey = cssKeys[idx]!;
 							const cfg: ChartConfig = { [cssKey]: { label: sym, color: colorTokens[idx % colorTokens.length] } };
 							const id = `fill-${cssKey}`;

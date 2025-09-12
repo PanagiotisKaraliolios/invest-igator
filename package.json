@@ -3,6 +3,7 @@
 		"initVersion": "7.39.3"
 	},
 	"dependencies": {
+		"@influxdata/influxdb-client": "^1.35.0",
 		"@auth/prisma-adapter": "^2.7.2",
 		"@hookform/resolvers": "^5.2.1",
 		"@prisma/client": "^6.5.0",
@@ -93,7 +94,8 @@
 		"postinstall": "prisma generate",
 		"preview": "next build && next start",
 		"start": "next start",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "tsc --noEmit",
+		"ingest:alpha": "bun run src/server/jobs/ingest-alpha.ts"
 	},
 	"type": "module",
 	"version": "0.1.0"
