@@ -107,7 +107,7 @@ export const watchlistRouter = createTRPCRouter({
 				const flux = `from(bucket: "${env.INFLUXDB_BUCKET}")
   |> range(start: -${days}d)
   |> filter(fn: (r) => r._measurement == "${measurement}" and r._field == "${input.field}" and r.symbol == "${sym}")
-  |> aggregateWindow(every: ${every}, fn: median, createEmpty: true)
+  |> aggregateWindow(every: ${every}, fn: median)
   |> fill(usePrevious: true)
   |> keep(columns: ["_time", "_value"]) 
   |> sort(columns: ["_time"])`;

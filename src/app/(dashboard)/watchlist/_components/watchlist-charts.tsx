@@ -355,7 +355,7 @@ export default function WatchlistCharts() {
 							const id = `fill-${cssKey}`;
 							return (
 								<div key={sym}>
-									<ChartContainer config={cfg} className="aspect-auto h-[140px] w-full sm:h-[160px]">
+									<ChartContainer config={cfg} className="aspect-auto h-[150px] w-full sm:h-[200px]">
 									<AreaChart data={series} margin={{ top: 8, right: 16, left: 12, bottom: 8 }}>
 										<defs>
 										<linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
@@ -364,6 +364,7 @@ export default function WatchlistCharts() {
 											</linearGradient>
 										</defs>
 										<CartesianGrid vertical={false} />
+										<YAxis tickLine={false} axisLine={false} width={40} />
 										<XAxis
 											dataKey='iso'
 											tickFormatter={(iso) => {
