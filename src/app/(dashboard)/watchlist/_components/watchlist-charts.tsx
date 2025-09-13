@@ -33,6 +33,19 @@ type CombinedDatum = {
 
 type SeriesDatum = { date: string; iso?: string; value: number };
 
+// Downsample by striding to cap the number of points for performance
+function downsample<T>(arr: T[], maxPoints: number): T[] {
+	if (!Array.isArray(arr)) return arr;
+	const n = arr.length;
+	if (n <= maxPoints) return arr;
+	const stride = Math.ceil(n / maxPoints);
+	const out: T[] = [];
+	for (let i = 0; i < n; i += stride) out.push(arr[i]!);
+	// ensure last sample included
+	if (out[out.length - 1] !== arr[n - 1]) out.push(arr[n - 1]!);
+	return out;
+}
+
 function hashStringToSeed(str: string) {
 	let h = 2166136261 >>> 0;
 	for (let i = 0; i < str.length; i++) {
@@ -98,7 +111,7 @@ export default function WatchlistCharts() {
 		return d;
 	}, []);
 	const [dateRange, setDateRange] = React.useState<DateRange>({ from: initialFrom, to: initialTo });
-	type Preset = '5D' | '1M' | '6M' | 'YTD' | '1Y' | '5Y' | 'MAX' | null;
+	type Preset = '5D' | '1M' | '6M' | 'YTD' | '1Y' | '5Y' | '10Y' | '20Y' | 'MAX' | null;
 	const [preset, setPreset] = React.useState<Preset>('6M');
 
 	const applyPreset = React.useCallback((p: Exclude<Preset, null>) => {
@@ -122,6 +135,12 @@ export default function WatchlistCharts() {
 				break;
 			case '5Y':
 				from.setDate(now.getDate() - 1824);
+				break;
+			case '10Y':
+				from.setDate(now.getDate() - 3649);
+				break;
+			case '20Y':
+				from.setDate(now.getDate() - 7299);
 				break;
 			case 'MAX':
 				from.setDate(now.getDate() - (MAX_DAYS - 1));
@@ -169,14 +188,15 @@ export default function WatchlistCharts() {
 			const toKey = format(toDate, 'yyyy-MM-dd');
 			for (const sym of symbols) {
 				const points = (history.series[sym] ?? []).filter((p) => p.date >= fromKey && p.date <= toKey);
-				out[sym] = points.map((p) => ({
+				const mapped = points.map((p) => ({
 					date: new Date(p.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }),
 					iso: p.date,
 					value: p.value
 				}));
+				out[sym] = downsample(mapped, 1500);
 			}
 		} else {
-			for (const sym of symbols) out[sym] = generateSeries(sym);
+			for (const sym of symbols) out[sym] = downsample(generateSeries(sym, 1000), 600);
 		}
 		return out;
 	}, [history, symbols, fromDate, toDate]);
@@ -196,7 +216,7 @@ export default function WatchlistCharts() {
 			});
 			byIndex.push(row);
 		}
-		return byIndex;
+		return downsample(byIndex, 600);
 	}, [symbols, cssKeys, seriesBySymbol]);
 
 	return (
@@ -225,6 +245,8 @@ export default function WatchlistCharts() {
 								<Button size="sm" variant={preset === 'YTD' ? 'default' : 'ghost'} onClick={() => applyPreset('YTD')}>YTD</Button>
 								<Button size="sm" variant={preset === '1Y' ? 'default' : 'ghost'} onClick={() => applyPreset('1Y')}>1Y</Button>
 								<Button size="sm" variant={preset === '5Y' ? 'default' : 'ghost'} onClick={() => applyPreset('5Y')}>5Y</Button>
+								<Button size="sm" variant={preset === '10Y' ? 'default' : 'ghost'} onClick={() => applyPreset('10Y')}>10Y</Button>
+								<Button size="sm" variant={preset === '20Y' ? 'default' : 'ghost'} onClick={() => applyPreset('20Y')}>20Y</Button>
 								<Button size="sm" variant={preset === 'MAX' ? 'default' : 'ghost'} onClick={() => applyPreset('MAX')}>Max</Button>
 							</div>
 							<Calendar
@@ -314,11 +336,11 @@ export default function WatchlistCharts() {
 								<Area
 									key={cssKey}
 									dataKey={cssKey}
-									type="natural"
+									type="linear"
 									fill={`url(#fill-${cssKey})`}
 									stroke={`var(--color-${cssKey})`}
 									strokeWidth={2}
-									stackId="a"
+									isAnimationActive={combinedData.length < 800}
 								/>
 							))}
 							<ChartLegend content={<ChartLegendContent />} />
@@ -371,7 +393,7 @@ export default function WatchlistCharts() {
 											}
 											cursor={false}
 										/>
-											<Area dataKey='value' type='natural' fill={`url(#${id})`} stroke={`var(--color-${cssKey})`} strokeWidth={2} stackId='a' />
+											<Area dataKey='value' type='monotone' fill={`url(#${id})`} stroke={`var(--color-${cssKey})`} strokeWidth={2} isAnimationActive={(series?.length ?? 0) < 800} />
 										<ChartLegend content={<ChartLegendContent nameKey={sym} />} />
 									</AreaChart>
 									</ChartContainer>

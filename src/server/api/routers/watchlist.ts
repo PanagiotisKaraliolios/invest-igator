@@ -88,10 +88,27 @@ export const watchlistRouter = createTRPCRouter({
 				symbols = (symbols ?? []).slice(0, 12);
 
 			const series: Record<string, Array<{ date: string; value: number }>> = {};
+			// Choose aggregation bucket to cap points for large ranges
+			const days = input.days;
+			let every: string;
+			if (days > 3650) {
+				every = '7d';
+			} else if (days > 1825) {
+				every = '3d';
+			} else if (days > 730) {
+				every = '1d';
+			} else if (days > 365) {
+				every = '1d';
+			} else {
+				every = '1d';
+			}
+
 			for (const sym of symbols) {
 				const flux = `from(bucket: "${env.INFLUXDB_BUCKET}")
-  |> range(start: -${input.days}d)
+  |> range(start: -${days}d)
   |> filter(fn: (r) => r._measurement == "${measurement}" and r._field == "${input.field}" and r.symbol == "${sym}")
+  |> aggregateWindow(every: ${every}, fn: median, createEmpty: true)
+  |> fill(usePrevious: true)
   |> keep(columns: ["_time", "_value"]) 
   |> sort(columns: ["_time"])`;
 
@@ -117,7 +134,6 @@ export const watchlistRouter = createTRPCRouter({
 					}
 				series[sym] = arr;
 			}
-			console.log('InfluxDB query result:', series);
 			return { series } as const;
 		})
 });
