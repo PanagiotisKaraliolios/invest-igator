@@ -20,6 +20,8 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { api } from '@/trpc/react';
 
 type CombinedDatum = {
@@ -82,11 +84,11 @@ function toCssKey(sym: string) {
 }
 
 export default function WatchlistCharts() {
-	const { data: items } = api.watchlist.list.useQuery();
+	const { data: items, isLoading: listLoading, error: listError } = api.watchlist.list.useQuery();
 	const watchlistSymbols = items?.map((i) => i.symbol) ?? [];
 	const symbols = watchlistSymbols.slice(0, 6);
 
-	const MAX_DAYS = 18250;
+	const MAX_DAYS = 7300; // ~20 years
 
 	// Date range state (default: last 180 days)
 	const initialTo = React.useMemo(() => new Date(), []);
@@ -96,7 +98,7 @@ export default function WatchlistCharts() {
 		return d;
 	}, []);
 	const [dateRange, setDateRange] = React.useState<DateRange>({ from: initialFrom, to: initialTo });
-	type Preset = '5D' | '1M' | '6M' | 'YTD' | '1Y' | '5Y' | 'ALL' | null;
+	type Preset = '5D' | '1M' | '6M' | 'YTD' | '1Y' | '5Y' | 'MAX' | null;
 	const [preset, setPreset] = React.useState<Preset>('6M');
 
 	const applyPreset = React.useCallback((p: Exclude<Preset, null>) => {
@@ -121,7 +123,7 @@ export default function WatchlistCharts() {
 			case '5Y':
 				from.setDate(now.getDate() - 1824);
 				break;
-			case 'ALL':
+			case 'MAX':
 				from.setDate(now.getDate() - (MAX_DAYS - 1));
 				break;
 		}
@@ -139,9 +141,11 @@ export default function WatchlistCharts() {
 		return Math.min(MAX_DAYS, computed);
 	}, [fromDate]);
 
-	const { data: history, isLoading } = api.watchlist.history.useQuery({ symbols, days: daysForServer, field: 'close' }, {
+	const { data: history, isLoading, isFetching, error: historyError, refetch } = api.watchlist.history.useQuery({ symbols, days: daysForServer, field: 'close' }, {
 		enabled: symbols.length > 0,
 	});
+	const loading = listLoading || isLoading || isFetching;
+	const error = listError ?? historyError;
 
 	const [combined, setCombined] = React.useState(true);
 
@@ -221,7 +225,7 @@ export default function WatchlistCharts() {
 								<Button size="sm" variant={preset === 'YTD' ? 'default' : 'ghost'} onClick={() => applyPreset('YTD')}>YTD</Button>
 								<Button size="sm" variant={preset === '1Y' ? 'default' : 'ghost'} onClick={() => applyPreset('1Y')}>1Y</Button>
 								<Button size="sm" variant={preset === '5Y' ? 'default' : 'ghost'} onClick={() => applyPreset('5Y')}>5Y</Button>
-								<Button size="sm" variant={preset === 'ALL' ? 'default' : 'ghost'} onClick={() => applyPreset('ALL')}>All</Button>
+								<Button size="sm" variant={preset === 'MAX' ? 'default' : 'ghost'} onClick={() => applyPreset('MAX')}>Max</Button>
 							</div>
 							<Calendar
 								mode="range"
@@ -239,7 +243,29 @@ export default function WatchlistCharts() {
 				</div>
 			</CardHeader>
 			<CardContent className='space-y-4'>
-				{symbols.length === 0 ? (
+				{error ? (
+					<Alert variant="destructive">
+						<AlertTitle>Failed to load charts</AlertTitle>
+						<AlertDescription className="flex items-center justify-between gap-4">
+							<span className="truncate">
+								{typeof error?.message === 'string' ? error.message : 'An unexpected error occurred while fetching data.'}
+							</span>
+							<Button size="sm" variant="secondary" onClick={() => refetch()} disabled={loading}>
+								Retry
+							</Button>
+						</AlertDescription>
+					</Alert>
+				) : loading ? (
+					combined ? (
+						<Skeleton className="h-[220px] w-full sm:h-[260px]" aria-busy aria-label="Loading chart" />
+					) : (
+						<div className={`grid grid-cols-1 gap-4 ${symbols.length > 1 ? 'md:grid-cols-2' : ''}`}>
+							{(symbols.length > 0 ? symbols : Array.from({ length: 2 })).map((_, idx) => (
+								<Skeleton key={idx} className="h-[140px] w-full sm:h-[160px]" aria-busy aria-label="Loading chart" />
+							))}
+						</div>
+					)
+				) : symbols.length === 0 ? (
 					<div className="flex h-[220px] w-full items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground sm:h-[260px]">
 						Your watchlist is empty. Add symbols to see charts.
 					</div>
@@ -255,7 +281,20 @@ export default function WatchlistCharts() {
 								))}
 							</defs>
 							<CartesianGrid vertical={false} />
-							<XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} minTickGap={32} />
+							<XAxis
+								dataKey="iso"
+								tickFormatter={(iso) => {
+									try {
+										return format(new Date(iso as string), 'MMM d, yyyy');
+									} catch {
+										return String(iso ?? '');
+									}
+								}}
+								tickLine={false}
+								axisLine={false}
+								tickMargin={8}
+								minTickGap={32}
+							/>
 							<YAxis tickLine={false} axisLine={false} width={40} />
 							<ChartTooltip
 								cursor={false}
@@ -303,7 +342,20 @@ export default function WatchlistCharts() {
 											</linearGradient>
 										</defs>
 										<CartesianGrid vertical={false} />
-										<XAxis dataKey='date' tickLine={false} axisLine={false} tickMargin={8} minTickGap={32} />
+										<XAxis
+											dataKey='iso'
+											tickFormatter={(iso) => {
+												try {
+													return format(new Date(iso as string), 'MMM d, yyyy');
+												} catch {
+													return String(iso ?? '');
+												}
+											}}
+											tickLine={false}
+											axisLine={false}
+											tickMargin={8}
+											minTickGap={32}
+										/>
 										<ChartTooltip
 											content={
 												<ChartTooltipContent
