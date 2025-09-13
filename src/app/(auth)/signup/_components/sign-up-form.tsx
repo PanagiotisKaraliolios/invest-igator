@@ -20,8 +20,9 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { api } from "@/trpc/react";
 import { Eye, EyeOff } from "lucide-react";
 
@@ -41,12 +42,14 @@ const schema = z
 	});
 
 export function SignUpForm() {
+	const router = useRouter();
 	const form = useForm<z.infer<typeof schema>>({
 		resolver: zodResolver(schema),
 		defaultValues: { name: "", email: "", password: "", confirmPassword: "" },
 	});
 
 	const [info, setInfo] = useState<string | null>(null);
+	const [countdown, setCountdown] = useState<number | null>(null);
 	const [showPassword, setShowPassword] = useState(false);
 	const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -57,6 +60,7 @@ export function SignUpForm() {
 		try {
 			await signupMutation.mutateAsync(values);
 			setInfo("Account created. Check your email for a sign-in link.");
+			setCountdown(3);
 			await signIn("nodemailer", { email: values.email, redirect: false });
 		} catch (err) {
 			const message = (err as { message?: string })?.message ?? "Failed to create account";
@@ -67,6 +71,16 @@ export function SignUpForm() {
 			}
 		}
 	}
+
+	useEffect(() => {
+		if (countdown === null) return;
+		if (countdown <= 0) {
+			router.push("/login");
+			return;
+		}
+		const t = setTimeout(() => setCountdown((c) => (c ?? 0) - 1), 1000);
+		return () => clearTimeout(t);
+	}, [countdown, router]);
 
 	return (
 		<Card>
@@ -164,7 +178,12 @@ export function SignUpForm() {
 							)}
 						/>
 						{info ? (
-							<div className="rounded bg-muted/50 p-3 text-sm">{info}</div>
+							<div className="rounded bg-muted/50 p-3 text-sm">
+								{info}
+								{countdown !== null ? (
+									<div className="mt-1">Redirecting to login in {countdown}s…</div>
+								) : null}
+							</div>
 						) : null}
 						<Button
 							className="h-auto w-full whitespace-normal break-words leading-tight"

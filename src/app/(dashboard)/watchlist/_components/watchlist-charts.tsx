@@ -2,6 +2,9 @@
 
 import * as React from 'react';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
+import { Calendar as CalendarIcon } from 'lucide-react';
+import { format, differenceInCalendarDays } from 'date-fns';
+import type { DateRange } from 'react-day-picker';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -14,15 +17,19 @@ import {
 } from '@/components/ui/chart';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { api } from '@/trpc/react';
 
 type CombinedDatum = {
 	date: string;
+	iso: string;
 	// dynamic keys per symbol
 	[cssKey: string]: string | number;
 };
 
-type SeriesDatum = { date: string; value: number };
+type SeriesDatum = { date: string; iso?: string; value: number };
 
 function hashStringToSeed(str: string) {
 	let h = 2166136261 >>> 0;
@@ -59,6 +66,7 @@ function generateSeries(symbol: string, points = 30): SeriesDatum[] {
 		d.setDate(d.getDate() - i);
 		out.push({
 			date: d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }),
+			iso: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
 			value: Math.round(price * 100) / 100
 		});
 	}
@@ -76,9 +84,62 @@ function toCssKey(sym: string) {
 export default function WatchlistCharts() {
 	const { data: items } = api.watchlist.list.useQuery();
 	const watchlistSymbols = items?.map((i) => i.symbol) ?? [];
-	const symbols = (watchlistSymbols.length ? watchlistSymbols : ['AAPL', 'MSFT', 'GOOGL']).slice(0, 6);
+	const symbols = watchlistSymbols.slice(0, 6);
 
-	const { data: history, isLoading } = api.watchlist.history.useQuery({ symbols, days: 180, field: 'close' }, {
+	const MAX_DAYS = 18250;
+
+	// Date range state (default: last 180 days)
+	const initialTo = React.useMemo(() => new Date(), []);
+	const initialFrom = React.useMemo(() => {
+		const d = new Date();
+		d.setDate(d.getDate() - 179);
+		return d;
+	}, []);
+	const [dateRange, setDateRange] = React.useState<DateRange>({ from: initialFrom, to: initialTo });
+	type Preset = '5D' | '1M' | '6M' | 'YTD' | '1Y' | '5Y' | 'ALL' | null;
+	const [preset, setPreset] = React.useState<Preset>('6M');
+
+	const applyPreset = React.useCallback((p: Exclude<Preset, null>) => {
+		const now = new Date();
+		let from = new Date(now);
+		switch (p) {
+			case '5D':
+				from.setDate(now.getDate() - 4);
+				break;
+			case '1M':
+				from.setDate(now.getDate() - 29);
+				break;
+			case '6M':
+				from.setDate(now.getDate() - 179);
+				break;
+			case 'YTD':
+				from = new Date(now.getFullYear(), 0, 1);
+				break;
+			case '1Y':
+				from.setDate(now.getDate() - 364);
+				break;
+			case '5Y':
+				from.setDate(now.getDate() - 1824);
+				break;
+			case 'ALL':
+				from.setDate(now.getDate() - (MAX_DAYS - 1));
+				break;
+		}
+		setDateRange({ from, to: now });
+		setPreset(p);
+	}, []);
+
+	const fromDate = dateRange.from ?? initialFrom;
+	const toDate = dateRange.to ?? initialTo;
+	// Server expects days from now back; compute from selected start
+	const daysForServer = React.useMemo(() => {
+		const now = new Date();
+		const start = fromDate ?? now;
+		const computed = Math.max(1, differenceInCalendarDays(now, start) + 1);
+		return Math.min(MAX_DAYS, computed);
+	}, [fromDate]);
+
+	const { data: history, isLoading } = api.watchlist.history.useQuery({ symbols, days: daysForServer, field: 'close' }, {
 		enabled: symbols.length > 0,
 	});
 
@@ -100,15 +161,21 @@ export default function WatchlistCharts() {
 	const seriesBySymbol: Record<string, SeriesDatum[]> = React.useMemo(() => {
 		const out: Record<string, SeriesDatum[]> = {};
 		if (history?.series && Object.keys(history.series).length > 0) {
+			const fromKey = format(fromDate, 'yyyy-MM-dd');
+			const toKey = format(toDate, 'yyyy-MM-dd');
 			for (const sym of symbols) {
-				const points = history.series[sym] ?? [];
-				out[sym] = points.map((p) => ({ date: new Date(p.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }), value: p.value }));
+				const points = (history.series[sym] ?? []).filter((p) => p.date >= fromKey && p.date <= toKey);
+				out[sym] = points.map((p) => ({
+					date: new Date(p.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }),
+					iso: p.date,
+					value: p.value
+				}));
 			}
 		} else {
 			for (const sym of symbols) out[sym] = generateSeries(sym);
 		}
 		return out;
-	}, [history, symbols]);
+	}, [history, symbols, fromDate, toDate]);
 
 	// Build combined dataset: one row per date with keys for each symbol
 	const combinedData: CombinedDatum[] = React.useMemo(() => {
@@ -119,7 +186,7 @@ export default function WatchlistCharts() {
 		if (!Number.isFinite(len) || len <= 0) return [];
 		const byIndex: CombinedDatum[] = [];
 		for (let i = 0; i < len; i++) {
-			const row: CombinedDatum = { date: per[0]!.data[i]!.date };
+			const row: CombinedDatum = { date: per[0]!.data[i]!.date, iso: per[0]!.data[i]!.iso ?? '' };
 			per.forEach(({ cssKey, data }) => {
 				row[cssKey] = data[i]?.value ?? 0;
 			});
@@ -128,19 +195,55 @@ export default function WatchlistCharts() {
 		return byIndex;
 	}, [symbols, cssKeys, seriesBySymbol]);
 
-	const toId = React.useCallback((sym: string) => sym.replace(/[^a-zA-Z0-9_-]/g, '_'), []);
-
 	return (
 		<Card>
-			<CardHeader className='flex flex-row items-center justify-between space-y-0'>
+			<CardHeader className='flex flex-col gap-3 space-y-0 sm:flex-row sm:items-center sm:justify-between'>
 				<CardTitle>Charts</CardTitle>
-				<div className='flex items-center gap-2'>
+				<div className='flex flex-wrap items-center gap-2'>
+					<Popover>
+						<PopoverTrigger asChild>
+							<Button variant="outline" className="h-8 gap-2">
+								<CalendarIcon className="h-4 w-4" />
+								{dateRange.from && dateRange.to ? (
+									<span>
+										{format(dateRange.from, 'MMM d, yyyy')} – {format(dateRange.to, 'MMM d, yyyy')}
+									</span>
+								) : (
+									<span>Pick date range</span>
+								)}
+							</Button>
+						</PopoverTrigger>
+						<PopoverContent className="w-auto p-0" align="end">
+							<div className="flex flex-wrap items-center gap-1 p-2 pb-0">
+								<Button size="sm" variant={preset === '5D' ? 'default' : 'ghost'} onClick={() => applyPreset('5D')}>5D</Button>
+								<Button size="sm" variant={preset === '1M' ? 'default' : 'ghost'} onClick={() => applyPreset('1M')}>1M</Button>
+								<Button size="sm" variant={preset === '6M' ? 'default' : 'ghost'} onClick={() => applyPreset('6M')}>6M</Button>
+								<Button size="sm" variant={preset === 'YTD' ? 'default' : 'ghost'} onClick={() => applyPreset('YTD')}>YTD</Button>
+								<Button size="sm" variant={preset === '1Y' ? 'default' : 'ghost'} onClick={() => applyPreset('1Y')}>1Y</Button>
+								<Button size="sm" variant={preset === '5Y' ? 'default' : 'ghost'} onClick={() => applyPreset('5Y')}>5Y</Button>
+								<Button size="sm" variant={preset === 'ALL' ? 'default' : 'ghost'} onClick={() => applyPreset('ALL')}>All</Button>
+							</div>
+							<Calendar
+								mode="range"
+								selected={dateRange}
+								onSelect={(r) => {
+									setDateRange(r ?? { from: initialFrom, to: initialTo });
+									setPreset(null);
+								}}
+								numberOfMonths={2}
+							/>
+						</PopoverContent>
+					</Popover>
 					<Label htmlFor='combined-chart'>Combined</Label>
 					<Switch checked={combined} id='combined-chart' onCheckedChange={setCombined} />
 				</div>
 			</CardHeader>
 			<CardContent className='space-y-4'>
-				{combined ? (
+				{symbols.length === 0 ? (
+					<div className="flex h-[220px] w-full items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground sm:h-[260px]">
+						Your watchlist is empty. Add symbols to see charts.
+					</div>
+				) : combined ? (
 					<ChartContainer config={chartConfig} className="aspect-auto h-[220px] w-full sm:h-[260px]">
 						<AreaChart data={combinedData} margin={{ top: 8, right: 16, left: 12, bottom: 8 }}>
 							<defs>
@@ -154,7 +257,20 @@ export default function WatchlistCharts() {
 							<CartesianGrid vertical={false} />
 							<XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} minTickGap={32} />
 							<YAxis tickLine={false} axisLine={false} width={40} />
-							<ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
+							<ChartTooltip
+								cursor={false}
+								content={
+									<ChartTooltipContent
+										indicator="dot"
+										labelFormatter={(_, pl) => {
+											const iso = (pl?.[0]?.payload as any)?.iso as string | undefined;
+											if (!iso) return (pl?.[0]?.payload as any)?.date ?? '';
+											const d = new Date(iso);
+											return format(d, 'MMM d, yyyy');
+										}}
+									/>
+								}
+							/>
 							{cssKeys.map((cssKey) => (
 								<Area
 									key={cssKey}
@@ -170,7 +286,7 @@ export default function WatchlistCharts() {
 						</AreaChart>
 					</ChartContainer>
 				) : (
-					<div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
+					<div className={`grid grid-cols-1 gap-4 ${symbols.length > 1 ? 'md:grid-cols-2' : ''}`}>
 						{symbols.map((sym, idx) => {
 							const series = seriesBySymbol[sym] ?? [];
 							const cssKey = cssKeys[idx]!;
@@ -188,7 +304,21 @@ export default function WatchlistCharts() {
 										</defs>
 										<CartesianGrid vertical={false} />
 										<XAxis dataKey='date' tickLine={false} axisLine={false} tickMargin={8} minTickGap={32} />
-										<ChartTooltip content={<ChartTooltipContent nameKey={sym} indicator="dot" />} cursor={false} />
+										<ChartTooltip
+											content={
+												<ChartTooltipContent
+													nameKey={sym}
+													indicator="dot"
+													labelFormatter={(_, pl) => {
+														const iso = (pl?.[0]?.payload as any)?.iso as string | undefined;
+														if (!iso) return (pl?.[0]?.payload as any)?.date ?? '';
+														const d = new Date(iso);
+														return format(d, 'MMM d, yyyy');
+													}}
+												/>
+											}
+											cursor={false}
+										/>
 											<Area dataKey='value' type='natural' fill={`url(#${id})`} stroke={`var(--color-${cssKey})`} strokeWidth={2} stackId='a' />
 										<ChartLegend content={<ChartLegendContent nameKey={sym} />} />
 									</AreaChart>

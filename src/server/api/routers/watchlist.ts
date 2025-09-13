@@ -70,7 +70,7 @@ export const watchlistRouter = createTRPCRouter({
 		.input(
 			z.object({
 				symbols: z.array(z.string()).optional(),
-				days: z.number().int().min(1).max(3650).default(90),
+				days: z.number().int().min(1).default(90),
 				field: z.enum(['open', 'high', 'low', 'close']).default('close')
 			})
 		)
@@ -84,8 +84,8 @@ export const watchlistRouter = createTRPCRouter({
 				});
 				symbols = Array.from(new Set(rows.map((r) => r.symbol.trim().toUpperCase())));
 			}
-			// small safety limit
-			symbols = symbols.slice(0, 12);
+				// small safety limit
+				symbols = (symbols ?? []).slice(0, 12);
 
 			const series: Record<string, Array<{ date: string; value: number }>> = {};
 			for (const sym of symbols) {
@@ -96,28 +96,28 @@ export const watchlistRouter = createTRPCRouter({
   |> sort(columns: ["_time"])`;
 
 				const arr: Array<{ date: string; value: number }> = [];
-				for await (const row of influxQueryApi.iterateRows(flux)) {
-					// row is [string[] values, TableMeta meta]
-					const values = Array.isArray(row) ? (row[0] as string[]) : (row as unknown as string[]);
-					const meta = Array.isArray(row) ? (row[1] as { columns: { label: string }[] }) : undefined;
-					// Fallback column indices for common labels
-					let timeIdx = -1;
-					let valueIdx = -1;
-					if (meta?.columns) {
-						for (let i = 0; i < meta.columns.length; i++) {
-							if (meta.columns[i]?.label === '_time') timeIdx = i;
-							if (meta.columns[i]?.label === '_value') valueIdx = i;
+					for await (const row of influxQueryApi.iterateRows(flux)) {
+						let values: unknown;
+						let tableMeta: any;
+						if (Array.isArray(row)) {
+							values = row[0];
+							tableMeta = row[1];
+						} else if (row && typeof row === 'object' && 'values' in (row as any)) {
+							values = (row as any).values;
+							tableMeta = (row as any).tableMeta;
 						}
+
+						if (!values || !tableMeta || typeof tableMeta.toObject !== 'function') continue;
+						const obj = tableMeta.toObject(values as string[]);
+						const t = (obj._time as string) || '';
+						const v = Number(obj._value);
+						if (!t) continue;
+						const d = t.slice(0, 10);
+						arr.push({ date: d, value: v });
 					}
-					if (timeIdx < 0) timeIdx = 0;
-					if (valueIdx < 0) valueIdx = values.length - 1;
-					const t = values[timeIdx] as string; // RFC3339
-					const v = Number(values[valueIdx]);
-					const d = t.slice(0, 10); // YYYY-MM-DD
-					arr.push({ date: d, value: v });
-				}
 				series[sym] = arr;
 			}
+			console.log('InfluxDB query result:', series);
 			return { series } as const;
 		})
 });
