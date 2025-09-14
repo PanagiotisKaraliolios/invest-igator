@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
 import { env } from '@/env';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
 import { influxQueryApi, measurement, symbolHasAnyData } from '@/server/influx';
@@ -61,6 +62,16 @@ export const watchlistRouter = createTRPCRouter({
 				select: { starred: true },
 			});
 			const next = input.starred ?? !current?.starred;
+
+			// Enforce max 5 starred items. Only check when transitioning to starred.
+			if (next && !current?.starred) {
+				const count = await ctx.db.watchlistItem.count({
+					where: { userId, starred: true },
+				});
+				if (count >= 5) {
+					throw new TRPCError({ code: 'BAD_REQUEST', message: 'You can only star up to 5 assets.' });
+				}
+			}
 			await ctx.db.watchlistItem.update({
 				where: { userId_symbol: { userId, symbol: input.symbol } },
 				data: { starred: next },
