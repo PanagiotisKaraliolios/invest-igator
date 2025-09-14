@@ -45,6 +45,8 @@ services:
   # One-off backfill job (optional): runs against your external Influx
   ingest-yahoo:
     image: docker.io/mrdeathrider/invest-igator:latest
+    # Mark as manual so it doesn't run/be created on normal `up -d`
+    profiles: ["manual"]
     env_file:
       - .env
     environment:
