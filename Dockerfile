@@ -14,7 +14,19 @@ COPY prisma ./prisma
 RUN bun install --frozen-lockfile
 
 FROM deps AS builder
-ENV SKIP_ENV_VALIDATION=1
+ENV SKIP_ENV_VALIDATION=1 \
+	EMAIL_FROM=dummy \
+	EMAIL_SERVER=dummy \
+	INFLUXDB_URL=http://localhost:8086 \
+	INFLUXDB_ORG=dummy \
+	INFLUXDB_BUCKET=dummy \
+	INFLUXDB_TOKEN=dummy \
+	DATABASE_URL=postgres://user:pass@localhost:5432/db \
+	AUTH_SECRET=dummy \
+	PASSWORD_PEPPER=dummy \
+	FINNHUB_API_URL=https://finnhub.io/api/v1 \
+	FINNHUB_API_KEY=dummy \
+	YAHOO_CHART_API_URL=https://query2.finance.yahoo.com/v8/finance/chart
 WORKDIR /app
 
 # Generate Prisma client

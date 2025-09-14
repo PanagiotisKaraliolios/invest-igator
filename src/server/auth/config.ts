@@ -81,21 +81,16 @@ export const authConfig = {
 		DiscordProvider({
 			// allowDangerousEmailAccountLinking: true,
 		}),
-		// Only enable Email provider when fully configured to avoid build-time errors
-		...(process.env.EMAIL_SERVER && process.env.EMAIL_FROM
-			? [
-					EmailProvider({
-						from: process.env.EMAIL_FROM,
-						/**
-						 * Before sending a magic link, ensure a user exists for the email.
-						 * If not, raise an error that includes a link to the signup page.
-						 */
-						sendVerificationRequest,
-						server: process.env.EMAIL_SERVER
-						// maxAge: 24 * 60 * 60, // How long email links are valid for (default 24h)
-					})
-				]
-			: []),
+		EmailProvider({
+			from: process.env.EMAIL_FROM,
+			/**
+			 * Before sending a magic link, ensure a user exists for the email.
+			 * If not, raise an error that includes a link to the signup page.
+			 */
+			sendVerificationRequest,
+			server: process.env.EMAIL_SERVER
+			// maxAge: 24 * 60 * 60, // How long email links are valid for (default 24h)
+		}),
 		Credentials({
 			authorize: async (credentials) => {
 				console.log('🚀 ~ config.ts:66 ~ credentials:', credentials);
