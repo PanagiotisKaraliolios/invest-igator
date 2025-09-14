@@ -1,0 +1,33 @@
+# Node
+after.lock
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-lock.yaml
+bun.lockb
+bun.lock
+
+# Next.js
+.next
+out
+.cache
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+
+# VCS
+.git
+.gitignore
+
+# OS/editor
+.DS_Store
+*.swp
+*.swo
+.vscode
+.idea
+
+# Prisma
+prisma/dev.db

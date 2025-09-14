@@ -1,0 +1,47 @@
+name: Ingest Yahoo (Daily)
+
+on:
+  schedule:
+    - cron: '15 2 * * *' # 02:15 UTC daily
+  workflow_dispatch: {}
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    env:
+      # Required env for runtime
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      INFLUXDB_URL: ${{ secrets.INFLUXDB_URL }}
+      INFLUXDB_BUCKET: ${{ secrets.INFLUXDB_BUCKET }}
+      INFLUXDB_ORG: ${{ secrets.INFLUXDB_ORG }}
+      INFLUXDB_TOKEN: ${{ secrets.INFLUXDB_TOKEN }}
+      PASSWORD_PEPPER: ${{ secrets.PASSWORD_PEPPER }}
+      AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+      AUTH_TRUST_HOST: true
+      FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+      FINNHUB_API_URL: https://finnhub.io/api/v1
+      ALPHAVANTAGE_API_KEY: placeholder
+      INFLUXDB_SETUP_USER: ignored
+      INFLUXDB_SETUP_PASSWORD: ignored
+      INFLUXDB_SETUP_ORG: ignored
+      INFLUXDB_SETUP_BUCKET: ignored
+      YAHOO_CHART_API_URL: https://query2.finance.yahoo.com/v8/finance/chart
+      SKIP_ENV_VALIDATION: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: '1.1.x'
+
+      - name: Install deps
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: bunx prisma generate
+
+      - name: Run ingest job
+        run: bun run src/server/jobs/ingest-yahoo.ts

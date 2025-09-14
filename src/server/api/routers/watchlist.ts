@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { env } from '@/env';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
-import { influxQueryApi, measurement } from '@/server/influx';
+import { influxQueryApi, measurement, symbolHasAnyData } from '@/server/influx';
+import { ingestYahooSymbol } from '@/server/jobs/yahoo-lib';
 
 export const watchlistRouter = createTRPCRouter({
 	add: protectedProcedure
@@ -15,18 +16,34 @@ export const watchlistRouter = createTRPCRouter({
 		)
 		.mutation(async ({ ctx, input }) => {
 			const userId = ctx.session.user.id;
+			let created = false;
+			let result: any;
 			try {
-				return await ctx.db.watchlistItem.create({
+				result = await ctx.db.watchlistItem.create({
 					data: { userId, ...input }
 				});
+				created = true;
 			} catch (e) {
 				// upsert-like behavior for unique(userId,symbol)
-						await ctx.db.watchlistItem.update({
-							data: { ...input },
-							where: { userId_symbol: { symbol: input.symbol, userId } }
-						});
-						return { alreadyExists: true } as const;
+				await ctx.db.watchlistItem.update({
+					data: { ...input },
+					where: { userId_symbol: { symbol: input.symbol, userId } }
+				});
+				result = { alreadyExists: true } as const;
 			}
+
+			// Fire-and-forget ingestion if symbol has no data yet
+			void (async () => {
+				try {
+					const sym = input.symbol.trim().toUpperCase();
+					const has = await symbolHasAnyData(sym);
+					if (!has) {
+						await ingestYahooSymbol(sym);
+					}
+				} catch {}
+			})();
+
+			return result ?? { alreadyExists: !created };
 		}),
 	list: protectedProcedure.query(async ({ ctx }) => {
 		const userId = ctx.session.user.id;

@@ -1,0 +1,86 @@
+version: "3.9"
+
+services:
+  app:
+    build: .
+    # Alternatively, use the pushed image from Docker Hub by setting DOCKER_IMAGE in .env
+    image: ${DOCKER_IMAGE:-invest-igator:local}
+    env_file:
+      - .env
+    environment:
+      # Compose wiring
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-investigator}
+      INFLUXDB_URL: http://influx:8086
+      AUTH_TRUST_HOST: "true"
+      NODE_ENV: production
+      # Useful to bypass strict env checks until you fill all required values
+      SKIP_ENV_VALIDATION: "1"
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+      influx:
+        condition: service_healthy
+    restart: unless-stopped
+
+  ingest-yahoo:
+    build: .
+    image: ${DOCKER_IMAGE:-invest-igator:local}
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-investigator}
+      INFLUXDB_URL: http://influx:8086
+      AUTH_TRUST_HOST: "true"
+      NODE_ENV: production
+      SKIP_ENV_VALIDATION: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+      influx:
+        condition: service_healthy
+    entrypoint: ["bun", "run", "src/server/jobs/ingest-yahoo.ts"]
+    restart: "no"
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-investigator}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-investigator}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  influx:
+    image: influxdb:2.7
+    ports:
+      - "8086:8086"
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: ${INFLUXDB_USERNAME:-admin}
+      DOCKER_INFLUXDB_INIT_PASSWORD: ${INFLUXDB_PASSWORD:-admin12345}
+      DOCKER_INFLUXDB_INIT_ORG: ${INFLUXDB_ORG}
+      DOCKER_INFLUXDB_INIT_BUCKET: ${INFLUXDB_BUCKET}
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUXDB_TOKEN}
+      DOCKER_INFLUXDB_INIT_RETENTION: 0
+    volumes:
+      - influx-data:/var/lib/influxdb2
+      - influx-config:/etc/influxdb2
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  influx-data:
+  influx-config:
