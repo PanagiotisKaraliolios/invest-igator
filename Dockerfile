@@ -9,6 +9,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-cert
 
 # Install dependencies with Bun
 COPY package.json bun.lock* ./
+# Ensure Prisma schema exists for postinstall prisma generate
+COPY prisma ./prisma
 RUN bun install --frozen-lockfile
 
 FROM deps AS builder
