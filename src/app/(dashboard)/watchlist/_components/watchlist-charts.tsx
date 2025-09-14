@@ -96,6 +96,20 @@ function toCssKey(sym: string) {
 	return sym.replace(/[^a-zA-Z0-9_-]/g, '_');
 }
 
+function percentChange(value?: number, base?: number): number | null {
+	if (base === undefined || base === null || base === 0) return null;
+	if (value === undefined || value === null || !Number.isFinite(Number(value))) return null;
+	return ((Number(value) - base) / base) * 100;
+}
+
+function changeClassForDelta(value?: number, base?: number) {
+	const pct = percentChange(value, base);
+	if (pct === null) return 'text-muted-foreground';
+	if (pct > 0) return 'text-emerald-500';
+	if (pct < 0) return 'text-red-500';
+	return 'text-muted-foreground';
+}
+
 export default function WatchlistCharts() {
 	const { data: items, isLoading: listLoading, error: listError } = api.watchlist.list.useQuery();
 	const watchlistSymbols = items?.map((i) => i.symbol) ?? [];
@@ -219,6 +233,18 @@ export default function WatchlistCharts() {
 		return downsample(byIndex, 600);
 	}, [symbols, cssKeys, seriesBySymbol]);
 
+	// Precompute baseline (first non-zero) per series for percent change in tooltip
+	const baselineByCssKey = React.useMemo(() => {
+		const map: Record<string, number> = {};
+		symbols.forEach((sym, idx) => {
+			const cssKey = cssKeys[idx]!;
+			const ser = seriesBySymbol[sym] ?? [];
+			const first = ser.find((d) => Number(d.value) > 0);
+			if (first && Number.isFinite(first.value)) map[cssKey] = Number(first.value);
+		});
+		return map;
+	}, [symbols, cssKeys, seriesBySymbol]);
+
 	return (
 		<Card>
 			<CardHeader className='flex flex-col gap-3 space-y-0 sm:flex-row sm:items-center sm:justify-between'>
@@ -329,6 +355,28 @@ export default function WatchlistCharts() {
 											const d = new Date(iso);
 											return format(d, 'MMM d, yyyy');
 										}}
+										formatter={(value: unknown, name: unknown) => {
+											const cssKey = String(name);
+											const numeric = Number(value as number);
+											const base = baselineByCssKey[cssKey];
+											const pct = base && base !== 0 && Number.isFinite(numeric)
+												? ` (${(((numeric - base) / base) * 100 >= 0 ? '+' : '') + (((numeric - base) / base) * 100).toFixed(2)}%)`
+												: '';
+											const colorVar = `var(--color-${cssKey})`;
+											const label = (chartConfig as any)?.[cssKey]?.label ?? cssKey;
+											return (
+												<div className="flex w-full items-center justify-between gap-3">
+													<div className="flex items-center gap-2">
+														<span className="h-2.5 w-2.5 rounded-[2px]" style={{ backgroundColor: colorVar }} />
+														<span className="text-muted-foreground">{String(label)}</span>
+													</div>
+													<div className="font-mono">
+														<span className="mr-1">{Number.isFinite(numeric) ? numeric.toLocaleString() : String(value)}</span>
+														<span className={changeClassForDelta(numeric, base)}>{pct}</span>
+													</div>
+												</div>
+											);
+										}}
 									/>
 								}
 							/>
@@ -389,6 +437,26 @@ export default function WatchlistCharts() {
 														if (!iso) return (pl?.[0]?.payload as any)?.date ?? '';
 														const d = new Date(iso);
 														return format(d, 'MMM d, yyyy');
+													}}
+													formatter={(value: unknown) => {
+														const numeric = Number(value as number);
+														const base = (series.find((d) => Number(d.value) > 0)?.value) ?? undefined;
+														const pctStr = base && base !== 0 && Number.isFinite(numeric)
+															? ` (${(((numeric - base) / base) * 100 >= 0 ? '+' : '') + (((numeric - base) / base) * 100).toFixed(2)}%)`
+															: '';
+														const colorVar = `var(--color-${cssKey})`;
+														return (
+															<div className="flex w-full items-center justify-between gap-3">
+																<div className="flex items-center gap-2">
+																	<span className="h-2.5 w-2.5 rounded-[2px]" style={{ backgroundColor: colorVar }} />
+																	<span className="text-muted-foreground">{sym}</span>
+																</div>
+																<div className="font-mono">
+																	<span className="mr-1">{Number.isFinite(numeric) ? numeric.toLocaleString() : String(value)}</span>
+																	<span className={changeClassForDelta(numeric, base)}>{pctStr}</span>
+																</div>
+															</div>
+														);
 													}}
 												/>
 											}

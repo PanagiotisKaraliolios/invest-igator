@@ -105,9 +105,9 @@ export const watchlistRouter = createTRPCRouter({
 
 			for (const sym of symbols) {
 				const flux = `from(bucket: "${env.INFLUXDB_BUCKET}")
-  |> range(start: -${days}d)
+  |> range(start: -${days+3}d)
   |> filter(fn: (r) => r._measurement == "${measurement}" and r._field == "${input.field}" and r.symbol == "${sym}")
-  |> aggregateWindow(every: ${every}, fn: median)
+  |> aggregateWindow(every: ${every}, fn: last, createEmpty: true)
   |> fill(usePrevious: true)
   |> keep(columns: ["_time", "_value"]) 
   |> sort(columns: ["_time"])`;
@@ -134,6 +134,7 @@ export const watchlistRouter = createTRPCRouter({
 					}
 				series[sym] = arr;
 			}
+			console.log(series);
 			return { series } as const;
 		})
 });
