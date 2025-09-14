@@ -75,6 +75,7 @@ export const authConfig = {
 	pages: {
 		error: '/auth-error',
 		signIn: '/login',
+		signOut: '/signout',
 		verifyRequest: '/verify-request' // (used for check email message)
 	},
 	providers: [

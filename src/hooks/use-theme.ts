@@ -12,7 +12,7 @@ function applyTheme(theme: Theme) {
 	else root.classList.remove('dark');
 }
 
-export function useThemeSwitch() {
+export function useThemeSwitch(isAuthenticated = false) {
 	const [mounted, setMounted] = useState(false);
 	const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const skipNextPersistRef = useRef(false);
@@ -20,13 +20,16 @@ export function useThemeSwitch() {
 	const setThemeMutation = api.theme.setTheme.useMutation();
 	const mutateRef = useRef<(t: Theme) => void>(() => {});
 	useEffect(() => {
-		mutateRef.current = (t: Theme) => setThemeMutation.mutate(t);
-	}, [setThemeMutation]);
-	const getThemeQuery = api.theme.getTheme.useQuery(undefined, {
-		refetchOnWindowFocus: false,
-		retry: false,
-		staleTime: 5 * 60 * 1000
-	});
+			mutateRef.current = (t: Theme) => {
+				if (isAuthenticated) setThemeMutation.mutate(t)
+			};
+		}, [setThemeMutation, isAuthenticated]);
+		const getThemeQuery = api.theme.getTheme.useQuery(undefined, {
+			enabled: isAuthenticated,
+			refetchOnWindowFocus: false,
+			retry: false,
+			staleTime: 5 * 60 * 1000
+		});
 
 	// Initialize from SSR-applied class which comes from the session
 	const [theme, _setTheme] = useState<Theme>(() => {
@@ -47,15 +50,17 @@ export function useThemeSwitch() {
 			return;
 		}
 
-		if (debounceRef.current) clearTimeout(debounceRef.current);
-		debounceRef.current = setTimeout(() => {
-			mutateRef.current(theme);
-		}, 3000);
+			if (isAuthenticated) {
+				if (debounceRef.current) clearTimeout(debounceRef.current);
+				debounceRef.current = setTimeout(() => {
+					mutateRef.current(theme);
+				}, 3000);
+			}
 
 		return () => {
 			if (debounceRef.current) clearTimeout(debounceRef.current);
 		};
-	}, [theme]);
+		}, [theme, isAuthenticated]);
 
 	const setTheme = useCallback((t: Theme) => {
 		_setTheme(t);
@@ -69,14 +74,14 @@ export function useThemeSwitch() {
 
 	// Initialize from DB via API once; align cookie and UI without re-persisting
 	useEffect(() => {
-		if (!getThemeQuery.isSuccess || initializedFromRemoteRef.current) return;
+		if (!isAuthenticated || !getThemeQuery.isSuccess || initializedFromRemoteRef.current) return;
 		initializedFromRemoteRef.current = true;
 		const rt = getThemeQuery.data?.theme;
 		if (rt && rt !== theme) {
 			skipNextPersistRef.current = true;
 			setTheme(rt);
 		}
-	}, [getThemeQuery.isSuccess, getThemeQuery.data?.theme, theme, setTheme]);
+		}, [isAuthenticated, getThemeQuery.isSuccess, getThemeQuery.data?.theme, theme, setTheme]);
 
 	const isLight = useMemo(() => theme === 'light', [theme]);
 	const setIsLight = useCallback(
