@@ -11,12 +11,12 @@ services:
       # Keep this true until all envs are properly set
       SKIP_ENV_VALIDATION: "1"
       # IMPORTANT: do NOT override INFLUXDB_URL here; it comes from .env and points to your external Influx
-    # Ofelia will exec the ingest inside this container on a cron schedule
+      # Ofelia will exec the ingest inside this container on a cron schedule
     labels:
       ofelia.enabled: "true"
       # Run daily at 02:15 UTC (same as previous GH Actions cron)
-      ofelia.job-exec.ingest-yahoo.schedule: "15 2 * * *"
-      ofelia.job-exec.ingest-yahoo.command: "bun run src/server/jobs/ingest-yahoo.ts"
+      ofelia.job-exec.ingest-yahoo.schedule: 15 2 * * *
+      ofelia.job-exec.ingest-yahoo.command: bun run src/server/jobs/ingest-yahoo.ts
       ofelia.job-exec.ingest-yahoo.no-overlap: "true"
     ports:
       - 3311:3000
@@ -42,27 +42,6 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
-  # One-off backfill job (optional): runs against your external Influx
-  ingest-yahoo:
-    image: docker.io/mrdeathrider/invest-igator:latest
-    # Mark as manual so it doesn't run/be created on normal `up -d`
-    profiles: ["manual"]
-    env_file:
-      - .env
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-investigator}
-      AUTH_TRUST_HOST: "true"
-      NODE_ENV: production
-      SKIP_ENV_VALIDATION: "1"
-      # Again, do not override INFLUXDB_URL here
-    depends_on:
-      db:
-        condition: service_healthy
-    entrypoint:
-      - bun
-      - run
-      - src/server/jobs/ingest-yahoo.ts
-    restart: no
   # Scheduler service to run jobs inside containers using labels above
   scheduler:
     image: mcuadros/ofelia:latest
