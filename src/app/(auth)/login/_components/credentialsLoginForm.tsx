@@ -1,21 +1,21 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { signIn } from "next-auth/react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { signIn } from 'next-auth/react';
+import { useState } from 'react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export function CredentialsLoginForm() {
 	const router = useRouter();
 	const sp = useSearchParams();
-	const callbackUrl = sp.get("callbackUrl") ?? "/dashboard";
+	const callbackUrl = sp.get('callbackUrl') ?? '/dashboard';
 
-	const [email, setEmail] = useState("");
-	const [password, setPassword] = useState("");
+	const [email, setEmail] = useState('');
+	const [password, setPassword] = useState('');
 	const [showPassword, setShowPassword] = useState(false);
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -24,19 +24,19 @@ export function CredentialsLoginForm() {
 		e.preventDefault();
 		setError(null);
 		if (!email || !password) {
-			setError("Email and password are required.");
+			setError('Email and password are required.');
 			return;
 		}
 		setSubmitting(true);
 		try {
-			const result = await signIn("credentials", {
+			const result = await signIn('credentials', {
 				email: email.trim().toLowerCase(),
 				password,
-				redirect: false,
+				redirect: false
 				// callbackUrl,
 			});
 
-			console.log("credentials signIn result:", result);
+			console.log('credentials signIn result:', result);
 
 			// Success: NextAuth returns a URL when redirect is false. Fallback to callbackUrl.
 			if (!result?.error && (result?.url || result?.ok)) {
@@ -47,12 +47,12 @@ export function CredentialsLoginForm() {
 			// Normalize error message
 			const code = result?.error;
 			const message =
-				code === "CredentialsSignin" || code === "Invalid Email or Password"
-					? "Invalid email or password."
-					: code || "Invalid email or password.";
+				code === 'CredentialsSignin' || code === 'Invalid Email or Password'
+					? 'Invalid email or password.'
+					: code || 'Invalid email or password.';
 			setError(message);
 		} catch (err) {
-			setError("Something went wrong. Please try again.");
+			setError('Something went wrong. Please try again.');
 		} finally {
 			setSubmitting(false);
 		}
@@ -60,57 +60,54 @@ export function CredentialsLoginForm() {
 
 	return (
 		<form onSubmit={onSubmit}>
-			<div className="grid gap-6">
+			<div className='grid gap-6'>
 				{error ? (
-					<Alert variant="destructive">
+					<Alert variant='destructive'>
 						<AlertTitle>Sign-in failed</AlertTitle>
 						<AlertDescription>{error}</AlertDescription>
 					</Alert>
 				) : null}
-				<div className="grid gap-3">
-					<Label htmlFor="cred-email">Email</Label>
+				<div className='grid gap-3'>
+					<Label htmlFor='cred-email'>Email</Label>
 					<Input
-						id="cred-email"
-						type="email"
-						placeholder="m@example.com"
-						value={email}
-						onChange={(e) => setEmail(e.target.value)}
 						disabled={submitting}
+						id='cred-email'
+						onChange={(e) => setEmail(e.target.value)}
+						placeholder='m@example.com'
 						required
+						type='email'
+						value={email}
 					/>
 				</div>
-				<div className="grid gap-3">
-					<div className="flex items-center">
-						<Label htmlFor="cred-password">Password</Label>
-						<a
-							href="/forgot-password"
-							className="ml-auto text-sm underline-offset-4 hover:underline"
-						>
+				<div className='grid gap-3'>
+					<div className='flex items-center'>
+						<Label htmlFor='cred-password'>Password</Label>
+						<a className='ml-auto text-sm underline-offset-4 hover:underline' href='/forgot-password'>
 							Forgot your password?
 						</a>
 					</div>
-					<div className="relative">
+					<div className='relative'>
 						<Input
-							id="cred-password"
-							type={showPassword ? "text" : "password"}
-							value={password}
-							onChange={(e) => setPassword(e.target.value)}
+							className='pr-10'
 							disabled={submitting}
+							id='cred-password'
+							onChange={(e) => setPassword(e.target.value)}
 							required
-							className="pr-10"
+							type={showPassword ? 'text' : 'password'}
+							value={password}
 						/>
 						<button
-							type="button"
-							className="absolute inset-y-0 right-2 flex items-center text-muted-foreground hover:text-foreground"
+							aria-label={showPassword ? 'Hide password' : 'Show password'}
+							className='absolute inset-y-0 right-2 flex items-center text-muted-foreground hover:text-foreground'
 							onClick={() => setShowPassword((s) => !s)}
-							aria-label={showPassword ? "Hide password" : "Show password"}
+							type='button'
 						>
-							{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+							{showPassword ? <EyeOff className='h-4 w-4' /> : <Eye className='h-4 w-4' />}
 						</button>
 					</div>
 				</div>
-				<Button type="submit" className="w-full" disabled={submitting}>
-					{submitting ? "Logging in…" : "Login"}
+				<Button className='w-full' disabled={submitting} type='submit'>
+					{submitting ? 'Logging in…' : 'Login'}
 				</Button>
 			</div>
 		</form>
