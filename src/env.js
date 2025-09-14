@@ -39,7 +39,8 @@ export const env = createEnv({
 		NODE_ENV: process.env.NODE_ENV,
 		PASSWORD_PEPPER: process.env.PASSWORD_PEPPER,
 		POLYGON_API_KEY: process.env.POLYGON_API_KEY,
-		POLYGON_API_URL: process.env.POLYGON_API_URL
+		POLYGON_API_URL: process.env.POLYGON_API_URL,
+		YAHOO_CHART_API_URL: process.env.YAHOO_CHART_API_URL
 	},
 	/**
 	 * Specify your server-side environment variables schema here. This way you can ensure the app
@@ -64,7 +65,8 @@ export const env = createEnv({
 		NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 		PASSWORD_PEPPER: z.string(),
 		POLYGON_API_KEY: z.string(),
-		POLYGON_API_URL: z.string().default('https://api.polygon.io')
+		POLYGON_API_URL: z.string().default('https://api.polygon.io'),
+		YAHOO_CHART_API_URL: z.string().default('https://query2.finance.yahoo.com/v8/finance/chart')
 	},
 	/**
 	 * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

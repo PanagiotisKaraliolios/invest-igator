@@ -27,8 +27,8 @@ import { api } from '@/trpc/react';
 type CombinedDatum = {
 	date: string;
 	iso: string;
-	// dynamic keys per symbol
-	[cssKey: string]: string | number;
+	// dynamic keys per symbol; allow null/undefined for "no data" points
+	[cssKey: string]: string | number | null | undefined;
 };
 
 type SeriesDatum = { date: string; iso?: string; value: number };
@@ -112,10 +112,11 @@ function changeClassForDelta(value?: number, base?: number) {
 
 export default function WatchlistCharts() {
 	const { data: items, isLoading: listLoading, error: listError } = api.watchlist.list.useQuery();
-	const watchlistSymbols = items?.map((i) => i.symbol) ?? [];
-	const symbols = watchlistSymbols.slice(0, 6);
+	const starredSymbols = (items ?? []).filter((i) => i.starred).map((i) => i.symbol);
+	const symbols = starredSymbols.slice(0, 5);
 
-	const MAX_DAYS = 7300; // ~20 years
+	// Max 50 years of daily data
+	const MAX_DAYS = 365 * 50;
 
 	// Date range state (default: last 180 days)
 	const initialTo = React.useMemo(() => new Date(), []);
@@ -219,14 +220,18 @@ export default function WatchlistCharts() {
 	const combinedData: CombinedDatum[] = React.useMemo(() => {
 		const per = symbols.map((s, idx) => ({ cssKey: cssKeys[idx]!, data: seriesBySymbol[s] ?? [] }));
 		if (per.length === 0) return [];
-		// Align by index; assume equal length for simplicity; using last series length
-		const len = Math.min(...per.map((p) => p.data.length).filter((n) => n > 0));
-		if (!Number.isFinite(len) || len <= 0) return [];
+		// Align by index using the shortest non-empty series
+		const nonEmptyLengths = per.map((p) => p.data.length).filter((n) => n > 0);
+		if (nonEmptyLengths.length === 0) return [];
+		const len = Math.min(...nonEmptyLengths);
+		const base = per.find((p) => p.data.length > 0);
+		if (!base) return [];
 		const byIndex: CombinedDatum[] = [];
 		for (let i = 0; i < len; i++) {
-			const row: CombinedDatum = { date: per[0]!.data[i]!.date, iso: per[0]!.data[i]!.iso ?? '' };
+			const row: CombinedDatum = { date: base.data[i]!.date, iso: base.data[i]!.iso ?? '' };
 			per.forEach(({ cssKey, data }) => {
-				row[cssKey] = data[i]?.value ?? 0;
+				// Use null for missing values so the area is not drawn and tooltips can show "No data".
+				row[cssKey] = Number.isFinite(data[i]?.value as number) ? (data[i] as any)?.value : null;
 			});
 			byIndex.push(row);
 		}
@@ -315,7 +320,9 @@ export default function WatchlistCharts() {
 					)
 				) : symbols.length === 0 ? (
 					<div className="flex h-[220px] w-full items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground sm:h-[260px]">
-						Your watchlist is empty. Add symbols to see charts.
+						{(!items || items.length === 0)
+							? 'Your watchlist is empty. Add symbols to see charts.'
+							: 'No starred symbols. Star up to 5 to show charts.'}
 					</div>
 				) : combined ? (
 					<ChartContainer config={chartConfig} className="aspect-auto h-[220px] w-full sm:h-[260px]">
@@ -357,9 +364,10 @@ export default function WatchlistCharts() {
 										}}
 										formatter={(value: unknown, name: unknown) => {
 											const cssKey = String(name);
-											const numeric = Number(value as number);
+												const isMissing = value === null || value === undefined || Number(value as number) === 0;
+												const numeric = isMissing ? NaN : Number(value as number);
 											const base = baselineByCssKey[cssKey];
-											const pct = base && base !== 0 && Number.isFinite(numeric)
+												const pct = !isMissing && base && base !== 0 && Number.isFinite(numeric)
 												? ` (${(((numeric - base) / base) * 100 >= 0 ? '+' : '') + (((numeric - base) / base) * 100).toFixed(2)}%)`
 												: '';
 											const colorVar = `var(--color-${cssKey})`;
@@ -368,12 +376,17 @@ export default function WatchlistCharts() {
 												<div className="flex w-full items-center justify-between gap-3">
 													<div className="flex items-center gap-2">
 														<span className="h-2.5 w-2.5 rounded-[2px]" style={{ backgroundColor: colorVar }} />
-														<span className="text-muted-foreground">{String(label)}</span>
+															<span className="text-muted-foreground">{String(label)}</span>
+															{isMissing && <span className="text-xs text-muted-foreground">(No data)</span>}
 													</div>
-													<div className="font-mono">
-														<span className="mr-1">{Number.isFinite(numeric) ? numeric.toLocaleString() : String(value)}</span>
-														<span className={changeClassForDelta(numeric, base)}>{pct}</span>
-													</div>
+														<div className="font-mono">
+															{!isMissing && (
+																<>
+																	<span className="mr-1">{Number.isFinite(numeric) ? numeric.toLocaleString() : String(value)}</span>
+																	<span className={changeClassForDelta(numeric, base)}>{pct}</span>
+																</>
+															)}
+														</div>
 												</div>
 											);
 										}}
@@ -388,7 +401,8 @@ export default function WatchlistCharts() {
 									fill={`url(#fill-${cssKey})`}
 									stroke={`var(--color-${cssKey})`}
 									strokeWidth={2}
-									isAnimationActive={combinedData.length < 800}
+									connectNulls
+								// isAnimationActive={combinedData.length < 800}
 								/>
 							))}
 							<ChartLegend content={<ChartLegendContent />} />
@@ -402,70 +416,87 @@ export default function WatchlistCharts() {
 							const cfg: ChartConfig = { [cssKey]: { label: sym, color: colorTokens[idx % colorTokens.length] } };
 							const id = `fill-${cssKey}`;
 							return (
-								<div key={sym}>
+								<div key={sym} className="relative">
 									<ChartContainer config={cfg} className="aspect-auto h-[150px] w-full sm:h-[200px]">
-									<AreaChart data={series} margin={{ top: 8, right: 16, left: 12, bottom: 8 }}>
-										<defs>
-										<linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
-											<stop offset="5%" stopColor={`var(--color-${cssKey})`} stopOpacity={0.8} />
-											<stop offset="95%" stopColor={`var(--color-${cssKey})`} stopOpacity={0.1} />
-											</linearGradient>
-										</defs>
-										<CartesianGrid vertical={false} />
-										<YAxis tickLine={false} axisLine={false} width={40} />
-										<XAxis
-											dataKey='iso'
-											tickFormatter={(iso) => {
-												try {
-													return format(new Date(iso as string), 'MMM d, yyyy');
-												} catch {
-													return String(iso ?? '');
+										<AreaChart data={series} margin={{ top: 8, right: 16, left: 12, bottom: 8 }}>
+											<defs>
+												<linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+													<stop offset="5%" stopColor={`var(--color-${cssKey})`} stopOpacity={0.8} />
+													<stop offset="95%" stopColor={`var(--color-${cssKey})`} stopOpacity={0.1} />
+												</linearGradient>
+											</defs>
+											<CartesianGrid vertical={false} />
+											<YAxis tickLine={false} axisLine={false} width={40} />
+											<XAxis
+												dataKey='iso'
+												tickFormatter={(iso) => {
+													try {
+														return format(new Date(iso as string), 'MMM d, yyyy');
+													} catch {
+														return String(iso ?? '');
+													}
+												}}
+												tickLine={false}
+												axisLine={false}
+												tickMargin={8}
+												minTickGap={32}
+											/>
+											<ChartTooltip
+												content={
+													<ChartTooltipContent
+														nameKey={sym}
+														indicator="dot"
+														labelFormatter={(_, pl) => {
+															const iso = (pl?.[0]?.payload as any)?.iso as string | undefined;
+															if (!iso) return (pl?.[0]?.payload as any)?.date ?? '';
+															const d = new Date(iso);
+															return format(d, 'MMM d, yyyy');
+														}}
+														formatter={(value: unknown) => {
+																const isMissing = value === null || value === undefined || Number(value as number) === 0;
+																const numeric = isMissing ? NaN : Number(value as number);
+															const base = (series.find((d) => Number(d.value) > 0)?.value) ?? undefined;
+															const pctStr = !isMissing && base && base !== 0 && Number.isFinite(numeric)
+																? ` (${(((numeric - base) / base) * 100 >= 0 ? '+' : '') + (((numeric - base) / base) * 100).toFixed(2)}%)`
+																: '';
+															const colorVar = `var(--color-${cssKey})`;
+															return (
+																<div className="flex w-full items-center justify-between gap-3">
+																	<div className="flex items-center gap-2">
+																		<span className="h-2.5 w-2.5 rounded-[2px]" style={{ backgroundColor: colorVar }} />
+																			<span className="text-muted-foreground">{sym}</span>
+																			{isMissing && <span className="text-xs text-muted-foreground">(No data)</span>}
+																	</div>
+																		<div className="font-mono">
+																			{!isMissing && (
+																				<>
+																					<span className="mr-1">{Number.isFinite(numeric) ? numeric.toLocaleString() : String(value)}</span>
+																					<span className={changeClassForDelta(numeric, base)}>{pctStr}</span>
+																				</>
+																			)}
+																		</div>
+																</div>
+															);
+														}}
+													/>
 												}
-											}}
-											tickLine={false}
-											axisLine={false}
-											tickMargin={8}
-											minTickGap={32}
-										/>
-										<ChartTooltip
-											content={
-												<ChartTooltipContent
-													nameKey={sym}
-													indicator="dot"
-													labelFormatter={(_, pl) => {
-														const iso = (pl?.[0]?.payload as any)?.iso as string | undefined;
-														if (!iso) return (pl?.[0]?.payload as any)?.date ?? '';
-														const d = new Date(iso);
-														return format(d, 'MMM d, yyyy');
-													}}
-													formatter={(value: unknown) => {
-														const numeric = Number(value as number);
-														const base = (series.find((d) => Number(d.value) > 0)?.value) ?? undefined;
-														const pctStr = base && base !== 0 && Number.isFinite(numeric)
-															? ` (${(((numeric - base) / base) * 100 >= 0 ? '+' : '') + (((numeric - base) / base) * 100).toFixed(2)}%)`
-															: '';
-														const colorVar = `var(--color-${cssKey})`;
-														return (
-															<div className="flex w-full items-center justify-between gap-3">
-																<div className="flex items-center gap-2">
-																	<span className="h-2.5 w-2.5 rounded-[2px]" style={{ backgroundColor: colorVar }} />
-																	<span className="text-muted-foreground">{sym}</span>
-																</div>
-																<div className="font-mono">
-																	<span className="mr-1">{Number.isFinite(numeric) ? numeric.toLocaleString() : String(value)}</span>
-																	<span className={changeClassForDelta(numeric, base)}>{pctStr}</span>
-																</div>
-															</div>
-														);
-													}}
-												/>
-											}
-											cursor={false}
-										/>
-											<Area dataKey='value' type='monotone' fill={`url(#${id})`} stroke={`var(--color-${cssKey})`} strokeWidth={2} isAnimationActive={(series?.length ?? 0) < 800} />
-										<ChartLegend content={<ChartLegendContent nameKey={sym} />} />
-									</AreaChart>
+												cursor={false}
+											/>
+											<Area
+												dataKey='value'
+												type='monotone'
+												fill={`url(#${id})`}
+												stroke={`var(--color-${cssKey})`}
+												strokeWidth={2}
+												connectNulls
+												// isAnimationActive={(series?.length ?? 0) < 800}
+											/>
+											<ChartLegend content={<ChartLegendContent nameKey={sym} />} />
+										</AreaChart>
 									</ChartContainer>
+									{series.length === 0 && (
+										<div className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">No data</div>
+									)}
 									<div className="mt-1 text-center text-xs text-muted-foreground">{sym}</div>
 								</div>
 							);

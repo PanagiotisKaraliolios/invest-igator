@@ -90,6 +90,7 @@ model WatchlistItem {
     description   String?
     type          String?
     createdAt     DateTime @default(now())
+    starred       Boolean  @default(false)
 
     @@unique([userId, symbol])
     @@index([userId])

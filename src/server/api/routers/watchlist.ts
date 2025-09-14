@@ -31,10 +31,25 @@ export const watchlistRouter = createTRPCRouter({
 	list: protectedProcedure.query(async ({ ctx }) => {
 		const userId = ctx.session.user.id;
 		return ctx.db.watchlistItem.findMany({
-			orderBy: { createdAt: 'desc' },
+			orderBy: [{ starred: 'desc' }, { createdAt: 'desc' }],
 			where: { userId }
 		});
 	}),
+	toggleStar: protectedProcedure
+		.input(z.object({ symbol: z.string().min(1), starred: z.boolean().optional() }))
+		.mutation(async ({ ctx, input }) => {
+			const userId = ctx.session.user.id;
+			const current = await ctx.db.watchlistItem.findUnique({
+				where: { userId_symbol: { userId, symbol: input.symbol } },
+				select: { starred: true },
+			});
+			const next = input.starred ?? !current?.starred;
+			await ctx.db.watchlistItem.update({
+				where: { userId_symbol: { userId, symbol: input.symbol } },
+				data: { starred: next },
+			});
+			return { symbol: input.symbol, starred: next } as const;
+		}),
 
 	remove: protectedProcedure.input(z.object({ symbol: z.string().min(1) })).mutation(async ({ ctx, input }) => {
 		const userId = ctx.session.user.id;
@@ -80,11 +95,12 @@ export const watchlistRouter = createTRPCRouter({
 			if (!symbols) {
 				const rows = await ctx.db.watchlistItem.findMany({
 					where: { userId },
-					select: { symbol: true }
+					select: { symbol: true },
+					orderBy: [{ starred: 'desc' }, { createdAt: 'desc' }],
 				});
-				symbols = Array.from(new Set(rows.map((r) => r.symbol.trim().toUpperCase())));
+				symbols = Array.from(new Set(rows.map((r) => r.symbol.trim().toUpperCase()))).slice(0, 5);
 			}
-				// small safety limit
+				// safety limit
 				symbols = (symbols ?? []).slice(0, 12);
 
 			const series: Record<string, Array<{ date: string; value: number }>> = {};
@@ -134,7 +150,6 @@ export const watchlistRouter = createTRPCRouter({
 					}
 				series[sym] = arr;
 			}
-			console.log(series);
 			return { series } as const;
 		})
 });

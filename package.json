@@ -3,9 +3,9 @@
 		"initVersion": "7.39.3"
 	},
 	"dependencies": {
-		"@influxdata/influxdb-client": "^1.35.0",
 		"@auth/prisma-adapter": "^2.7.2",
 		"@hookform/resolvers": "^5.2.1",
+		"@influxdata/influxdb-client": "^1.35.0",
 		"@prisma/client": "^6.5.0",
 		"@radix-ui/react-accordion": "^1.2.12",
 		"@radix-ui/react-alert-dialog": "^1.1.15",
@@ -91,11 +91,12 @@
 		"db:push": "prisma db push",
 		"db:studio": "prisma studio",
 		"dev": "next dev --turbo",
+		"ingest:alpha": "bun run src/server/jobs/ingest-alpha.ts",
+		"ingest:yahoo": "bun run src/server/jobs/ingest-yahoo.ts",
 		"postinstall": "prisma generate",
 		"preview": "next build && next start",
 		"start": "next start",
-		"typecheck": "tsc --noEmit",
-		"ingest:alpha": "bun run src/server/jobs/ingest-alpha.ts"
+		"typecheck": "tsc --noEmit"
 	},
 	"type": "module",
 	"version": "0.1.0"
