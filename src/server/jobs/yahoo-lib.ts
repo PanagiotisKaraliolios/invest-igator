@@ -1,11 +1,20 @@
 import { env } from '@/env';
-import { buildPoint, type DailyBar, influxWriteApi, symbolHasAnyData } from '@/server/influx';
+import { buildPoint, type DailyBar, influxWriteApi, Point, symbolHasAnyData } from '@/server/influx';
 
 interface YahooChartResponse {
 	chart?: {
 		result?: Array<{
 			meta?: { gmtoffset?: number };
 			timestamp?: number[];
+			events?: {
+				dividends?: Record<string, { amount?: number; date?: number }>;
+				splits?: Record<
+					string,
+					{ date?: number; numerator?: number; denominator?: number; splitRatio?: number }
+				>;
+				capitalGains?: Record<string, { amount?: number; date?: number }>;
+				// other event types may appear; we ignore unknowns safely
+			};
 			indicators?: {
 				quote?: Array<{
 					open?: Array<number | null>;
@@ -33,6 +42,10 @@ function toDateStringFromEpochSec(epochSec: number, gmtoffset?: number): string 
 	return `${y}-${m}-${day}`;
 }
 
+type DividendEvent = { date: string; amount: number };
+type SplitEvent = { date: string; numerator: number; denominator: number; ratio: number };
+type CapitalGainEvent = { date: string; amount: number };
+
 export async function fetchYahooDaily(
 	symbol: string,
 	options?: {
@@ -42,12 +55,13 @@ export async function fetchYahooDaily(
 		includePrePost?: boolean;
 		events?: string;
 	}
-): Promise<DailyBar[]> {
+): Promise<{ bars: DailyBar[]; dividends: DividendEvent[]; splits: SplitEvent[]; capitalGains: CapitalGainEvent[] }> {
 	const base = env.YAHOO_CHART_API_URL.replace(/\/$/, '');
 	const url = new URL(`${base}/${encodeURIComponent(symbol)}`);
 	url.searchParams.set('interval', options?.interval ?? '1d');
 	url.searchParams.set('includePrePost', String(options?.includePrePost ?? true));
-	url.searchParams.set('events', options?.events ?? 'div|split|earn');
+	url.searchParams.set('formatted', 'true');
+	url.searchParams.set('events', options?.events ?? 'capitalGain|div|split|earn');
 	url.searchParams.set('lang', 'en-US');
 	url.searchParams.set('region', 'US');
 	url.searchParams.set('source', 'invest-igator');
@@ -64,32 +78,94 @@ export async function fetchYahooDaily(
 	if (!rsp.ok) throw new Error(`Yahoo chart HTTP ${rsp.status} for ${symbol}`);
 	const json = (await rsp.json()) as YahooChartResponse;
 	const res = json.chart?.result?.[0];
-	if (!res || !res.timestamp || !res.indicators?.quote?.[0]) return [];
+	if (!res) return { bars: [], capitalGains: [], dividends: [], splits: [] };
 
-	const quote = res.indicators.quote[0]!;
+	const quote = res.indicators?.quote?.[0];
 	const gmtoffset = res.meta?.gmtoffset;
-	const timestamps = res.timestamp ?? [];
 	const bars: DailyBar[] = [];
-	for (let i = 0; i < timestamps.length; i++) {
-		const ts = timestamps[i]!;
-		const o = quote.open?.[i] ?? null;
-		const h = quote.high?.[i] ?? null;
-		const l = quote.low?.[i] ?? null;
-		const c = quote.close?.[i] ?? null;
-		const v = quote.volume?.[i] ?? 0; // default missing volume to 0
-		if (o == null || h == null || l == null || c == null) continue;
-		if ([o, h, l, c].some((n) => Number.isNaN(Number(n)))) continue;
-		bars.push({
-			close: Number(c),
-			high: Number(h),
-			low: Number(l),
-			open: Number(o),
-			time: toDateStringFromEpochSec(ts, gmtoffset ?? 0),
-			volume: Math.max(0, Math.round(Number(v ?? 0)))
+	if (quote && res.timestamp) {
+		const timestamps = res.timestamp ?? [];
+		for (let i = 0; i < timestamps.length; i++) {
+			const ts = timestamps[i]!;
+			const o = quote.open?.[i] ?? null;
+			const h = quote.high?.[i] ?? null;
+			const l = quote.low?.[i] ?? null;
+			const c = quote.close?.[i] ?? null;
+			const v = quote.volume?.[i] ?? 0; // default missing volume to 0
+			if (o == null || h == null || l == null || c == null) continue;
+			if ([o, h, l, c].some((n) => Number.isNaN(Number(n)))) continue;
+			bars.push({
+				close: Number(c),
+				high: Number(h),
+				low: Number(l),
+				open: Number(o),
+				time: toDateStringFromEpochSec(ts, gmtoffset ?? 0),
+				volume: Math.max(0, Math.round(Number(v ?? 0)))
+			});
+		}
+		bars.sort((a, b) => a.time.localeCompare(b.time));
+	}
+
+	const dividends: DividendEvent[] = [];
+	const dividendsMap = res.events?.dividends ?? {};
+	for (const key of Object.keys(dividendsMap)) {
+		const ev = dividendsMap[key]!;
+		const amount = Number(ev.amount ?? Number.NaN);
+		const dateSec = ev.date ?? Number(key);
+		if (!Number.isFinite(amount) || !Number.isFinite(dateSec)) continue;
+		dividends.push({
+			amount,
+			date: toDateStringFromEpochSec(dateSec, gmtoffset ?? 0)
 		});
 	}
-	bars.sort((a, b) => a.time.localeCompare(b.time));
-	return bars;
+	dividends.sort((a, b) => a.date.localeCompare(b.date));
+
+	const splits: SplitEvent[] = [];
+	const splitsMap = res.events?.splits ?? {};
+	for (const key of Object.keys(splitsMap)) {
+		const ev = splitsMap[key]!;
+		const dateSec = ev.date ?? Number(key);
+		const numerator = Number(ev.numerator ?? Number.NaN);
+		const denominator = Number(ev.denominator ?? Number.NaN);
+		// Some payloads include splitRatio; compute ratio if missing and numbers are valid
+		const ratio = Number(
+			Number.isFinite(ev.splitRatio as number)
+				? (ev.splitRatio as number)
+				: Number.isFinite(numerator) && Number.isFinite(denominator) && denominator !== 0
+					? numerator / denominator
+					: Number.NaN
+		);
+		if (
+			!Number.isFinite(dateSec) ||
+			!Number.isFinite(numerator) ||
+			!Number.isFinite(denominator) ||
+			!Number.isFinite(ratio)
+		)
+			continue;
+		splits.push({
+			date: toDateStringFromEpochSec(dateSec, gmtoffset ?? 0),
+			denominator,
+			numerator,
+			ratio
+		});
+	}
+	splits.sort((a, b) => a.date.localeCompare(b.date));
+
+	const capitalGains: CapitalGainEvent[] = [];
+	const capMap = res.events?.capitalGains ?? {};
+	for (const key of Object.keys(capMap)) {
+		const ev = capMap[key]!;
+		const amount = Number(ev.amount ?? Number.NaN);
+		const dateSec = ev.date ?? Number(key);
+		if (!Number.isFinite(amount) || !Number.isFinite(dateSec)) continue;
+		capitalGains.push({
+			amount,
+			date: toDateStringFromEpochSec(dateSec, gmtoffset ?? 0)
+		});
+	}
+	capitalGains.sort((a, b) => a.date.localeCompare(b.date));
+
+	return { bars, capitalGains, dividends, splits };
 }
 
 export async function writeBars(symbol: string, bars: DailyBar[]) {
@@ -114,15 +190,101 @@ export async function writeBars(symbol: string, bars: DailyBar[]) {
 	}
 }
 
+export async function writeDividends(symbol: string, events: DividendEvent[]) {
+	if (events.length === 0) return;
+	const BATCH = 1000;
+	for (let i = 0; i < events.length; i += BATCH) {
+		const slice = events.slice(i, i + BATCH);
+		const points = slice.map((ev) =>
+			new Point('dividends')
+				.tag('symbol', symbol)
+				.floatField('amount', ev.amount)
+				.timestamp(new Date(ev.date + 'T00:00:00Z'))
+		);
+		let attempt = 1;
+		const maxAttempts = 5;
+		while (true) {
+			try {
+				influxWriteApi.writePoints(points);
+				await influxWriteApi.flush();
+				break;
+			} catch (err) {
+				if (attempt >= maxAttempts) throw err;
+				await sleep(Math.min(30_000, 2_000 * attempt));
+				attempt += 1;
+			}
+		}
+	}
+}
+
+export async function writeSplits(symbol: string, events: SplitEvent[]) {
+	if (events.length === 0) return;
+	const BATCH = 1000;
+	for (let i = 0; i < events.length; i += BATCH) {
+		const slice = events.slice(i, i + BATCH);
+		const points = slice.map((ev) =>
+			new Point('splits')
+				.tag('symbol', symbol)
+				.floatField('numerator', ev.numerator)
+				.floatField('denominator', ev.denominator)
+				.floatField('ratio', ev.ratio)
+				.timestamp(new Date(ev.date + 'T00:00:00Z'))
+		);
+		let attempt = 1;
+		const maxAttempts = 5;
+		while (true) {
+			try {
+				influxWriteApi.writePoints(points);
+				await influxWriteApi.flush();
+				break;
+			} catch (err) {
+				if (attempt >= maxAttempts) throw err;
+				await sleep(Math.min(30_000, 2_000 * attempt));
+				attempt += 1;
+			}
+		}
+	}
+}
+
+export async function writeCapitalGains(symbol: string, events: CapitalGainEvent[]) {
+	if (events.length === 0) return;
+	const BATCH = 1000;
+	for (let i = 0; i < events.length; i += BATCH) {
+		const slice = events.slice(i, i + BATCH);
+		const points = slice.map((ev) =>
+			new Point('capital_gains')
+				.tag('symbol', symbol)
+				.floatField('amount', ev.amount)
+				.timestamp(new Date(ev.date + 'T00:00:00Z'))
+		);
+		let attempt = 1;
+		const maxAttempts = 5;
+		while (true) {
+			try {
+				influxWriteApi.writePoints(points);
+				await influxWriteApi.flush();
+				break;
+			} catch (err) {
+				if (attempt >= maxAttempts) throw err;
+				await sleep(Math.min(30_000, 2_000 * attempt));
+				attempt += 1;
+			}
+		}
+	}
+}
+
 export async function ingestYahooSymbol(symbol: string) {
 	//   const has = await symbolHasAnyData(symbol);
 	//   if (has) return { skipped: true } as const;
-	const bars = await fetchYahooDaily(symbol, {
+	const { bars, dividends, splits, capitalGains } = await fetchYahooDaily(symbol, {
 		includePrePost: false,
 		interval: '1d',
 		period1: 1,
 		period2: Date.now()
 	});
 	if (bars.length > 0) await writeBars(symbol, bars);
+	if (dividends.length > 0) await writeDividends(symbol, dividends);
+	if (splits.length > 0) await writeSplits(symbol, splits);
+	if (capitalGains.length > 0) await writeCapitalGains(symbol, capitalGains);
 	return { count: bars.length, skipped: false } as const;
 }
