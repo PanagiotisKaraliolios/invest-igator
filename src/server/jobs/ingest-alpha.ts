@@ -4,21 +4,21 @@ import { buildPoint, type DailyBar, influxWriteApi, symbolHasAnyData } from '../
 
 type AlphaDailyResponse =
 	| {
-		'Meta Data'?: Record<string, string>;
-		'Time Series (Daily)'?: Record<
-			string,
-			{
-				'1. open': string;
-				'2. high': string;
-				'3. low': string;
-				'4. close': string;
-				'5. volume': string;
-			}
-		>;
-		Information?: string; // throttle note
-		Note?: string; // another throttle key Alpha uses
-		'Error Message'?: string;
-	}
+			'Meta Data'?: Record<string, string>;
+			'Time Series (Daily)'?: Record<
+				string,
+				{
+					'1. open': string;
+					'2. high': string;
+					'3. low': string;
+					'4. close': string;
+					'5. volume': string;
+				}
+			>;
+			Information?: string; // throttle note
+			Note?: string; // another throttle key Alpha uses
+			'Error Message'?: string;
+	  }
 	| undefined;
 
 async function sleep(ms: number) {
@@ -104,14 +104,12 @@ async function writeBars(symbol: string, bars: DailyBar[]) {
 				break; // success
 			} catch (err) {
 				if (attempt >= maxAttempts) {
-					throw new Error(
-						`Failed writing batch for ${symbol} after ${attempt} attempts: ${String(err)}`,
-					);
+					throw new Error(`Failed writing batch for ${symbol} after ${attempt} attempts: ${String(err)}`);
 				}
 				const delay = Math.min(30_000, 2_000 * attempt);
 				console.warn(
 					`Write to InfluxDB failed (attempt ${attempt}/${maxAttempts}) for ${symbol}. Retrying in ${delay}ms...`,
-					err,
+					err
 				);
 				await sleep(delay);
 				attempt += 1;

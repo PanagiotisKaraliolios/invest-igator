@@ -1,11 +1,13 @@
-"use client";
+'use client';
 
-import * as React from 'react';
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
+import { differenceInCalendarDays, format } from 'date-fns';
 import { Calendar as CalendarIcon } from 'lucide-react';
-import { format, differenceInCalendarDays } from 'date-fns';
+import * as React from 'react';
 import type { DateRange } from 'react-day-picker';
-
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
 	type ChartConfig,
@@ -16,12 +18,9 @@ import {
 	ChartTooltipContent
 } from '@/components/ui/chart';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Switch } from '@/components/ui/switch';
 import { api } from '@/trpc/react';
 
 type CombinedDatum = {
@@ -175,9 +174,18 @@ export default function WatchlistCharts() {
 		return Math.min(MAX_DAYS, computed);
 	}, [fromDate]);
 
-	const { data: history, isLoading, isFetching, error: historyError, refetch } = api.watchlist.history.useQuery({ symbols, days: daysForServer, field: 'close' }, {
-		enabled: symbols.length > 0,
-	});
+	const {
+		data: history,
+		isLoading,
+		isFetching,
+		error: historyError,
+		refetch
+	} = api.watchlist.history.useQuery(
+		{ days: daysForServer, field: 'close', symbols },
+		{
+			enabled: symbols.length > 0
+		}
+	);
 	const loading = listLoading || isLoading || isFetching;
 	const error = listError ?? historyError;
 
@@ -190,7 +198,7 @@ export default function WatchlistCharts() {
 	const chartConfig: ChartConfig = React.useMemo(() => {
 		const cfg: ChartConfig = {};
 		cssKeys.forEach((cssKey, idx) => {
-			cfg[cssKey] = { label: symbols[idx]!, color: colorTokens[idx % colorTokens.length] };
+			cfg[cssKey] = { color: colorTokens[idx % colorTokens.length], label: symbols[idx]! };
 		});
 		return cfg;
 	}, [cssKeys, symbols]);
@@ -257,8 +265,8 @@ export default function WatchlistCharts() {
 				<div className='flex flex-wrap items-center gap-2'>
 					<Popover>
 						<PopoverTrigger asChild>
-							<Button variant="outline" className="h-8 gap-2">
-								<CalendarIcon className="h-4 w-4" />
+							<Button className='h-8 gap-2' variant='outline'>
+								<CalendarIcon className='h-4 w-4' />
 								{dateRange.from && dateRange.to ? (
 									<span>
 										{format(dateRange.from, 'MMM d, yyyy')} – {format(dateRange.to, 'MMM d, yyyy')}
@@ -268,26 +276,80 @@ export default function WatchlistCharts() {
 								)}
 							</Button>
 						</PopoverTrigger>
-						<PopoverContent className="w-auto p-0" align="end">
-							<div className="flex flex-wrap items-center gap-1 p-2 pb-0">
-								<Button size="sm" variant={preset === '5D' ? 'default' : 'ghost'} onClick={() => applyPreset('5D')}>5D</Button>
-								<Button size="sm" variant={preset === '1M' ? 'default' : 'ghost'} onClick={() => applyPreset('1M')}>1M</Button>
-								<Button size="sm" variant={preset === '6M' ? 'default' : 'ghost'} onClick={() => applyPreset('6M')}>6M</Button>
-								<Button size="sm" variant={preset === 'YTD' ? 'default' : 'ghost'} onClick={() => applyPreset('YTD')}>YTD</Button>
-								<Button size="sm" variant={preset === '1Y' ? 'default' : 'ghost'} onClick={() => applyPreset('1Y')}>1Y</Button>
-								<Button size="sm" variant={preset === '5Y' ? 'default' : 'ghost'} onClick={() => applyPreset('5Y')}>5Y</Button>
-								<Button size="sm" variant={preset === '10Y' ? 'default' : 'ghost'} onClick={() => applyPreset('10Y')}>10Y</Button>
-								<Button size="sm" variant={preset === '20Y' ? 'default' : 'ghost'} onClick={() => applyPreset('20Y')}>20Y</Button>
-								<Button size="sm" variant={preset === 'MAX' ? 'default' : 'ghost'} onClick={() => applyPreset('MAX')}>Max</Button>
+						<PopoverContent align='end' className='w-auto p-0'>
+							<div className='flex flex-wrap items-center gap-1 p-2 pb-0'>
+								<Button
+									onClick={() => applyPreset('5D')}
+									size='sm'
+									variant={preset === '5D' ? 'default' : 'ghost'}
+								>
+									5D
+								</Button>
+								<Button
+									onClick={() => applyPreset('1M')}
+									size='sm'
+									variant={preset === '1M' ? 'default' : 'ghost'}
+								>
+									1M
+								</Button>
+								<Button
+									onClick={() => applyPreset('6M')}
+									size='sm'
+									variant={preset === '6M' ? 'default' : 'ghost'}
+								>
+									6M
+								</Button>
+								<Button
+									onClick={() => applyPreset('YTD')}
+									size='sm'
+									variant={preset === 'YTD' ? 'default' : 'ghost'}
+								>
+									YTD
+								</Button>
+								<Button
+									onClick={() => applyPreset('1Y')}
+									size='sm'
+									variant={preset === '1Y' ? 'default' : 'ghost'}
+								>
+									1Y
+								</Button>
+								<Button
+									onClick={() => applyPreset('5Y')}
+									size='sm'
+									variant={preset === '5Y' ? 'default' : 'ghost'}
+								>
+									5Y
+								</Button>
+								<Button
+									onClick={() => applyPreset('10Y')}
+									size='sm'
+									variant={preset === '10Y' ? 'default' : 'ghost'}
+								>
+									10Y
+								</Button>
+								<Button
+									onClick={() => applyPreset('20Y')}
+									size='sm'
+									variant={preset === '20Y' ? 'default' : 'ghost'}
+								>
+									20Y
+								</Button>
+								<Button
+									onClick={() => applyPreset('MAX')}
+									size='sm'
+									variant={preset === 'MAX' ? 'default' : 'ghost'}
+								>
+									Max
+								</Button>
 							</div>
 							<Calendar
-								mode="range"
-								selected={dateRange}
+								mode='range'
+								numberOfMonths={2}
 								onSelect={(r) => {
 									setDateRange(r ?? { from: initialFrom, to: initialTo });
 									setPreset(null);
 								}}
-								numberOfMonths={2}
+								selected={dateRange}
 							/>
 						</PopoverContent>
 					</Popover>
@@ -297,47 +359,56 @@ export default function WatchlistCharts() {
 			</CardHeader>
 			<CardContent className='space-y-4'>
 				{error ? (
-					<Alert variant="destructive">
+					<Alert variant='destructive'>
 						<AlertTitle>Failed to load charts</AlertTitle>
-						<AlertDescription className="flex items-center justify-between gap-4">
-							<span className="truncate">
-								{typeof error?.message === 'string' ? error.message : 'An unexpected error occurred while fetching data.'}
+						<AlertDescription className='flex items-center justify-between gap-4'>
+							<span className='truncate'>
+								{typeof error?.message === 'string'
+									? error.message
+									: 'An unexpected error occurred while fetching data.'}
 							</span>
-							<Button size="sm" variant="secondary" onClick={() => refetch()} disabled={loading}>
+							<Button disabled={loading} onClick={() => refetch()} size='sm' variant='secondary'>
 								Retry
 							</Button>
 						</AlertDescription>
 					</Alert>
 				) : loading ? (
 					combined ? (
-						<Skeleton className="h-[220px] w-full sm:h-[260px]" aria-busy aria-label="Loading chart" />
+						<Skeleton aria-busy aria-label='Loading chart' className='h-[220px] w-full sm:h-[260px]' />
 					) : (
 						<div className={`grid grid-cols-1 gap-4 ${symbols.length > 1 ? 'md:grid-cols-2' : ''}`}>
 							{(symbols.length > 0 ? symbols : Array.from({ length: 2 })).map((_, idx) => (
-								<Skeleton key={idx} className="h-[140px] w-full sm:h-[160px]" aria-busy aria-label="Loading chart" />
+								<Skeleton
+									aria-busy
+									aria-label='Loading chart'
+									className='h-[140px] w-full sm:h-[160px]'
+									key={idx}
+								/>
 							))}
 						</div>
 					)
 				) : symbols.length === 0 ? (
-					<div className="flex h-[220px] w-full items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground sm:h-[260px]">
-						{(!items || items.length === 0)
+					<div className='flex h-[220px] w-full items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground sm:h-[260px]'>
+						{!items || items.length === 0
 							? 'Your watchlist is empty. Add symbols to see charts.'
 							: 'No starred symbols. Star up to 5 to show charts.'}
 					</div>
 				) : combined ? (
-					<ChartContainer config={chartConfig} className="aspect-auto h-[220px] w-full sm:h-[260px]">
-						<AreaChart data={combinedData} margin={{ top: 8, right: 16, left: 12, bottom: 8 }}>
+					<ChartContainer className='aspect-auto h-[220px] w-full sm:h-[260px]' config={chartConfig}>
+						<AreaChart data={combinedData} margin={{ bottom: 8, left: 12, right: 16, top: 8 }}>
 							<defs>
 								{cssKeys.map((cssKey) => (
-									<linearGradient key={cssKey} id={`fill-${cssKey}`} x1="0" y1="0" x2="0" y2="1">
-										<stop offset="5%" stopColor={`var(--color-${cssKey})`} stopOpacity={0.8} />
-										<stop offset="95%" stopColor={`var(--color-${cssKey})`} stopOpacity={0.1} />
+									<linearGradient id={`fill-${cssKey}`} key={cssKey} x1='0' x2='0' y1='0' y2='1'>
+										<stop offset='5%' stopColor={`var(--color-${cssKey})`} stopOpacity={0.8} />
+										<stop offset='95%' stopColor={`var(--color-${cssKey})`} stopOpacity={0.1} />
 									</linearGradient>
 								))}
 							</defs>
 							<CartesianGrid vertical={false} />
 							<XAxis
-								dataKey="iso"
+								axisLine={false}
+								dataKey='iso'
+								minTickGap={32}
 								tickFormatter={(iso) => {
 									try {
 										return format(new Date(iso as string), 'MMM d, yyyy');
@@ -346,63 +417,76 @@ export default function WatchlistCharts() {
 									}
 								}}
 								tickLine={false}
-								axisLine={false}
 								tickMargin={8}
-								minTickGap={32}
 							/>
-							<YAxis tickLine={false} axisLine={false} width={40} />
+							<YAxis axisLine={false} tickLine={false} width={40} />
 							<ChartTooltip
-								cursor={false}
 								content={
 									<ChartTooltipContent
-										indicator="dot"
+										formatter={(value: unknown, name: unknown) => {
+											const cssKey = String(name);
+											const isMissing =
+												value === null || value === undefined || Number(value as number) === 0;
+											const numeric = isMissing ? Number.NaN : Number(value as number);
+											const base = baselineByCssKey[cssKey];
+											const pct =
+												!isMissing && base && base !== 0 && Number.isFinite(numeric)
+													? ` (${(((numeric - base) / base) * 100 >= 0 ? '+' : '') + (((numeric - base) / base) * 100).toFixed(2)}%)`
+													: '';
+											const colorVar = `var(--color-${cssKey})`;
+											const label = (chartConfig as any)?.[cssKey]?.label ?? cssKey;
+											return (
+												<div className='flex w-full items-center justify-between gap-3'>
+													<div className='flex items-center gap-2'>
+														<span
+															className='h-2.5 w-2.5 rounded-[2px]'
+															style={{ backgroundColor: colorVar }}
+														/>
+														<span className='text-muted-foreground'>{String(label)}</span>
+														{isMissing && (
+															<span className='text-xs text-muted-foreground'>
+																(No data)
+															</span>
+														)}
+													</div>
+													<div className='font-mono'>
+														{!isMissing && (
+															<>
+																<span className='mr-1'>
+																	{Number.isFinite(numeric)
+																		? numeric.toLocaleString()
+																		: String(value)}
+																</span>
+																<span className={changeClassForDelta(numeric, base)}>
+																	{pct}
+																</span>
+															</>
+														)}
+													</div>
+												</div>
+											);
+										}}
+										indicator='dot'
 										labelFormatter={(_, pl) => {
 											const iso = (pl?.[0]?.payload as any)?.iso as string | undefined;
 											if (!iso) return (pl?.[0]?.payload as any)?.date ?? '';
 											const d = new Date(iso);
 											return format(d, 'MMM d, yyyy');
 										}}
-										formatter={(value: unknown, name: unknown) => {
-											const cssKey = String(name);
-												const isMissing = value === null || value === undefined || Number(value as number) === 0;
-												const numeric = isMissing ? NaN : Number(value as number);
-											const base = baselineByCssKey[cssKey];
-												const pct = !isMissing && base && base !== 0 && Number.isFinite(numeric)
-												? ` (${(((numeric - base) / base) * 100 >= 0 ? '+' : '') + (((numeric - base) / base) * 100).toFixed(2)}%)`
-												: '';
-											const colorVar = `var(--color-${cssKey})`;
-											const label = (chartConfig as any)?.[cssKey]?.label ?? cssKey;
-											return (
-												<div className="flex w-full items-center justify-between gap-3">
-													<div className="flex items-center gap-2">
-														<span className="h-2.5 w-2.5 rounded-[2px]" style={{ backgroundColor: colorVar }} />
-															<span className="text-muted-foreground">{String(label)}</span>
-															{isMissing && <span className="text-xs text-muted-foreground">(No data)</span>}
-													</div>
-														<div className="font-mono">
-															{!isMissing && (
-																<>
-																	<span className="mr-1">{Number.isFinite(numeric) ? numeric.toLocaleString() : String(value)}</span>
-																	<span className={changeClassForDelta(numeric, base)}>{pct}</span>
-																</>
-															)}
-														</div>
-												</div>
-											);
-										}}
 									/>
 								}
+								cursor={false}
 							/>
 							{cssKeys.map((cssKey) => (
 								<Area
-									key={cssKey}
+									connectNulls
 									dataKey={cssKey}
-									type="linear"
 									fill={`url(#fill-${cssKey})`}
+									key={cssKey}
 									stroke={`var(--color-${cssKey})`}
 									strokeWidth={2}
-									connectNulls
-								// isAnimationActive={combinedData.length < 800}
+									type='linear'
+									// isAnimationActive={combinedData.length < 800}
 								/>
 							))}
 							<ChartLegend content={<ChartLegendContent />} />
@@ -413,22 +497,34 @@ export default function WatchlistCharts() {
 						{symbols.map((sym, idx) => {
 							const series = seriesBySymbol[sym] ?? [];
 							const cssKey = cssKeys[idx]!;
-							const cfg: ChartConfig = { [cssKey]: { label: sym, color: colorTokens[idx % colorTokens.length] } };
+							const cfg: ChartConfig = {
+								[cssKey]: { color: colorTokens[idx % colorTokens.length], label: sym }
+							};
 							const id = `fill-${cssKey}`;
 							return (
-								<div key={sym} className="relative">
-									<ChartContainer config={cfg} className="aspect-auto h-[150px] w-full sm:h-[200px]">
-										<AreaChart data={series} margin={{ top: 8, right: 16, left: 12, bottom: 8 }}>
+								<div className='relative' key={sym}>
+									<ChartContainer className='aspect-auto h-[150px] w-full sm:h-[200px]' config={cfg}>
+										<AreaChart data={series} margin={{ bottom: 8, left: 12, right: 16, top: 8 }}>
 											<defs>
-												<linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
-													<stop offset="5%" stopColor={`var(--color-${cssKey})`} stopOpacity={0.8} />
-													<stop offset="95%" stopColor={`var(--color-${cssKey})`} stopOpacity={0.1} />
+												<linearGradient id={id} x1='0' x2='0' y1='0' y2='1'>
+													<stop
+														offset='5%'
+														stopColor={`var(--color-${cssKey})`}
+														stopOpacity={0.8}
+													/>
+													<stop
+														offset='95%'
+														stopColor={`var(--color-${cssKey})`}
+														stopOpacity={0.1}
+													/>
 												</linearGradient>
 											</defs>
 											<CartesianGrid vertical={false} />
-											<YAxis tickLine={false} axisLine={false} width={40} />
+											<YAxis axisLine={false} tickLine={false} width={40} />
 											<XAxis
+												axisLine={false}
 												dataKey='iso'
+												minTickGap={32}
 												tickFormatter={(iso) => {
 													try {
 														return format(new Date(iso as string), 'MMM d, yyyy');
@@ -437,67 +533,100 @@ export default function WatchlistCharts() {
 													}
 												}}
 												tickLine={false}
-												axisLine={false}
 												tickMargin={8}
-												minTickGap={32}
 											/>
 											<ChartTooltip
 												content={
 													<ChartTooltipContent
-														nameKey={sym}
-														indicator="dot"
+														formatter={(value: unknown) => {
+															const isMissing =
+																value === null ||
+																value === undefined ||
+																Number(value as number) === 0;
+															const numeric = isMissing
+																? Number.NaN
+																: Number(value as number);
+															const base =
+																series.find((d) => Number(d.value) > 0)?.value ??
+																undefined;
+															const pctStr =
+																!isMissing &&
+																base &&
+																base !== 0 &&
+																Number.isFinite(numeric)
+																	? ` (${(((numeric - base) / base) * 100 >= 0 ? '+' : '') + (((numeric - base) / base) * 100).toFixed(2)}%)`
+																	: '';
+															const colorVar = `var(--color-${cssKey})`;
+															return (
+																<div className='flex w-full items-center justify-between gap-3'>
+																	<div className='flex items-center gap-2'>
+																		<span
+																			className='h-2.5 w-2.5 rounded-[2px]'
+																			style={{ backgroundColor: colorVar }}
+																		/>
+																		<span className='text-muted-foreground'>
+																			{sym}
+																		</span>
+																		{isMissing && (
+																			<span className='text-xs text-muted-foreground'>
+																				(No data)
+																			</span>
+																		)}
+																	</div>
+																	<div className='font-mono'>
+																		{!isMissing && (
+																			<>
+																				<span className='mr-1'>
+																					{Number.isFinite(numeric)
+																						? numeric.toLocaleString()
+																						: String(value)}
+																				</span>
+																				<span
+																					className={changeClassForDelta(
+																						numeric,
+																						base
+																					)}
+																				>
+																					{pctStr}
+																				</span>
+																			</>
+																		)}
+																	</div>
+																</div>
+															);
+														}}
+														indicator='dot'
 														labelFormatter={(_, pl) => {
-															const iso = (pl?.[0]?.payload as any)?.iso as string | undefined;
+															const iso = (pl?.[0]?.payload as any)?.iso as
+																| string
+																| undefined;
 															if (!iso) return (pl?.[0]?.payload as any)?.date ?? '';
 															const d = new Date(iso);
 															return format(d, 'MMM d, yyyy');
 														}}
-														formatter={(value: unknown) => {
-																const isMissing = value === null || value === undefined || Number(value as number) === 0;
-																const numeric = isMissing ? NaN : Number(value as number);
-															const base = (series.find((d) => Number(d.value) > 0)?.value) ?? undefined;
-															const pctStr = !isMissing && base && base !== 0 && Number.isFinite(numeric)
-																? ` (${(((numeric - base) / base) * 100 >= 0 ? '+' : '') + (((numeric - base) / base) * 100).toFixed(2)}%)`
-																: '';
-															const colorVar = `var(--color-${cssKey})`;
-															return (
-																<div className="flex w-full items-center justify-between gap-3">
-																	<div className="flex items-center gap-2">
-																		<span className="h-2.5 w-2.5 rounded-[2px]" style={{ backgroundColor: colorVar }} />
-																			<span className="text-muted-foreground">{sym}</span>
-																			{isMissing && <span className="text-xs text-muted-foreground">(No data)</span>}
-																	</div>
-																		<div className="font-mono">
-																			{!isMissing && (
-																				<>
-																					<span className="mr-1">{Number.isFinite(numeric) ? numeric.toLocaleString() : String(value)}</span>
-																					<span className={changeClassForDelta(numeric, base)}>{pctStr}</span>
-																				</>
-																			)}
-																		</div>
-																</div>
-															);
-														}}
+														nameKey={sym}
 													/>
 												}
 												cursor={false}
 											/>
 											<Area
+												connectNulls
 												dataKey='value'
-												type='monotone'
 												fill={`url(#${id})`}
 												stroke={`var(--color-${cssKey})`}
 												strokeWidth={2}
-												connectNulls
+												type='monotone'
 												// isAnimationActive={(series?.length ?? 0) < 800}
 											/>
 											<ChartLegend content={<ChartLegendContent nameKey={sym} />} />
 										</AreaChart>
 									</ChartContainer>
 									{series.length === 0 && (
-										<div className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">No data</div>
+										<div className='pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-muted-foreground'>
+											No data
+										</div>
 									)}
-									<div className="mt-1 text-center text-xs text-muted-foreground">{sym}</div>
+									<div className='mt-1 text-center text-xs text-muted-foreground'>{sym}</div>
 								</div>
 							);
 						})}

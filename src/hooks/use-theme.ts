@@ -20,16 +20,16 @@ export function useThemeSwitch(isAuthenticated = false) {
 	const setThemeMutation = api.theme.setTheme.useMutation();
 	const mutateRef = useRef<(t: Theme) => void>(() => {});
 	useEffect(() => {
-			mutateRef.current = (t: Theme) => {
-				if (isAuthenticated) setThemeMutation.mutate(t)
-			};
-		}, [setThemeMutation, isAuthenticated]);
-		const getThemeQuery = api.theme.getTheme.useQuery(undefined, {
-			enabled: isAuthenticated,
-			refetchOnWindowFocus: false,
-			retry: false,
-			staleTime: 5 * 60 * 1000
-		});
+		mutateRef.current = (t: Theme) => {
+			if (isAuthenticated) setThemeMutation.mutate(t);
+		};
+	}, [setThemeMutation, isAuthenticated]);
+	const getThemeQuery = api.theme.getTheme.useQuery(undefined, {
+		enabled: isAuthenticated,
+		refetchOnWindowFocus: false,
+		retry: false,
+		staleTime: 5 * 60 * 1000
+	});
 
 	// Initialize from SSR-applied class which comes from the session
 	const [theme, _setTheme] = useState<Theme>(() => {
@@ -50,17 +50,17 @@ export function useThemeSwitch(isAuthenticated = false) {
 			return;
 		}
 
-			if (isAuthenticated) {
-				if (debounceRef.current) clearTimeout(debounceRef.current);
-				debounceRef.current = setTimeout(() => {
-					mutateRef.current(theme);
-				}, 3000);
-			}
+		if (isAuthenticated) {
+			if (debounceRef.current) clearTimeout(debounceRef.current);
+			debounceRef.current = setTimeout(() => {
+				mutateRef.current(theme);
+			}, 3000);
+		}
 
 		return () => {
 			if (debounceRef.current) clearTimeout(debounceRef.current);
 		};
-		}, [theme, isAuthenticated]);
+	}, [theme, isAuthenticated]);
 
 	const setTheme = useCallback((t: Theme) => {
 		_setTheme(t);
@@ -81,7 +81,7 @@ export function useThemeSwitch(isAuthenticated = false) {
 			skipNextPersistRef.current = true;
 			setTheme(rt);
 		}
-		}, [isAuthenticated, getThemeQuery.isSuccess, getThemeQuery.data?.theme, theme, setTheme]);
+	}, [isAuthenticated, getThemeQuery.isSuccess, getThemeQuery.data?.theme, theme, setTheme]);
 
 	const isLight = useMemo(() => theme === 'light', [theme]);
 	const setIsLight = useCallback(

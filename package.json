@@ -84,9 +84,9 @@
 	"private": true,
 	"scripts": {
 		"build": "next build",
-		"check": "biome check .",
-		"check:unsafe": "biome check --write --unsafe .",
-		"check:write": "biome check --write .",
+		"check": "biome check ./src",
+		"check:unsafe": "biome check --write --unsafe ./src",
+		"check:write": "biome check --write ./src",
 		"db:generate": "prisma migrate dev",
 		"db:migrate": "prisma migrate deploy",
 		"db:push": "prisma db push",

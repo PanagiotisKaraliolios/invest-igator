@@ -1,12 +1,12 @@
-import { createTransport } from "nodemailer";
-import { db } from "../db";
-import type { NodemailerConfig } from "next-auth/providers/nodemailer";
+import type { NodemailerConfig } from 'next-auth/providers/nodemailer';
+import { createTransport } from 'nodemailer';
+import { db } from '../db';
 
 interface Theme {
-	colorScheme?: "auto" | "dark" | "light"
-	logo?: string
-	brandColor?: string
-	buttonText?: string
+	colorScheme?: 'auto' | 'dark' | 'light';
+	logo?: string;
+	brandColor?: string;
+	buttonText?: string;
 }
 
 interface SendVerificationRequestParams {
@@ -19,13 +19,11 @@ interface SendVerificationRequestParams {
 	request: Request;
 }
 
-export async function sendVerificationRequest(
-	params: SendVerificationRequestParams,
-): Promise<void> {
+export async function sendVerificationRequest(params: SendVerificationRequestParams): Promise<void> {
 	const { identifier, url, provider, theme } = params;
 	// Check if a user exists for this email
 	const existingUser = await db.user.findUnique({
-		where: { email: identifier },
+		where: { email: identifier }
 	});
 	// if (!existingUser) {
 	// 	// Throw an error that will be surfaced to the client. Include a signup link.
@@ -37,11 +35,11 @@ export async function sendVerificationRequest(
 	// NOTE: You are not required to use `nodemailer`, use whatever you want.
 	const transport = createTransport(provider.server);
 	const result = await transport.sendMail({
-		to: identifier,
 		from: provider.from,
+		html: html({ host, theme, url }),
 		subject: `Sign in to ${host}`,
-		text: text({ url, host }),
-		html: html({ url, host, theme }),
+		text: text({ host, url }),
+		to: identifier
 	});
 	// const result = await transport.sendMail({
 	// 	to: identifier,
@@ -52,23 +50,23 @@ export async function sendVerificationRequest(
 	// });
 	const failed = result.rejected.concat(result.pending).filter(Boolean);
 	if (failed.length) {
-		throw new Error(`Email(s) (${failed.join(", ")}) could not be sent`);
+		throw new Error(`Email(s) (${failed.join(', ')}) could not be sent`);
 	}
 }
 
 function html(params: { url: string; host: string; theme: Theme }) {
 	const { url, host, theme } = params;
 
-	const escapedHost = host.replace(/\./g, "&#8203;.");
+	const escapedHost = host.replace(/\./g, '&#8203;.');
 
-	const brandColor = theme.brandColor || "#346df1";
+	const brandColor = theme.brandColor || '#346df1';
 	const color = {
-		background: "#f9f9f9",
-		text: "#444",
-		mainBackground: "#fff",
+		background: '#f9f9f9',
 		buttonBackground: brandColor,
 		buttonBorder: brandColor,
-		buttonText: theme.buttonText || "#fff",
+		buttonText: theme.buttonText || '#fff',
+		mainBackground: '#fff',
+		text: '#444'
 	};
 
 	return `

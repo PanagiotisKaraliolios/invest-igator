@@ -1,9 +1,9 @@
 'use client';
 
+import { motion } from 'framer-motion';
 import React from 'react';
 import { Area, Bar, BarChart, Line, LineChart, AreaChart as RCAreaChart } from 'recharts';
 import { type ChartConfig, ChartContainer } from '@/components/ui/chart';
-import { motion } from 'framer-motion';
 
 const sparkData = [
 	{ i: 0, v: 10 },
@@ -131,10 +131,10 @@ export function HeroCharts() {
 					</ChartContainer>
 					<div className='pointer-events-none absolute inset-0 overflow-hidden opacity-0 transition-opacity duration-700 group-hover:opacity-100'>
 						<motion.div
+							animate={{ x: '120%' }}
 							className='absolute inset-y-0 -left-1 w-1/3 [background:linear-gradient(90deg,transparent,hsl(var(--primary)/0.12),transparent)] blur-[6px]'
 							initial={{ x: '-60%' }}
-							animate={{ x: '120%' }}
-							transition={{ duration: 2.8, ease: 'linear', repeat: Infinity }}
+							transition={{ duration: 2.8, ease: 'linear', repeat: Number.POSITIVE_INFINITY }}
 						/>
 					</div>
 				</div>
