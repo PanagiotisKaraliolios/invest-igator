@@ -47,6 +47,126 @@ export const watchlistRouter = createTRPCRouter({
 			return result ?? { alreadyExists: !created };
 		}),
 
+	// Corporate events per symbol (dividends, splits, capital gains)
+	events: protectedProcedure
+		.input(
+			z.object({
+				days: z.number().int().min(1).default(365),
+				symbols: z.array(z.string()).optional()
+			})
+		)
+		.query(async ({ ctx, input }) => {
+			const userId = ctx.session.user.id;
+			let symbols = input.symbols;
+			if (!symbols) {
+				const rows = await ctx.db.watchlistItem.findMany({
+					orderBy: [{ starred: 'desc' }, { createdAt: 'desc' }],
+					select: { symbol: true },
+					where: { userId }
+				});
+				symbols = Array.from(new Set(rows.map((r) => r.symbol.trim().toUpperCase()))).slice(0, 5);
+			}
+			// safety limit
+			symbols = (symbols ?? []).slice(0, 12);
+
+			type Div = { date: string; amount: number };
+			type Split = { date: string; ratio: number; numerator?: number; denominator?: number };
+			type CapG = { date: string; amount: number };
+			const events: Record<string, { dividends: Div[]; splits: Split[]; capitalGains: CapG[] }> = {};
+
+			const days = input.days;
+			for (const sym of symbols) {
+				// Dividends
+				{
+					const flux = `from(bucket: "${env.INFLUXDB_BUCKET}")
+  |> range(start: -${days + 3}d)
+  |> filter(fn: (r) => r._measurement == "dividends" and r._field == "amount" and r.symbol == "${sym}")
+  |> keep(columns: ["_time", "_value"]) 
+  |> sort(columns: ["_time"])`;
+					const arr: Div[] = [];
+					for await (const row of influxQueryApi.iterateRows(flux)) {
+						let values: unknown;
+						let tableMeta: any;
+						if (Array.isArray(row)) {
+							values = row[0];
+							tableMeta = row[1];
+						} else if (row && typeof row === 'object' && 'values' in (row as any)) {
+							values = (row as any).values;
+							tableMeta = (row as any).tableMeta;
+						}
+						if (!values || !tableMeta || typeof tableMeta.toObject !== 'function') continue;
+						const obj = tableMeta.toObject(values as string[]);
+						const t = (obj._time as string) || '';
+						const v = Number(obj._value);
+						if (!t || !Number.isFinite(v)) continue;
+						arr.push({ amount: v, date: t.slice(0, 10) });
+					}
+					events[sym] = events[sym] ?? { capitalGains: [], dividends: [], splits: [] };
+					events[sym].dividends = arr;
+				}
+
+				// Splits (use ratio field)
+				{
+					const flux = `from(bucket: "${env.INFLUXDB_BUCKET}")
+  |> range(start: -${days + 3}d)
+  |> filter(fn: (r) => r._measurement == "splits" and r._field == "ratio" and r.symbol == "${sym}")
+  |> keep(columns: ["_time", "_value"]) 
+  |> sort(columns: ["_time"])`;
+					const arr: Split[] = [];
+					for await (const row of influxQueryApi.iterateRows(flux)) {
+						let values: unknown;
+						let tableMeta: any;
+						if (Array.isArray(row)) {
+							values = row[0];
+							tableMeta = row[1];
+						} else if (row && typeof row === 'object' && 'values' in (row as any)) {
+							values = (row as any).values;
+							tableMeta = (row as any).tableMeta;
+						}
+						if (!values || !tableMeta || typeof tableMeta.toObject !== 'function') continue;
+						const obj = tableMeta.toObject(values as string[]);
+						const t = (obj._time as string) || '';
+						const v = Number(obj._value);
+						if (!t || !Number.isFinite(v)) continue;
+						arr.push({ date: t.slice(0, 10), ratio: v });
+					}
+					events[sym] = events[sym] ?? { capitalGains: [], dividends: [], splits: [] };
+					events[sym].splits = arr;
+				}
+
+				// Capital gains
+				{
+					const flux = `from(bucket: "${env.INFLUXDB_BUCKET}")
+  |> range(start: -${days + 3}d)
+  |> filter(fn: (r) => r._measurement == "capital_gains" and r._field == "amount" and r.symbol == "${sym}")
+  |> keep(columns: ["_time", "_value"]) 
+  |> sort(columns: ["_time"])`;
+					const arr: CapG[] = [];
+					for await (const row of influxQueryApi.iterateRows(flux)) {
+						let values: unknown;
+						let tableMeta: any;
+						if (Array.isArray(row)) {
+							values = row[0];
+							tableMeta = row[1];
+						} else if (row && typeof row === 'object' && 'values' in (row as any)) {
+							values = (row as any).values;
+							tableMeta = (row as any).tableMeta;
+						}
+						if (!values || !tableMeta || typeof tableMeta.toObject !== 'function') continue;
+						const obj = tableMeta.toObject(values as string[]);
+						const t = (obj._time as string) || '';
+						const v = Number(obj._value);
+						if (!t || !Number.isFinite(v)) continue;
+						arr.push({ amount: v, date: t.slice(0, 10) });
+					}
+					events[sym] = events[sym] ?? { capitalGains: [], dividends: [], splits: [] };
+					events[sym].capitalGains = arr;
+				}
+			}
+
+			return { events } as const;
+		}),
+
 	// Historical daily series from InfluxDB (default: close). If no symbols provided, use user's watchlist.
 	history: protectedProcedure
 		.input(
