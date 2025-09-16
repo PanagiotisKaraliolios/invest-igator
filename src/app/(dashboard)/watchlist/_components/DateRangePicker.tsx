@@ -12,37 +12,38 @@ export type Preset = '5D' | '1M' | '6M' | 'YTD' | '1Y' | '5Y' | '10Y' | '20Y' | 
 
 export function applyPresetToRange(p: Exclude<Preset, null>, maxDays: number): DateRange {
 	const now = new Date();
-	let from = new Date(now);
+	const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+	let from = new Date(end);
 	switch (p) {
 		case '5D':
-			from.setDate(now.getDate() - 4);
+			from.setDate(end.getDate() - 4);
 			break;
 		case '1M':
-			from.setDate(now.getDate() - 29);
+			from.setDate(end.getDate() - 29);
 			break;
 		case '6M':
-			from.setDate(now.getDate() - 179);
+			from.setDate(end.getDate() - 179);
 			break;
 		case 'YTD':
-			from = new Date(now.getFullYear(), 0, 1);
+			from = new Date(end.getFullYear(), 0, 1);
 			break;
 		case '1Y':
-			from.setDate(now.getDate() - 364);
+			from.setDate(end.getDate() - 364);
 			break;
 		case '5Y':
-			from.setDate(now.getDate() - 1824);
+			from.setDate(end.getDate() - 1824);
 			break;
 		case '10Y':
-			from.setDate(now.getDate() - 3649);
+			from.setDate(end.getDate() - 3649);
 			break;
 		case '20Y':
-			from.setDate(now.getDate() - 7299);
+			from.setDate(end.getDate() - 7299);
 			break;
 		case 'MAX':
-			from.setDate(now.getDate() - (maxDays - 1));
+			from.setDate(end.getDate() - (maxDays - 1));
 			break;
 	}
-	return { from, to: now };
+	return { from, to: end };
 }
 
 type Props = {
@@ -63,6 +64,8 @@ export default function DateRangePicker({
 	buttonClassName
 }: Props) {
 	const presets: Exclude<Preset, null>[] = ['5D', '1M', '6M', 'YTD', '1Y', '5Y', '10Y', '20Y', 'MAX'];
+	const today = new Date();
+	const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
 	return (
 		<Popover>
 			<PopoverTrigger asChild>
@@ -95,13 +98,23 @@ export default function DateRangePicker({
 					))}
 				</div>
 				<Calendar
+					autoFocus
+					disabled={{ after: yesterday }}
 					mode='range'
 					numberOfMonths={2}
 					onSelect={(r) => {
-						onChange(r ?? dateRange);
+						if (!r) {
+							onChange(dateRange);
+							onPresetChange(null);
+							return;
+						}
+						const clamp = (d: Date | undefined) => (d && d > yesterday ? yesterday : d);
+						const next = { from: clamp(r.from), to: clamp(r.to) } as DateRange;
+						onChange(next);
 						onPresetChange(null);
 					}}
 					selected={dateRange}
+					toDate={yesterday}
 				/>
 			</PopoverContent>
 		</Popover>

@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 /**
  * Shared chart utilities for the Watchlist views.
@@ -11,6 +11,71 @@
  */
 
 import { differenceInCalendarDays } from 'date-fns';
+
+/** Event categories supported for annotations on charts. */
+export type EventType = 'dividend' | 'split' | 'capitalGain';
+
+/** Normalized event point used by chart layers to annotate timelines. */
+export type EventPoint = {
+	/** ISO date (yyyy-MM-dd) to align with series `iso` keys */
+	date: string;
+	/** Event kind */
+	type: EventType;
+	/** Optional numeric value (amount or split ratio) to display */
+	value?: number;
+	/** Optional label override (e.g., "1:5" for splits) */
+	label?: string;
+};
+
+/**
+ * Small helper to pick a glyph/short label for an event type.
+ */
+export function eventGlyph(type: EventType): string {
+	switch (type) {
+		case 'dividend':
+			return 'D';
+		case 'split':
+			return 'S';
+		case 'capitalGain':
+			return 'C';
+		default:
+			return '?';
+	}
+}
+
+/**
+ * Default color mapping for event types. Consumers can override per chart.
+ */
+export function eventColor(type: EventType): string {
+	switch (type) {
+		case 'dividend':
+			return '#10B981'; // emerald-500
+		case 'split':
+			return '#3B82F6'; // blue-500
+		case 'capitalGain':
+			return '#FBBF24'; // amber-500
+		default:
+			return '#6B7280'; // gray-500
+	}
+}
+
+/**
+ * Format an event into a concise, readable label for tooltips/legends.
+ */
+export function formatEventText(ev: EventPoint): string {
+	const fmtNum = (n: number) =>
+		Number.isFinite(n) ? n.toLocaleString(undefined, { maximumFractionDigits: 4 }) : String(n);
+	switch (ev.type) {
+		case 'split':
+			return ev.label ? `Split ${ev.label}:1` : 'Split';
+		case 'dividend':
+			return ev.value != null ? `Dividend: ${fmtNum(ev.value)} units per share` : 'Dividend';
+		case 'capitalGain':
+			return ev.value != null ? `Capital gain: ${fmtNum(ev.value)}` : 'Capital gain';
+		default:
+			return ev.label ?? 'Event';
+	}
+}
 
 /**
  * Row shape for a combined multi-series dataset where each symbol is stored
@@ -28,7 +93,7 @@ export type CombinedDatum = {
 /**
  * Single-series point with formatted label and optional ISO date.
  */
-export type SeriesDatum = { date: string; iso?: string; value: number };
+export type SeriesDatum = { date: string; iso?: string; value: number; events?: EventPoint[] };
 
 /**
  * Downsample an array using a fixed stride to cap the number of points.
@@ -36,16 +101,33 @@ export type SeriesDatum = { date: string; iso?: string; value: number };
  *
  * Complexity: O(n)
  */
-export function downsample<T>(arr: T[], maxPoints: number): T[] {
+export function downsample<T>(arr: T[], maxPoints: number, opts?: { preserve?: (v: T, idx: number) => boolean }): T[] {
 	if (!Array.isArray(arr)) return arr;
 	const n = arr.length;
 	if (n <= maxPoints) return arr;
 	const stride = Math.ceil(n / maxPoints);
-	const out: T[] = [];
-	for (let i = 0; i < n; i += stride) out.push(arr[i]!);
-	// ensure the last original item is included
-	if (out[out.length - 1] !== arr[n - 1]) out.push(arr[n - 1]!);
-	return out;
+	const include = new Set<number>();
+	for (let i = 0; i < n; i += stride) include.add(i);
+	include.add(n - 1);
+	if (opts?.preserve) {
+		for (let i = 0; i < n; i++) {
+			try {
+				if (opts.preserve(arr[i]!, i)) include.add(i);
+			} catch {
+				// ignore predicate errors
+			}
+		}
+	}
+	const idxs = Array.from(include.values()).sort((a, b) => a - b);
+	// If we still exceed maxPoints significantly, thin non-preserved indices
+	if (idxs.length > maxPoints && !opts?.preserve) {
+		const stride2 = Math.ceil(idxs.length / maxPoints);
+		const reduced: number[] = [];
+		for (let i = 0; i < idxs.length; i += stride2) reduced.push(idxs[i]!);
+		if (reduced[reduced.length - 1] !== idxs[idxs.length - 1]) reduced.push(idxs[idxs.length - 1]!);
+		return reduced.map((i) => arr[i]!);
+	}
+	return idxs.map((i) => arr[i]!);
 }
 
 /**
@@ -91,9 +173,9 @@ export function generateSeries(symbol: string, points = 30): SeriesDatum[] {
 		const d = new Date();
 		d.setDate(d.getDate() - i);
 		out.push({
-			date: d.toLocaleDateString(undefined, { day: "numeric", month: "short" }),
-			iso: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
-			value: Math.round(price * 100) / 100,
+			date: d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }),
+			iso: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
+			value: Math.round(price * 100) / 100
 		});
 	}
 	return out;
@@ -108,7 +190,7 @@ export const colorTokens = Array.from({ length: 12 }, (_, i) => `var(--chart-${i
  * Sanitize a string into a CSS custom property-friendly key.
  */
 export function toCssKey(sym: string) {
-	return sym.replace(/[^a-zA-Z0-9_-]/g, "_");
+	return sym.replace(/[^a-zA-Z0-9_-]/g, '_');
 }
 
 /**
@@ -125,10 +207,10 @@ export function percentChange(value?: number, base?: number): number | null {
  */
 export function changeClassForDelta(value?: number, base?: number) {
 	const pct = percentChange(value, base);
-	if (pct === null) return "text-muted-foreground";
-	if (pct > 0) return "text-emerald-500";
-	if (pct < 0) return "text-red-500";
-	return "text-muted-foreground";
+	if (pct === null) return 'text-muted-foreground';
+	if (pct > 0) return 'text-emerald-500';
+	if (pct < 0) return 'text-red-500';
+	return 'text-muted-foreground';
 }
 
 /**
