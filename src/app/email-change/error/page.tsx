@@ -7,11 +7,7 @@ export const metadata: Metadata = {
 	title: 'Email Change Failed — Invest-igator'
 };
 
-export default async function EmailChangeErrorPage({
-	searchParams
-}: {
-	searchParams?: Promise<{ reason?: string }>;
-}) {
+export default async function EmailChangeErrorPage({ searchParams }: { searchParams?: Promise<{ reason?: string }> }) {
 	const sp = (await searchParams) ?? {};
 	const reason = sp.reason ?? 'Unable to confirm email change.';
 	return (

@@ -1,10 +1,6 @@
 import Link from 'next/link';
 
-export default async function VerifyErrorPage({
-	searchParams
-}: {
-	searchParams?: Promise<{ reason?: string }>;
-}) {
+export default async function VerifyErrorPage({ searchParams }: { searchParams?: Promise<{ reason?: string }> }) {
 	const sp = (await searchParams) ?? {};
 	const reason = decodeURIComponent(sp.reason ?? 'Verification failed');
 	return (

@@ -8,6 +8,10 @@ export const env = createEnv({
 	 * `NEXT_PUBLIC_`.
 	 */
 	client: {
+		NEXT_PUBLIC_ADSENSE_CLIENT_ID: z.string().optional(),
+		NEXT_PUBLIC_ADSENSE_SLOT_DASHBOARD: z.string().optional(),
+		NEXT_PUBLIC_ADSENSE_SLOT_LANDING: z.string().optional(),
+		NEXT_PUBLIC_ADSENSE_SLOT_WATCHLIST: z.string().optional(),
 		// NEXT_PUBLIC_CLIENTVAR: z.string(),
 		NEXT_PUBLIC_SITE_URL: z.string().default('http://localhost:3000')
 	},
@@ -37,6 +41,10 @@ export const env = createEnv({
 		INFLUXDB_ORG: process.env.INFLUXDB_ORG,
 		INFLUXDB_TOKEN: process.env.INFLUXDB_TOKEN,
 		INFLUXDB_URL: process.env.INFLUXDB_URL,
+		NEXT_PUBLIC_ADSENSE_CLIENT_ID: process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID,
+		NEXT_PUBLIC_ADSENSE_SLOT_DASHBOARD: process.env.NEXT_PUBLIC_ADSENSE_SLOT_DASHBOARD,
+		NEXT_PUBLIC_ADSENSE_SLOT_LANDING: process.env.NEXT_PUBLIC_ADSENSE_SLOT_LANDING,
+		NEXT_PUBLIC_ADSENSE_SLOT_WATCHLIST: process.env.NEXT_PUBLIC_ADSENSE_SLOT_WATCHLIST,
 		NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
 		NODE_ENV: process.env.NODE_ENV,
 		PASSWORD_PEPPER: process.env.PASSWORD_PEPPER,

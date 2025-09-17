@@ -1,5 +1,6 @@
 import { ChartLine, ListChecks, Shield, Wallet } from 'lucide-react';
 import Link from 'next/link';
+import { AdSlot } from '@/components/ads/AdSlot';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -95,6 +96,13 @@ export default async function Home() {
 					</div>
 				</div>
 			</section>
+
+			{/* Landing Ad */}
+			{env.NEXT_PUBLIC_ADSENSE_SLOT_LANDING ? (
+				<section className='container mx-auto px-6'>
+					<AdSlot className='my-8' format='auto' slot={env.NEXT_PUBLIC_ADSENSE_SLOT_LANDING} />
+				</section>
+			) : null}
 
 			{/* Features */}
 			<section className='container mx-auto px-6 py-12 md:py-20' id='features'>

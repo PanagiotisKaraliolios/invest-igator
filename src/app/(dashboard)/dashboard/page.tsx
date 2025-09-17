@@ -1,3 +1,5 @@
+import { AdSlot } from '@/components/ads/AdSlot';
+import { env } from '@/env';
 export default function DashboardPage() {
 	return (
 		<div className='flex flex-1 flex-col gap-4'>
@@ -7,6 +9,11 @@ export default function DashboardPage() {
 				<div className='aspect-video rounded-xl bg-muted/50' />
 			</div>
 			<div className='min-h-[100vh] flex-1 rounded-xl bg-muted/50 md:min-h-min' />
+			{env.NEXT_PUBLIC_ADSENSE_SLOT_DASHBOARD ? (
+				<div className='mt-4'>
+					<AdSlot className='my-4' format='auto' slot={env.NEXT_PUBLIC_ADSENSE_SLOT_DASHBOARD} />
+				</div>
+			) : null}
 		</div>
 	);
 }
