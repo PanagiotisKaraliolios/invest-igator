@@ -9,6 +9,7 @@ export const env = createEnv({
 	 */
 	client: {
 		// NEXT_PUBLIC_CLIENTVAR: z.string(),
+		NEXT_PUBLIC_SITE_URL: z.string().default('http://localhost:3000'),
 	},
 	/**
 	 * Makes it so that empty strings are treated as undefined. `SOME_VAR: z.string()` and
@@ -36,6 +37,7 @@ export const env = createEnv({
 		INFLUXDB_ORG: process.env.INFLUXDB_ORG,
 		INFLUXDB_TOKEN: process.env.INFLUXDB_TOKEN,
 		INFLUXDB_URL: process.env.INFLUXDB_URL,
+		NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
 		NODE_ENV: process.env.NODE_ENV,
 		PASSWORD_PEPPER: process.env.PASSWORD_PEPPER,
 		POLYGON_API_KEY: process.env.POLYGON_API_KEY,

@@ -7,10 +7,27 @@ import { Toaster } from '@/components/ui/sonner';
 import { env } from '@/env';
 import { TRPCReactProvider } from '@/trpc/react';
 
+const siteUrl = env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+
 export const metadata: Metadata = {
 	description: 'An open-source investment portfolio tracker',
 	icons: [{ rel: 'icon', url: '/favicon.ico' }],
-	title: env.APP_NAME || 'Invest-igator'
+	metadataBase: new URL(siteUrl),
+	openGraph: {
+		description: 'An open-source investment portfolio tracker',
+		images: [{ url: '/opengraph-image' }],
+		siteName: env.APP_NAME || 'Invest-igator',
+		title: env.APP_NAME || 'Invest-igator',
+		type: 'website',
+		url: siteUrl
+	},
+	title: env.APP_NAME || 'Invest-igator',
+	twitter: {
+		card: 'summary_large_image',
+		description: 'An open-source investment portfolio tracker',
+		images: [{ url: '/twitter-image' }],
+		title: env.APP_NAME || 'Invest-igator'
+	}
 };
 
 const geist = Geist({
