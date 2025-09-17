@@ -66,6 +66,7 @@ model User {
     sessions      Session[]
     posts         Post[]
     watchlist     WatchlistItem[]
+    emailChangeTokens EmailChangeToken[]
 }
 
 model VerificationToken {
@@ -74,6 +75,19 @@ model VerificationToken {
     expires    DateTime
 
     @@unique([identifier, token])
+}
+
+model EmailChangeToken {
+    id        String   @id @default(cuid())
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId    String
+    newEmail  String
+    token     String   @unique
+    expiresAt DateTime
+    createdAt DateTime @default(now())
+
+    @@index([userId])
+    @@index([expiresAt])
 }
 
 enum Theme {

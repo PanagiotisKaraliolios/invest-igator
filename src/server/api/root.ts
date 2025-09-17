@@ -1,3 +1,4 @@
+import { accountRouter } from '@/server/api/routers/account';
 import { authRouter } from '@/server/api/routers/auth';
 import { postRouter } from '@/server/api/routers/post';
 import { watchlistRouter } from '@/server/api/routers/watchlist';
@@ -10,6 +11,7 @@ import { themeProcedures } from './routers/theme';
  * All routers added in /api/routers should be manually added here.
  */
 export const appRouter = createTRPCRouter({
+	account: accountRouter,
 	auth: authRouter,
 	post: postRouter,
 	theme: themeProcedures,

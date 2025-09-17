@@ -63,17 +63,17 @@ const data = {
 			],
 			title: 'Tools',
 			url: '/tools'
-		},
-		{
-			icon: Settings2,
-			items: [
-				{ title: 'Profile', url: '/account/profile' },
-				{ title: 'Settings', url: '/account/settings' },
-				{ title: 'Support', url: '/account/support' }
-			],
-			title: 'Account',
-			url: '/account'
 		}
+		// {
+		// 	icon: Settings2,
+		// 	items: [
+		// 		{ title: 'Profile', url: '/account/profile' },
+		// 		{ title: 'Settings', url: '/account/settings' },
+		// 		{ title: 'Support', url: '/account/support' }
+		// 	],
+		// 	title: 'Account',
+		// 	url: '/account'
+		// }
 	]
 };
 

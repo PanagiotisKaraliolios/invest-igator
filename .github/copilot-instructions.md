@@ -21,6 +21,7 @@ Next.js App Router (T3-ish) with tRPC v11, Prisma/PostgreSQL, NextAuth, shadcn/u
 - Define routers in `src/server/api/routers/*` and register in `src/server/api/root.ts`.
 - Use `publicProcedure` for open endpoints, `protectedProcedure` when `ctx.session.user` is required; DB access via `ctx.db.*`.
 - Dev-only timing middleware adds a small delay and logs `[TRPC] <path> took Nms` (see `src/server/api/trpc.ts`).
+- Server usage: `import { HydrateClient, api } from "@/trpc/server";` → `const data = await api.watchlist.list.query();`
 - Client usage: `import { api } from "@/trpc/react";` → `api.watchlist.list.useQuery()`; RSC usage via `src/trpc/server.ts` helpers.
 
 ## Prisma & Models

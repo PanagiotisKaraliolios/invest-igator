@@ -52,7 +52,7 @@ export const authConfig = {
 			}
 			return token;
 		},
-		session: ({ session, token }) => {
+		session: async ({ session, token }) => {
 			const t = token as {
 				sub?: string;
 				id?: string;
@@ -64,11 +64,27 @@ export const authConfig = {
 				const u = session.user as unknown as {
 					id?: string;
 					emailVerified?: string | null;
+					name?: string | null;
+					image?: string | null;
 				};
 				if (id) u.id = id;
 				u.emailVerified = t.emailVerified ?? null;
+
+				// Always reflect latest profile fields in the session
+				if (id) {
+					const latest = await db.user.findUnique({
+						select: { email: true, image: true, name: true },
+						where: { id }
+					});
+					if (latest) {
+						u.name = latest.name ?? u.name ?? null;
+						u.image = latest.image ?? u.image ?? null;
+						// Ensure email in session reflects the latest from DB
+						(u as { email?: string | null }).email =
+							latest.email ?? (u as { email?: string | null }).email ?? null;
+					}
+				}
 			}
-			console.log('🚀 ~ config.ts: ~ session:', session);
 			return session;
 		}
 	},
@@ -113,8 +129,6 @@ export const authConfig = {
 					},
 					where: { email }
 				});
-
-				console.log('🚀 ~ config.ts:85 ~ user:', user);
 
 				if (!user || !user.passwordHash) {
 					// No password set for this user (likely OAuth-only) or user not found
