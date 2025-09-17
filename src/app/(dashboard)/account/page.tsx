@@ -1,11 +1,12 @@
 import DangerZoneCard from '@/app/(dashboard)/account/_components/danger-zone-card';
 import PasswordCard from '@/app/(dashboard)/account/_components/password-card';
 import ProfileCard from '@/app/(dashboard)/account/_components/profile-card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { auth } from '@/server/auth';
 import { api, HydrateClient } from '@/trpc/server';
+import AccountTabsClient from './_components/account-tabs-client';
 
-export default async function AccountPage() {
+export default async function AccountPage({ searchParams }: { searchParams?: { tab?: string } }) {
 	const session = await auth();
 
 	// Seed client cache for smoother hydration (pattern-aligned)
@@ -17,7 +18,7 @@ export default async function AccountPage() {
 
 	return (
 		<HydrateClient>
-			<Tabs className='w-full' defaultValue='profile'>
+			<AccountTabsClient defaultValue='profile' valid={['profile', 'security', 'danger']}>
 				<TabsList>
 					<TabsTrigger value='profile'>Profile</TabsTrigger>
 					<TabsTrigger value='security'>Security</TabsTrigger>
@@ -34,7 +35,7 @@ export default async function AccountPage() {
 						<DangerZoneCard />
 					</TabsContent>
 				</div>
-			</Tabs>
+			</AccountTabsClient>
 		</HydrateClient>
 	);
 }

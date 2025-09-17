@@ -76,7 +76,10 @@ export default function ProfileCard({ initial }: { initial: RouterOutputs['accou
 					value={image}
 				/>
 				<div className='flex items-center justify-between'>
-					<p className='text-xs text-muted-foreground'>Email: {initial?.email}</p>
+					<div className='flex items-center gap-2'>
+						<p className='text-xs text-muted-foreground'>Email: {initial?.email}</p>
+						{!initial?.emailVerified && initial?.email ? <RequestVerifyButton /> : null}
+					</div>
 					<Dialog onOpenChange={setEmailDialogOpen} open={emailDialogOpen}>
 						<DialogTrigger asChild>
 							<Button size='sm' variant='outline'>
@@ -161,5 +164,17 @@ function EmailChangeForm({ onDone }: { onDone?: () => void }) {
 				</Button>
 			</div>
 		</form>
+	);
+}
+
+function RequestVerifyButton() {
+	const request = api.account.requestEmailVerification.useMutation({
+		onError: (e) => toast.error(e.message || 'Failed to send verification email'),
+		onSuccess: () => toast.success('Verification email sent')
+	});
+	return (
+		<Button disabled={request.isPending} onClick={() => request.mutate()} size='sm' variant='default'>
+			{request.isPending ? 'Sending…' : 'Verify email'}
+		</Button>
 	);
 }

@@ -67,7 +67,7 @@ export const accountRouter = createTRPCRouter({
 	}),
 	getProfile: protectedProcedure.query(async ({ ctx }) => {
 		const user = await ctx.db.user.findUnique({
-			select: { email: true, id: true, image: true, name: true, theme: true },
+			select: { email: true, emailVerified: true, id: true, image: true, name: true, theme: true },
 			where: { id: ctx.session.user.id }
 		});
 		if (!user) throw new TRPCError({ code: 'NOT_FOUND' });
@@ -128,6 +128,44 @@ export const accountRouter = createTRPCRouter({
 
 			return { ok: true } as const;
 		}),
+
+	requestEmailVerification: protectedProcedure.mutation(async ({ ctx }) => {
+		const userId = ctx.session.user.id;
+		const user = await ctx.db.user.findUnique({
+			select: { email: true, emailVerified: true },
+			where: { id: userId }
+		});
+		if (!user?.email) throw new TRPCError({ code: 'BAD_REQUEST', message: 'No email on file' });
+		if (user.emailVerified) {
+			return { ok: true } as const;
+		}
+
+		const token = randomBytes(32).toString('hex');
+		const expires = new Date(Date.now() + 1000 * 60 * 60); // 1 hour
+		// Clear any existing tokens for this identifier
+		await ctx.db.verificationToken.deleteMany({ where: { identifier: user.email } });
+		await ctx.db.verificationToken.create({ data: { expires, identifier: user.email, token } });
+
+		const baseUrl = env.NEXT_PUBLIC_SITE_URL;
+		const url = `${baseUrl}/api/verify-email/confirm?token=${encodeURIComponent(token)}`;
+		try {
+			await sendVerificationRequest({
+				expires,
+				identifier: user.email,
+				provider: { from: env.EMAIL_FROM, server: env.EMAIL_SERVER } as any,
+				request: new Request(url),
+				theme: { brandColor: '#f97316' },
+				token,
+				url
+			});
+		} catch {
+			if (env.NODE_ENV !== 'production') {
+				console.log('[VerifyEmail] Confirm URL:', url);
+			}
+		}
+
+		return { ok: true } as const;
+	}),
 
 	updateProfile: protectedProcedure
 		.input(

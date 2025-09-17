@@ -20,7 +20,7 @@ interface SendVerificationRequestParams {
 }
 
 export async function sendVerificationRequest(params: SendVerificationRequestParams): Promise<void> {
-	const { identifier, url, provider, theme } = params;
+	const { identifier, url, provider, theme, request } = params;
 	// Check if a user exists for this email
 	const existingUser = await db.user.findUnique({
 		where: { email: identifier }
@@ -31,14 +31,33 @@ export async function sendVerificationRequest(params: SendVerificationRequestPar
 	// 		`No account found for ${identifier}. <a href=\"/signup\">Create an account</a>`,
 	// 	);
 	// }
-	const { host } = new URL(url);
+	const { host, pathname } = new URL(url);
+	// Determine context: email change confirmation vs email verification (auth email)
+	const isEmailChange = pathname.includes('/api/email-change/confirm');
+	const isAuthEmail = pathname.includes('/api/auth/callback/email');
+	const isCustomVerify = pathname.includes('/api/verify-email/confirm');
+
+	// If available, refine based on the referring page
+	const referer = request.headers.get('referer') || '';
+	const cameFromAccount = referer.includes('/account');
+
+	const mode: 'email-change' | 'verify-email' | 'auth-email' = isEmailChange
+		? 'email-change'
+		: cameFromAccount || isAuthEmail || isCustomVerify
+			? 'verify-email'
+			: 'auth-email';
 	// NOTE: You are not required to use `nodemailer`, use whatever you want.
 	const transport = createTransport(provider.server);
 	const result = await transport.sendMail({
 		from: provider.from,
-		html: html({ host, theme, url }),
-		subject: `Sign in to ${host}`,
-		text: text({ host, url }),
+		html: html({ host, mode, theme, url }),
+		subject:
+			mode === 'email-change'
+				? `Confirm your new email — ${host}`
+				: mode === 'verify-email'
+					? `Verify your email — ${host}`
+					: `Access your account — ${host}`,
+		text: text({ host, mode, url }),
 		to: identifier
 	});
 	// const result = await transport.sendMail({
@@ -54,12 +73,17 @@ export async function sendVerificationRequest(params: SendVerificationRequestPar
 	}
 }
 
-function html(params: { url: string; host: string; theme: Theme }) {
-	const { url, host, theme } = params;
+function html(params: {
+	url: string;
+	host: string;
+	theme: Theme;
+	mode: 'email-change' | 'verify-email' | 'auth-email';
+}) {
+	const { url, host, theme, mode } = params;
 
 	const escapedHost = host.replace(/\./g, '&#8203;.');
 
-	const brandColor = theme.brandColor || '#346df1';
+	const brandColor = theme.brandColor || '#f97316';
 	const color = {
 		background: '#f9f9f9',
 		buttonBackground: brandColor,
@@ -69,14 +93,26 @@ function html(params: { url: string; host: string; theme: Theme }) {
 		text: '#444'
 	};
 
+	const heading =
+		mode === 'email-change'
+			? `Confirm your new email for <strong>${host.replace(/\./g, '&#8203;.')}</strong>`
+			: mode === 'verify-email'
+				? `Verify your email for <strong>${host.replace(/\./g, '&#8203;.')}</strong>`
+				: `Access your account at <strong>${host.replace(/\./g, '&#8203;.')}</strong>`;
+	const cta = mode === 'email-change' ? 'Confirm email' : mode === 'verify-email' ? 'Verify email' : 'Continue';
+	const footer =
+		mode === 'email-change'
+			? 'If you did not request to change your email, you can safely ignore this message.'
+			: 'If you did not request this email you can safely ignore it.';
+
 	return `
 <body style="background: ${color.background};">
-  <table width="100%" border="0" cellspacing="20" cellpadding="0"
+	<table width="100%" border="0" cellspacing="20" cellpadding="0"
     style="background: ${color.mainBackground}; max-width: 600px; margin: auto; border-radius: 10px;">
     <tr>
       <td align="center"
         style="padding: 10px 0px; font-size: 22px; font-family: Helvetica, Arial, sans-serif; color: ${color.text};">
-        Sign in to <strong>${escapedHost}</strong>
+				${heading}
       </td>
     </tr>
     <tr>
@@ -85,8 +121,8 @@ function html(params: { url: string; host: string; theme: Theme }) {
           <tr>
             <td align="center" style="border-radius: 5px;" bgcolor="${color.buttonBackground}"><a href="${url}"
                 target="_blank"
-                style="font-size: 18px; font-family: Helvetica, Arial, sans-serif; color: ${color.buttonText}; text-decoration: none; border-radius: 5px; padding: 10px 20px; border: 1px solid ${color.buttonBorder}; display: inline-block; font-weight: bold;">Sign
-                in</a></td>
+								style="font-size: 18px; font-family: Helvetica, Arial, sans-serif; color: ${color.buttonText}; text-decoration: none; border-radius: 5px; padding: 10px 20px; border: 1px solid ${color.buttonBorder}; display: inline-block; font-weight: bold;">${cta}
+								</a></td>
           </tr>
         </table>
       </td>
@@ -94,7 +130,7 @@ function html(params: { url: string; host: string; theme: Theme }) {
     <tr>
       <td align="center"
         style="padding: 0px 0px 10px 0px; font-size: 16px; line-height: 22px; font-family: Helvetica, Arial, sans-serif; color: ${color.text};">
-        If you did not request this email you can safely ignore it.
+				${footer}
       </td>
     </tr>
   </table>
@@ -103,6 +139,20 @@ function html(params: { url: string; host: string; theme: Theme }) {
 }
 
 // Email Text body (fallback for email clients that don't render HTML, e.g. feature phones)
-function text({ url, host }: { url: string; host: string }) {
-	return `Sign in to ${host}\n${url}\n\n`;
+function text({
+	url,
+	host,
+	mode
+}: {
+	url: string;
+	host: string;
+	mode: 'email-change' | 'verify-email' | 'auth-email';
+}) {
+	const title =
+		mode === 'email-change'
+			? 'Confirm your new email'
+			: mode === 'verify-email'
+				? 'Verify your email'
+				: 'Access your account';
+	return `${title} — ${host}\n${url}\n\n`;
 }

@@ -1,5 +1,5 @@
 'use client';
-import { useRouter } from 'next/navigation';
+import { signOut } from 'next-auth/react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -8,12 +8,11 @@ import { api } from '@/trpc/react';
 
 export default function DangerZoneCard() {
 	const [confirming, setConfirming] = useState(false);
-	const router = useRouter();
 	const del = api.account.deleteAccount.useMutation({
 		onError: (e) => toast.error(e.message || 'Failed to delete account'),
 		onSuccess: () => {
 			toast.success('Account deleted');
-			router.push('/signout');
+			void signOut({ callbackUrl: '/' });
 		}
 	});
 

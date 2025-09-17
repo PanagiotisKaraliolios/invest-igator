@@ -77,7 +77,7 @@ export function NavUser({
 						<DropdownMenuSeparator />
 						<DropdownMenuGroup>
 							<DropdownMenuItem asChild>
-								<Link className='flex items-center gap-2' href='/account'>
+								<Link className='flex items-center gap-2' href='/account' prefetch>
 									<BadgeCheck />
 									Account
 								</Link>
