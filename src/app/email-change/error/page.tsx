@@ -7,8 +7,13 @@ export const metadata: Metadata = {
 	title: 'Email Change Failed — Invest-igator'
 };
 
-export default function EmailChangeErrorPage({ searchParams }: { searchParams?: { reason?: string } }) {
-	const reason = searchParams?.reason ?? 'Unable to confirm email change.';
+export default async function EmailChangeErrorPage({
+	searchParams
+}: {
+	searchParams?: Promise<{ reason?: string }>;
+}) {
+	const sp = (await searchParams) ?? {};
+	const reason = sp.reason ?? 'Unable to confirm email change.';
 	return (
 		<div className='mx-auto max-w-md p-6'>
 			<Card>
@@ -20,7 +25,7 @@ export default function EmailChangeErrorPage({ searchParams }: { searchParams?: 
 					<p className='text-sm text-muted-foreground'>{reason}</p>
 					<div className='flex gap-2'>
 						<Button asChild variant='secondary'>
-							<Link href='/account'>Back to Account</Link>
+							<Link href='/account?tab=profile'>Back to Account</Link>
 						</Button>
 						<Button asChild>
 							<Link href='/'>Go Home</Link>

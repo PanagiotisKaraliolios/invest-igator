@@ -6,7 +6,7 @@ import { auth } from '@/server/auth';
 import { api, HydrateClient } from '@/trpc/server';
 import AccountTabsClient from './_components/account-tabs-client';
 
-export default async function AccountPage({ searchParams }: { searchParams?: { tab?: string } }) {
+export default async function AccountPage() {
 	const session = await auth();
 
 	// Seed client cache for smoother hydration (pattern-aligned)
