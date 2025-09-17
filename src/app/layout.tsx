@@ -26,6 +26,9 @@ export const metadata: Metadata = {
 		type: 'website',
 		url: siteUrl
 	},
+	other: env.NEXT_PUBLIC_ADSENSE_CLIENT_ID
+		? { 'google-adsense-account': env.NEXT_PUBLIC_ADSENSE_CLIENT_ID }
+		: undefined,
 	title: env.APP_NAME || 'Invest-igator',
 	twitter: {
 		card: 'summary_large_image',

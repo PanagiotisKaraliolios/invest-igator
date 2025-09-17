@@ -61,7 +61,7 @@ export function ConsentProvider({ children }: { children: React.ReactNode }) {
 	};
 
 	const shouldLoadAds =
-		process.env.NODE_ENV === 'production' && env.NEXT_PUBLIC_ADSENSE_CLIENT_ID && consent === 'granted';
+		process.env.NODE_ENV === 'production' && env.NEXT_PUBLIC_ADSENSE_CLIENT_ID;
 
 	return (
 		<>
