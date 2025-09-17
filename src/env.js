@@ -9,7 +9,7 @@ export const env = createEnv({
 	 */
 	client: {
 		// NEXT_PUBLIC_CLIENTVAR: z.string(),
-		NEXT_PUBLIC_SITE_URL: z.string().default('http://localhost:3000'),
+		NEXT_PUBLIC_SITE_URL: z.string().default('http://localhost:3000')
 	},
 	/**
 	 * Makes it so that empty strings are treated as undefined. `SOME_VAR: z.string()` and

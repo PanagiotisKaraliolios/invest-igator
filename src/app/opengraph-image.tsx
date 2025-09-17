@@ -13,7 +13,7 @@ export default async function Image() {
 		<div
 			style={{
 				alignItems: 'flex-start',
-				background: 'linear-gradient(135deg, #0f172a 0%, #111827 40%, #0a0f1e 100%)',
+				background: 'linear-gradient(135deg, #0b0f1a 0%, #111827 40%, #0a0f1e 100%)',
 				color: 'white',
 				display: 'flex',
 				flexDirection: 'column',
@@ -33,9 +33,9 @@ export default async function Image() {
 			>
 				<div
 					style={{
-						background: 'linear-gradient(135deg, #22d3ee 0%, #a78bfa 100%)',
+						background: 'linear-gradient(135deg, #fb923c 0%, #f59e0b 50%, #f97316 100%)',
 						borderRadius: 14,
-						boxShadow: '0 10px 30px rgba(167,139,250,0.35)',
+						boxShadow: '0 10px 30px rgba(251,146,60,0.35)',
 						height: 56,
 						width: 56
 					}}
@@ -76,7 +76,7 @@ export default async function Image() {
 			<div
 				style={{ alignItems: 'center', bottom: 64, display: 'flex', gap: 12, position: 'absolute', right: 64 }}
 			>
-				<div style={{ backgroundColor: '#22d3ee', borderRadius: 9999, height: 10, width: 10 }} />
+				<div style={{ backgroundColor: '#fb923c', borderRadius: 9999, height: 10, width: 10 }} />
 				<span style={{ fontSize: 24, opacity: 0.9 }}>Built with Next.js, tRPC, Prisma</span>
 			</div>
 		</div>,

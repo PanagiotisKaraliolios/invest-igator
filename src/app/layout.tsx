@@ -11,7 +11,11 @@ const siteUrl = env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
 export const metadata: Metadata = {
 	description: 'An open-source investment portfolio tracker',
-	icons: [{ rel: 'icon', url: '/favicon.ico' }],
+	icons: [
+		{ rel: 'icon', url: '/icon' },
+		{ rel: 'shortcut icon', url: '/favicon.ico' },
+		{ rel: 'apple-touch-icon', url: '/apple-icon' }
+	],
 	metadataBase: new URL(siteUrl),
 	openGraph: {
 		description: 'An open-source investment portfolio tracker',

@@ -13,7 +13,7 @@ export default async function Image() {
 		<div
 			style={{
 				alignItems: 'flex-start',
-				background: 'linear-gradient(135deg, #020617 0%, #0b1220 40%, #0a0f1e 100%)',
+				background: 'linear-gradient(135deg, #0a0f1e 0%, #111827 40%, #0b0f1a 100%)',
 				color: 'white',
 				display: 'flex',
 				flexDirection: 'column',
@@ -26,9 +26,9 @@ export default async function Image() {
 			<div style={{ alignItems: 'center', display: 'flex', gap: 16, opacity: 0.92 }}>
 				<div
 					style={{
-						background: 'linear-gradient(135deg, #60a5fa 0%, #22d3ee 100%)',
+						background: 'linear-gradient(135deg, #fb923c 0%, #f59e0b 50%, #f97316 100%)',
 						borderRadius: 14,
-						boxShadow: '0 10px 30px rgba(34,211,238,0.35)',
+						boxShadow: '0 10px 30px rgba(251,146,60,0.35)',
 						height: 56,
 						width: 56
 					}}
