@@ -47,34 +47,38 @@ export default function SearchAssets() {
 								<Skeleton className='h-10 w-full' />
 							</div>
 						)}
-						{search.data?.result?.slice(0, 10).map((r: SearchResult, idx) => (
-							<div
-								className='flex items-center justify-between rounded-md border p-2'
-								key={`${r.symbol}-${idx}`}
-							>
-								<div>
-									<div className='font-medium'>{r.displaySymbol || r.symbol}</div>
-									<div className='text-xs text-muted-foreground'>{r.description}</div>
-								</div>
-								<Button
-									aria-label='Add to watchlist'
-									className='text-muted-foreground hover:text-primary'
-									disabled={add.isPending}
-									onClick={() =>
-										add.mutate({
-											description: r.description,
-											displaySymbol: r.displaySymbol,
-											symbol: r.symbol,
-											type: r.type
-										})
-									}
-									size='icon'
-									variant='ghost'
-								>
-									<Plus className='h-4 w-4' />
-								</Button>
+						{search.data?.result && (
+							<div className='max-h-[60vh] space-y-2 overflow-y-auto pr-1'>
+								{search.data.result.map((r: SearchResult, idx) => (
+									<div
+										className='flex items-center justify-between rounded-md border p-2'
+										key={`${r.symbol}-${idx}`}
+									>
+										<div>
+											<div className='font-medium'>{r.displaySymbol || r.symbol}</div>
+											<div className='text-xs text-muted-foreground'>{r.description}</div>
+										</div>
+										<Button
+											aria-label='Add to watchlist'
+											className='text-muted-foreground hover:text-primary'
+											disabled={add.isPending}
+											onClick={() =>
+												add.mutate({
+													description: r.description,
+													displaySymbol: r.displaySymbol,
+													symbol: r.symbol,
+													type: r.type
+												})
+											}
+											size='icon'
+											variant='ghost'
+										>
+											<Plus className='h-4 w-4' />
+										</Button>
+									</div>
+								))}
 							</div>
-						))}
+						)}
 						{search.data && search.data.result.length === 0 && (
 							<div className='text-sm text-muted-foreground'>No results</div>
 						)}
