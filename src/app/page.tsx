@@ -97,13 +97,6 @@ export default async function Home() {
 				</div>
 			</section>
 
-			{/* Landing Ad */}
-			{env.NEXT_PUBLIC_ADSENSE_SLOT_LANDING ? (
-				<section className='container mx-auto px-6'>
-					<AdSlot className='my-8' format='auto' slot={env.NEXT_PUBLIC_ADSENSE_SLOT_LANDING} />
-				</section>
-			) : null}
-
 			{/* Features */}
 			<section className='container mx-auto px-6 py-12 md:py-20' id='features'>
 				<div className='mx-auto mb-10 max-w-2xl text-center'>
@@ -207,6 +200,13 @@ export default async function Home() {
 					</div>
 				</div>
 			</section>
+
+			{/* Landing Ad */}
+			{env.NEXT_PUBLIC_ADSENSE_SLOT_LANDING ? (
+				<section className='container mx-auto px-6'>
+					<AdSlot className='my-8' format='auto' slot={env.NEXT_PUBLIC_ADSENSE_SLOT_LANDING} />
+				</section>
+			) : null}
 
 			{/* Footer */}
 			<footer className='container mx-auto flex items-center justify-between gap-4 px-6 py-8 text-sm text-muted-foreground'>

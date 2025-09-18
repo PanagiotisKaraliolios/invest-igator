@@ -13,10 +13,15 @@ function getInitialConsent(): ConsentState {
 }
 
 export function ConsentProvider({ children }: { children: React.ReactNode }) {
-	const [consent, setConsent] = useState<ConsentState>(undefined);
+	const [consent, setConsent] = useState<ConsentState>(() =>
+		typeof window !== 'undefined' ? getInitialConsent() : undefined
+	);
+	const [hydrated, setHydrated] = useState(false);
 
 	useEffect(() => {
+		// Ensure state sync after hydration
 		setConsent(getInitialConsent());
+		setHydrated(true);
 	}, []);
 
 	useEffect(() => {
@@ -49,19 +54,22 @@ export function ConsentProvider({ children }: { children: React.ReactNode }) {
 		}
 	}, [consent]);
 
-	const showBanner = useMemo(() => consent === undefined, [consent]);
+	const showBanner = useMemo(() => hydrated && consent === undefined, [hydrated, consent]);
 
 	const acceptAll = () => {
-		window.localStorage.setItem('consent.ads', 'granted');
+		if (typeof window !== 'undefined') {
+			window.localStorage.setItem('consent.ads', 'granted');
+		}
 		setConsent('granted');
 	};
 	const rejectAll = () => {
-		window.localStorage.setItem('consent.ads', 'denied');
+		if (typeof window !== 'undefined') {
+			window.localStorage.setItem('consent.ads', 'denied');
+		}
 		setConsent('denied');
 	};
 
-	const shouldLoadAds =
-		process.env.NODE_ENV === 'production' && env.NEXT_PUBLIC_ADSENSE_CLIENT_ID;
+	const shouldLoadAds = hydrated && process.env.NODE_ENV === 'production' && env.NEXT_PUBLIC_ADSENSE_CLIENT_ID;
 
 	return (
 		<>
