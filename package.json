@@ -69,6 +69,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.2.3",
+		"@playwright/test": "^1.55.0",
 		"@tailwindcss/postcss": "^4.0.15",
 		"@tanstack/react-query-devtools": "^5.87.3",
 		"@types/node": "^20.14.10",
@@ -97,7 +98,13 @@
 		"postinstall": "prisma generate",
 		"preview": "next build && next start",
 		"start": "next start",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "tsc --noEmit",
+		"test:e2e:install": "bunx playwright install --with-deps",
+		"test:e2e": "bunx playwright test",
+		"test:e2e:headed": "bunx playwright test --headed",
+		"test:e2e:ui": "bunx playwright test --ui",
+		"test:e2e:noweb": "PW_SKIP_WEBSERVER=1 bunx playwright test",
+		"test:e2e:ui:noweb": "PW_SKIP_WEBSERVER=1 bunx playwright test --ui"
 	},
 	"type": "module",
 	"version": "0.1.0"

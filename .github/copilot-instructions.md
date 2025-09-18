@@ -41,3 +41,11 @@ Next.js App Router (T3-ish) with tRPC v11, Prisma/PostgreSQL, NextAuth, shadcn/u
 - DB models: `prisma/schema.prisma`; Auth: `src/server/auth/config.ts`.
 - Influx helpers: `src/server/influx.ts`; Ingest job: `src/server/jobs/ingest-alpha.ts`.
 - Feature example: `src/server/api/routers/watchlist.ts` + `src/app/(dashboard)/watchlist/*`.
+
+
+## Tests
+- E2E: Playwright tests in `tests/e2e/*`; run with `bun run test:e2e` (headless) or `bun run test:e2e:headed` (headed).
+- Test config: `playwright.config.ts` (e.g., timeouts, base URL).
+- Always add `data-testid` attributes to interactive elements (buttons, inputs) for stable selectors.
+- Test patterns: use `data-testid` attributes for stable selectors; prefer `getByRole` with name/label for accessibility-aligned queries.
+- CI: GitHub Actions workflow in `.github/workflows/ci.yml` runs lint, typecheck, build, and e2e tests on pushes and PRs.

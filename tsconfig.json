@@ -23,6 +23,7 @@
 		"jsx": "preserve",
 		"plugins": [{ "name": "next" }],
 		"incremental": true,
+        "types": ["@playwright/test"] ,
 
 		/* Path Aliases */
 		"baseUrl": ".",
@@ -36,7 +37,8 @@
 		"**/*.tsx",
 		"**/*.cjs",
 		"**/*.js",
-		".next/types/**/*.ts"
+		".next/types/**/*.ts",
+		"tests/**/*.ts"
 	],
 	"exclude": ["node_modules"]
 }

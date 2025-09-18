@@ -70,6 +70,7 @@ export function CredentialsLoginForm() {
 				<div className='grid gap-3'>
 					<Label htmlFor='cred-email'>Email</Label>
 					<Input
+						data-testid='cred-email'
 						disabled={submitting}
 						id='cred-email'
 						onChange={(e) => setEmail(e.target.value)}
@@ -89,6 +90,7 @@ export function CredentialsLoginForm() {
 					<div className='relative'>
 						<Input
 							className='pr-10'
+							data-testid='cred-password'
 							disabled={submitting}
 							id='cred-password'
 							onChange={(e) => setPassword(e.target.value)}
@@ -99,6 +101,7 @@ export function CredentialsLoginForm() {
 						<button
 							aria-label={showPassword ? 'Hide password' : 'Show password'}
 							className='absolute inset-y-0 right-2 flex items-center text-muted-foreground hover:text-foreground'
+							data-testid='toggle-password-visibility'
 							onClick={() => setShowPassword((s) => !s)}
 							type='button'
 						>
@@ -106,7 +109,7 @@ export function CredentialsLoginForm() {
 						</button>
 					</div>
 				</div>
-				<Button className='w-full' disabled={submitting} type='submit'>
+				<Button className='w-full' data-testid='cred-submit' disabled={submitting} type='submit'>
 					{submitting ? 'Logging in…' : 'Login'}
 				</Button>
 			</div>
