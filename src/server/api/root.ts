@@ -4,6 +4,7 @@ import { postRouter } from '@/server/api/routers/post';
 import { watchlistRouter } from '@/server/api/routers/watchlist';
 import { createCallerFactory, createTRPCRouter } from '@/server/api/trpc';
 import { themeProcedures } from './routers/theme';
+import { transactionsRouter } from './routers/transactions';
 
 /**
  * This is the primary router for your server.
@@ -15,6 +16,7 @@ export const appRouter = createTRPCRouter({
 	auth: authRouter,
 	post: postRouter,
 	theme: themeProcedures,
+	transactions: transactionsRouter,
 	watchlist: watchlistRouter
 });
 

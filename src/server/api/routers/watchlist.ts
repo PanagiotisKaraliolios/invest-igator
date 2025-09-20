@@ -247,13 +247,22 @@ export const watchlistRouter = createTRPCRouter({
 		});
 	}),
 
-	remove: protectedProcedure.input(z.object({ symbol: z.string().min(1) })).mutation(async ({ ctx, input }) => {
-		const userId = ctx.session.user.id;
-		await ctx.db.watchlistItem.delete({
-			where: { userId_symbol: { symbol: input.symbol, userId } }
-		});
-		return { success: true };
-	}),
+	remove: protectedProcedure
+		.input(z.object({ symbol: z.string().min(1) }))
+		.mutation(async ({ ctx, input }) => {
+			const userId = ctx.session.user.id;
+			const hasTx = await ctx.db.transaction.findFirst({
+				select: { id: true },
+				where: { symbol: input.symbol.trim().toUpperCase(), userId }
+			});
+			if (hasTx) {
+				throw new TRPCError({ code: 'BAD_REQUEST', message: 'Cannot remove a symbol that has transactions.' });
+			}
+			await ctx.db.watchlistItem.delete({
+				where: { userId_symbol: { symbol: input.symbol, userId } }
+			});
+			return { success: true } as const;
+		}),
 
 	search: protectedProcedure.input(z.object({ q: z.string().min(1) })).query(async ({ input }) => {
 		const url = new URL(`${env.FINNHUB_API_URL}/search`);
