@@ -6,11 +6,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import ProviderLoginButton from './providerLoginButton';
 
 export default function ProvidersList() {
-	const [providers, setProviders] = useState<{
-		id: string;
-		name: string;
-		type: string;
-	}[]>([]);
+	const [providers, setProviders] = useState<
+		{
+			id: string;
+			name: string;
+			type: string;
+		}[]
+	>([]);
 	const [loading, setLoading] = useState(true);
 
 	useEffect(() => {

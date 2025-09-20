@@ -7,34 +7,6 @@ import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
 import { sendVerificationRequest } from '@/server/auth/send-verification-request';
 
 export const accountRouter = createTRPCRouter({
-	listOAuthAccounts: protectedProcedure.query(async ({ ctx }) => {
-		const accounts = await ctx.db.account.findMany({
-			select: { id: true, provider: true, providerAccountId: true, type: true },
-			where: { userId: ctx.session.user.id }
-		});
-		return accounts;
-	}),
-
-	disconnectOAuthAccount: protectedProcedure
-		.input(z.object({ accountId: z.string().min(1) }))
-		.mutation(async ({ ctx, input }) => {
-			const userId = ctx.session.user.id;
-			const account = await ctx.db.account.findFirst({ select: { id: true, userId: true }, where: { id: input.accountId, userId } });
-			if (!account) throw new TRPCError({ code: 'NOT_FOUND' });
-
-			// Safety: prevent removing last authentication method
-			const [accountCount, user] = await Promise.all([
-				ctx.db.account.count({ where: { userId } }),
-				ctx.db.user.findUnique({ select: { passwordHash: true }, where: { id: userId } })
-			]);
-			const hasPassword = Boolean(user?.passwordHash);
-			if (accountCount <= 1 && !hasPassword) {
-				throw new TRPCError({ code: 'BAD_REQUEST', message: 'Cannot remove your only sign-in method. Please add another sign-in method (or set a password) before removing this one.' });
-			}
-
-			await ctx.db.account.delete({ where: { id: input.accountId } });
-			return { ok: true } as const;
-		}),
 	changePassword: protectedProcedure
 		.input(
 			z.object({
@@ -102,6 +74,34 @@ export const accountRouter = createTRPCRouter({
 		await ctx.db.user.delete({ where: { id: ctx.session.user.id } });
 		return { ok: true } as const;
 	}),
+
+	disconnectOAuthAccount: protectedProcedure
+		.input(z.object({ accountId: z.string().min(1) }))
+		.mutation(async ({ ctx, input }) => {
+			const userId = ctx.session.user.id;
+			const account = await ctx.db.account.findFirst({
+				select: { id: true, userId: true },
+				where: { id: input.accountId, userId }
+			});
+			if (!account) throw new TRPCError({ code: 'NOT_FOUND' });
+
+			// Safety: prevent removing last authentication method
+			const [accountCount, user] = await Promise.all([
+				ctx.db.account.count({ where: { userId } }),
+				ctx.db.user.findUnique({ select: { passwordHash: true }, where: { id: userId } })
+			]);
+			const hasPassword = Boolean(user?.passwordHash);
+			if (accountCount <= 1 && !hasPassword) {
+				throw new TRPCError({
+					code: 'BAD_REQUEST',
+					message:
+						'Cannot remove your only sign-in method. Please add another sign-in method (or set a password) before removing this one.'
+				});
+			}
+
+			await ctx.db.account.delete({ where: { id: input.accountId } });
+			return { ok: true } as const;
+		}),
 	getProfile: protectedProcedure.query(async ({ ctx }) => {
 		const user = await ctx.db.user.findUnique({
 			select: {
@@ -118,6 +118,13 @@ export const accountRouter = createTRPCRouter({
 		if (!user) throw new TRPCError({ code: 'NOT_FOUND' });
 		const { passwordHash, ...rest } = user;
 		return { ...rest, hasPassword: Boolean(passwordHash) } as const;
+	}),
+	listOAuthAccounts: protectedProcedure.query(async ({ ctx }) => {
+		const accounts = await ctx.db.account.findMany({
+			select: { id: true, provider: true, providerAccountId: true, type: true },
+			where: { userId: ctx.session.user.id }
+		});
+		return accounts;
 	}),
 	requestEmailChange: protectedProcedure
 		.input(z.object({ currentPassword: z.string().optional(), newEmail: z.string().email() }))
