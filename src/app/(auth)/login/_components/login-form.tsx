@@ -11,7 +11,9 @@ export function LoginForm({ className, errorCode, ...props }: React.ComponentPro
 			<Card>
 				<CardHeader className='text-center'>
 					<CardTitle className='text-xl'>Welcome back</CardTitle>
-					<CardDescription>Login with your Discord or Google account</CardDescription>
+					<CardDescription>
+						Login with one of the providers below or with your email and password.
+					</CardDescription>
 				</CardHeader>
 				<CardContent>
 					<div className='grid gap-6'>
