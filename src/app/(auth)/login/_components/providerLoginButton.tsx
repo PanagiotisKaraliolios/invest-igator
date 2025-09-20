@@ -1,18 +1,10 @@
 'use client';
 import { useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
-import type { IconType } from 'react-icons';
-import { FaDiscord, FaGithub } from 'react-icons/fa';
-import { FcGoogle } from 'react-icons/fc';
-import { MdEmail } from 'react-icons/md';
 import { Button } from '@/components/ui/button';
+import { providerIcons } from '@/lib/auth/providerMeta';
 
-const providerIcons: Record<string, IconType> = {
-	discord: FaDiscord,
-	email: MdEmail,
-	github: FaGithub,
-	google: FcGoogle
-};
+// icons come from providerMeta
 
 export default function ProviderLoginButton({ provider }: { provider: string }) {
 	const searchParams = useSearchParams();

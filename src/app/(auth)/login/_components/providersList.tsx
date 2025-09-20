@@ -1,20 +1,28 @@
 'use client';
 
 import { getProviders } from 'next-auth/react';
-import type { ClientSafeProvider } from 'node_modules/next-auth/lib/client';
 import { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import ProviderLoginButton from './providerLoginButton';
 
 export default function ProvidersList() {
-	const [providers, setProviders] = useState<ClientSafeProvider[]>([]);
+	const [providers, setProviders] = useState<{
+		id: string;
+		name: string;
+		type: string;
+	}[]>([]);
 	const [loading, setLoading] = useState(true);
 
 	useEffect(() => {
 		getProviders()
 			.then((p) => {
 				if (!p) return setProviders([]);
-				setProviders(Object.values(p));
+				const list = Object.values(p).map((prov: any) => ({
+					id: prov.id,
+					name: prov.name,
+					type: prov.type
+				}));
+				setProviders(list);
 			})
 			.finally(() => setLoading(false));
 	}, []);

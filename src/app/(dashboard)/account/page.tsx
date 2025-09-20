@@ -1,3 +1,4 @@
+import ConnectedAccountsCard from '@/app/(dashboard)/account/_components/connected-accounts-card';
 import DangerZoneCard from '@/app/(dashboard)/account/_components/danger-zone-card';
 import PasswordCard from '@/app/(dashboard)/account/_components/password-card';
 import ProfileCard from '@/app/(dashboard)/account/_components/profile-card';
@@ -29,7 +30,10 @@ export default async function AccountPage() {
 						<ProfileCard initial={profile} />
 					</TabsContent>
 					<TabsContent className='col-span-1 md:col-span-2' value='security'>
-						<PasswordCard />
+						<div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
+							<PasswordCard />
+							<ConnectedAccountsCard />
+						</div>
 					</TabsContent>
 					<TabsContent className='col-span-1 md:col-span-2' value='danger'>
 						<DangerZoneCard />
