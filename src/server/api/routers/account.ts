@@ -28,6 +28,15 @@ export const accountRouter = createTRPCRouter({
 			const pepper = env.PASSWORD_PEPPER ?? '';
 			const ok = await bcrypt.compare(`${input.currentPassword}${pepper}`, user.passwordHash);
 			if (!ok) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Current password is incorrect' });
+
+			// Prevent reusing the current password
+			const sameAsCurrent = await bcrypt.compare(`${input.newPassword}${pepper}`, user.passwordHash);
+			if (sameAsCurrent) {
+				throw new TRPCError({
+					code: 'BAD_REQUEST',
+					message: 'New password must be different from current password'
+				});
+			}
 			const nextHash = await bcrypt.hash(`${input.newPassword}${pepper}`, 12);
 			await ctx.db.user.update({ data: { passwordHash: nextHash }, where: { id: ctx.session.user.id } });
 			return { ok: true } as const;
@@ -67,11 +76,20 @@ export const accountRouter = createTRPCRouter({
 	}),
 	getProfile: protectedProcedure.query(async ({ ctx }) => {
 		const user = await ctx.db.user.findUnique({
-			select: { email: true, emailVerified: true, id: true, image: true, name: true, theme: true },
+			select: {
+				email: true,
+				emailVerified: true,
+				id: true,
+				image: true,
+				name: true,
+				passwordHash: true,
+				theme: true
+			},
 			where: { id: ctx.session.user.id }
 		});
 		if (!user) throw new TRPCError({ code: 'NOT_FOUND' });
-		return user;
+		const { passwordHash, ...rest } = user;
+		return { ...rest, hasPassword: Boolean(passwordHash) } as const;
 	}),
 	requestEmailChange: protectedProcedure
 		.input(z.object({ currentPassword: z.string().optional(), newEmail: z.string().email() }))
@@ -166,6 +184,29 @@ export const accountRouter = createTRPCRouter({
 
 		return { ok: true } as const;
 	}),
+	setPassword: protectedProcedure
+		.input(
+			z.object({
+				newPassword: z.string().min(8).max(200)
+			})
+		)
+		.mutation(async ({ ctx, input }) => {
+			const user = await ctx.db.user.findUnique({
+				select: { passwordHash: true },
+				where: { id: ctx.session.user.id }
+			});
+			if (!user) throw new TRPCError({ code: 'NOT_FOUND' });
+			if (user.passwordHash) {
+				throw new TRPCError({
+					code: 'BAD_REQUEST',
+					message: 'Password already set. Use change password instead.'
+				});
+			}
+			const pepper = env.PASSWORD_PEPPER ?? '';
+			const nextHash = await bcrypt.hash(`${input.newPassword}${pepper}`, 12);
+			await ctx.db.user.update({ data: { passwordHash: nextHash }, where: { id: ctx.session.user.id } });
+			return { ok: true } as const;
+		}),
 
 	updateProfile: protectedProcedure
 		.input(
