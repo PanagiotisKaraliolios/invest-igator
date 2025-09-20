@@ -1,6 +1,8 @@
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import bcrypt from 'bcryptjs';
+import { headers } from 'next/headers';
 import { CredentialsSignin, type DefaultSession, type NextAuthConfig } from 'next-auth';
+import { getToken } from 'next-auth/jwt';
 import Credentials from 'next-auth/providers/credentials';
 import DiscordProvider from 'next-auth/providers/discord';
 import EmailProvider from 'next-auth/providers/nodemailer';
@@ -86,6 +88,49 @@ export const authConfig = {
 				}
 			}
 			return session;
+		},
+		async signIn({ account, user }) {
+			// If attempting to link/sign in with an OAuth account that already belongs to
+			// another user, block the action and show a friendly error.
+			// This preserves correct login behavior (logging in with that provider still works),
+			// while preventing cross-user linking when a different user is currently signed in.
+			try {
+				if (account?.provider && account?.providerAccountId) {
+					// Determine if there is a currently signed-in user via the session token
+					let sessionUserId: string | undefined;
+					try {
+						const token = await getToken({
+							req: { headers: new Headers(await headers()) } as any,
+							secret: env.AUTH_SECRET
+						});
+						sessionUserId =
+							(token?.sub as string | undefined) ?? ((token as any)?.id as string | undefined);
+					} catch {
+						// ignore token decode errors; treat as no active session
+					}
+					const existing = await db.account.findUnique({
+						select: { userId: true },
+						where: {
+							provider_providerAccountId: {
+								provider: account.provider,
+								providerAccountId: account.providerAccountId
+							}
+						}
+					});
+					// If a different user is currently signed in and the provider is already linked
+					// to someone else, block linking and show an error.
+					if (existing && sessionUserId && existing.userId !== sessionUserId) {
+						const params = new URLSearchParams({
+							error: 'AccessDenied',
+							error_description: 'This provider account is already linked to another user.'
+						});
+						return `/auth-error?${params.toString()}`;
+					}
+				}
+			} catch {
+				// On any unexpected error, fall through to default behavior
+			}
+			return true;
 		}
 	},
 	pages: {

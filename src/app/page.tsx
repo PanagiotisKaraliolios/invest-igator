@@ -9,6 +9,8 @@ import { auth } from '@/server/auth';
 import HeroCharts from './_components/hero-charts';
 import ThemeSwitch from './(dashboard)/_components/theme-switch';
 
+export const revalidate = 60;
+
 export default async function Home() {
 	const session = await auth();
 	const appName = env.APP_NAME ?? 'Invest-igator';

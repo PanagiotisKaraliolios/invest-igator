@@ -9,30 +9,29 @@ Next.js App Router app (T3 stack) with tRPC v11, Prisma/PostgreSQL, NextAuth, sh
 - Apply Prisma schema: `bun run db:generate`
 - Dev server: `bun run dev`
 
-## Ingestion: Alpha Vantage → InfluxDB
+## Ingestion: Yahoo Finance → InfluxDB
 
-This repo includes a job to ingest historical daily OHLCV bars from Alpha Vantage for symbols in your watchlist and write them into InfluxDB.
+This repo includes a job to ingest historical daily OHLCV bars from Yahoo Finance for symbols in your watchlist and write them into InfluxDB.
 
 Prerequisites (env):
 
-- `ALPHAVANTAGE_API_KEY`
-- `ALPHAVANTAGE_API_URL` (default `https://www.alphavantage.co/query`)
 - `INFLUXDB_URL` (default `http://localhost:8086`)
 - `INFLUXDB_TOKEN`
 - `INFLUXDB_ORG`
 - `INFLUXDB_BUCKET`
+- `YAHOO_CHART_API_URL` (default `https://query2.finance.yahoo.com/v8/finance/chart`)
 
 Run the job:
 
 ```sh
-bun run ingest:alpha
+bun run ingest:yahoo
 ```
 
 Notes:
 
-- The job skips symbols that already have any data in the `daily_bars` measurement.
-- Alpha Vantage free tier is rate-limited; the job backs off automatically and waits ~15s between symbols.
-- Data source: TIME_SERIES_DAILY (outputsize=full).
+- The job writes bars, dividends, splits, and capital gains to InfluxDB.
+- Gentle pacing is applied (~2s/request) to play nicely with Yahoo's protections.
+- By default, it requests the full available range (1d interval).
 
 ## Tech stack
 

@@ -1,9 +1,8 @@
 'use client';
 
-import { getProviders, signIn } from 'next-auth/react';
-import { useEffect, useMemo, useState } from 'react';
-import { FaDiscord, FaGithub } from 'react-icons/fa';
-import { FcGoogle } from 'react-icons/fc';
+import { useQuery } from '@tanstack/react-query';
+import { signIn } from 'next-auth/react';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
@@ -19,7 +18,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
 import { providerLabel, providerIcons as sharedProviderIcons } from '@/lib/auth/providerMeta';
+import { availableAuthProvidersQueryOptions } from '@/lib/auth/providersQuery';
 import { api } from '@/trpc/react';
 
 const providerIcons = sharedProviderIcons;
@@ -27,8 +28,7 @@ const providerIcons = sharedProviderIcons;
 export default function ConnectedAccountsCard() {
 	const utils = api.useUtils();
 	const { data: accounts, isLoading, isError } = api.account.listOAuthAccounts.useQuery();
-	const [availableProviders, setAvailableProviders] = useState<string[]>([]);
-	const [loadingProviders, setLoadingProviders] = useState(true);
+	const providersQuery = useQuery(availableAuthProvidersQueryOptions());
 	const [confirm, setConfirm] = useState<{ id: string; provider: string } | null>(null);
 	const disconnect = api.account.disconnectOAuthAccount.useMutation({
 		onError: (err) => {
@@ -49,22 +49,10 @@ export default function ConnectedAccountsCard() {
 		await signIn(provider, { callbackUrl: '/account?tab=security' });
 	}
 
-	useEffect(() => {
-		getProviders()
-			.then((p) => {
-				if (!p) return setAvailableProviders([]);
-				const filtered = Object.values(p)
-					.filter((prov) => prov.type !== 'email' && prov.id !== 'credentials')
-					.map((prov) => prov.id);
-				setAvailableProviders(filtered);
-			})
-			.finally(() => setLoadingProviders(false));
-	}, []);
-
 	const connectableProviders = useMemo(() => {
 		const connected = new Set((accounts ?? []).map((a) => a.provider));
-		return availableProviders.filter((id) => !connected.has(id));
-	}, [accounts, availableProviders]);
+		return (providersQuery.data ?? []).filter((id) => !connected.has(id));
+	}, [accounts, providersQuery.data]);
 
 	return (
 		<>
@@ -75,7 +63,7 @@ export default function ConnectedAccountsCard() {
 				</CardHeader>
 				<CardContent>
 					{isLoading ? (
-						<p className='text-sm text-muted-foreground'>Loading…</p>
+						<Skeleton className='h-10 w-full' />
 					) : isError ? (
 						<Alert variant='destructive'>
 							<AlertDescription>Failed to load connected accounts.</AlertDescription>
@@ -111,8 +99,10 @@ export default function ConnectedAccountsCard() {
 							)}
 							<Separator className='my-2' />
 							<div className='grid w-full grid-cols-1 gap-2'>
-								{loadingProviders ? (
+								{providersQuery.isLoading ? (
 									<p className='text-sm text-muted-foreground'>Loading providers…</p>
+								) : providersQuery.isError ? (
+									<p className='text-sm text-destructive'>Failed to load providers.</p>
 								) : connectableProviders.length === 0 ? (
 									<p className='text-sm text-muted-foreground'>No additional providers available.</p>
 								) : (
