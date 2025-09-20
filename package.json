@@ -104,7 +104,8 @@
 		"test:e2e:noweb": "PW_SKIP_WEBSERVER=1 bunx playwright test",
 		"test:e2e:ui": "bunx playwright test --ui",
 		"test:e2e:ui:noweb": "PW_SKIP_WEBSERVER=1 bunx playwright test --ui",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "tsc --noEmit",
+		"verify:secrets": "bash scripts/verify-secrets.sh"
 	},
 	"type": "module",
 	"version": "0.1.0"
