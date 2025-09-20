@@ -1,4 +1,4 @@
-import { ChartLine, ListChecks, Shield, Wallet } from 'lucide-react';
+import { ChartLine, Github, ListChecks, Shield, Wallet } from 'lucide-react';
 import Link from 'next/link';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { Badge } from '@/components/ui/badge';
@@ -211,17 +211,96 @@ export default async function Home() {
 			) : null}
 
 			{/* Footer */}
-			<footer className='container mx-auto flex items-center justify-between gap-4 px-6 py-8 text-sm text-muted-foreground'>
-				<p>
-					© {new Date().getFullYear()} {appName}. All rights reserved.
-				</p>
-				<div className='flex items-center gap-4'>
-					<Link className='hover:text-foreground' href='/login'>
-						Login
-					</Link>
-					<Link className='hover:text-foreground' href='/signup'>
-						Sign up
-					</Link>
+			<footer className='border-t'>
+				<div className='container mx-auto px-6 py-12'>
+					<div className='grid gap-8 md:grid-cols-4'>
+						<div>
+							<Link className='mb-3 flex items-center gap-2 text-foreground' href='/'>
+								<span className='grid size-9 place-items-center rounded-md bg-primary/10 text-primary'>
+									<ChartLine className='size-5' />
+								</span>
+								<span className='text-base font-semibold'>{appName}</span>
+							</Link>
+							<p className='text-muted-foreground text-sm'>
+								Open-source portfolio tracker powered by Next.js, tRPC, Prisma, and InfluxDB.
+							</p>
+							<div className='mt-4 flex items-center gap-3'>
+								<a
+									aria-label='GitHub repository'
+									className='text-muted-foreground hover:text-foreground'
+									href='https://github.com/PanagiotisKaraliolios/invest-igator'
+									rel='noopener noreferrer'
+									target='_blank'
+								>
+									<Github className='size-5' />
+								</a>
+							</div>
+						</div>
+
+						<div>
+							<h4 className='mb-3 text-sm font-semibold tracking-wide'>Product</h4>
+							<ul className='space-y-2 text-sm text-muted-foreground'>
+								<li>
+									<Link className='hover:text-foreground' href='#features'>
+										Features
+									</Link>
+								</li>
+								<li>
+									<Link className='hover:text-foreground' href='/watchlist'>
+										Watchlist
+									</Link>
+								</li>
+								<li>
+									<Link className='hover:text-foreground' href='/portfolio'>
+										Portfolio
+									</Link>
+								</li>
+								<li>
+									<Link className='hover:text-foreground' href='/dashboard'>
+										Dashboard
+									</Link>
+								</li>
+							</ul>
+						</div>
+
+						<div>
+							<h4 className='mb-3 text-sm font-semibold tracking-wide'>Legal</h4>
+							<ul className='space-y-2 text-sm text-muted-foreground'>
+								<li>
+									<Link className='hover:text-foreground' href='/privacy-policy'>
+										Privacy Policy
+									</Link>
+								</li>
+								<li>
+									<Link className='hover:text-foreground' href='/terms-of-service'>
+										Terms of Service
+									</Link>
+								</li>
+							</ul>
+						</div>
+
+						<div>
+							<h4 className='mb-3 text-sm font-semibold tracking-wide'>Account</h4>
+							<ul className='space-y-2 text-sm text-muted-foreground'>
+								<li>
+									<Link className='hover:text-foreground' href='/login'>
+										Login
+									</Link>
+								</li>
+								<li>
+									<Link className='hover:text-foreground' href='/signup'>
+										Sign up
+									</Link>
+								</li>
+							</ul>
+						</div>
+					</div>
+
+					<div className='mt-10 flex flex-col items-center justify-between gap-4 border-t pt-6 text-sm text-muted-foreground md:flex-row'>
+						<p>
+							© {new Date().getFullYear()} {appName}. All rights reserved.
+						</p>
+					</div>
 				</div>
 			</footer>
 		</main>

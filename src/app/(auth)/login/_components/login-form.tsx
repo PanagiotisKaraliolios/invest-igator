@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -44,8 +45,8 @@ export function LoginForm({ className, errorCode, ...props }: React.ComponentPro
 				</CardContent>
 			</Card>
 			<div className='text-balance text-center text-muted-foreground text-xs *:[a]:underline *:[a]:underline-offset-4 *:[a]:hover:text-primary'>
-				By clicking continue, you agree to our <a href='/'>Terms of Service</a> and{' '}
-				<a href='/'>Privacy Policy</a>.
+				By clicking continue, you agree to our <Link href='/terms-of-service'>Terms of Service</Link> and{' '}
+				<Link href='/privacy-policy'>Privacy Policy</Link>.
 			</div>
 		</div>
 	);
