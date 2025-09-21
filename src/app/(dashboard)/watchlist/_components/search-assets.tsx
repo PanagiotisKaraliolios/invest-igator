@@ -33,9 +33,9 @@ export default function SearchAssets() {
 
 	return (
 		<Card>
-			<CardHeader>
+			{/* <CardHeader>
 				<CardTitle>Search assets</CardTitle>
-			</CardHeader>
+			</CardHeader> */}
 			<CardContent className='space-y-3'>
 				<Input onChange={(e) => setQ(e.target.value)} placeholder='Search symbol or name...' value={q} />
 				{debounced.trim().length > 1 && (

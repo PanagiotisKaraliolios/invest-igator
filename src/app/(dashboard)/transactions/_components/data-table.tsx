@@ -115,6 +115,9 @@ export function DataTable<TData extends { id?: string }, TValue>({ columns }: Da
 		}
 	});
 
+	// Numeric columns that should be right-aligned
+	const numericColumns = useMemo(() => new Set(['quantity', 'price', 'total']), []);
+
 	return (
 		<div className='space-y-4'>
 			{/* Top row: primary action left, utilities right */}
@@ -123,11 +126,6 @@ export function DataTable<TData extends { id?: string }, TValue>({ columns }: Da
 					Add Transaction
 				</Button>
 				<div className='ml-auto flex items-center gap-2'>
-					{isFetching ? (
-						<span className='inline-flex items-center text-xs text-muted-foreground'>
-							<Loader2 className='mr-1 size-3 animate-spin' /> Updating…
-						</span>
-					) : null}
 					<DropdownMenu>
 						<DropdownMenuTrigger asChild>
 							<Button className='w-auto' size='sm' variant='ghost'>
@@ -248,8 +246,9 @@ export function DataTable<TData extends { id?: string }, TValue>({ columns }: Da
 						{table.getHeaderGroups().map((headerGroup) => (
 							<TableRow className='sticky top-0 z-2 bg-background' key={headerGroup.id}>
 								{headerGroup.headers.map((header) => {
+									const isNumeric = numericColumns.has(header.column.id);
 									return (
-										<TableHead key={header.id}>
+										<TableHead className={isNumeric ? 'text-right' : undefined} key={header.id}>
 											{header.isPlaceholder
 												? null
 												: flexRender(header.column.columnDef.header, header.getContext())}
@@ -264,11 +263,15 @@ export function DataTable<TData extends { id?: string }, TValue>({ columns }: Da
 							Array.from({ length: pageSize }).map((_, i) => (
 								<TableRow key={`skeleton-row-${i}`}>
 									{table.getVisibleLeafColumns().map((col, j) => {
-										const widths = ['w-16', 'w-24', 'w-20', 'w-12', 'w-28'];
+										const widths = ['w-16', 'w-16', 'w-16', 'w-16', 'w-16'];
 										const w = widths[j % widths.length];
+										const isNumeric = numericColumns.has(col.id);
 										return (
-											<TableCell key={`skeleton-cell-${i}-${col.id}`}>
-												<Skeleton className={`h-5 ${w}`} />
+											<TableCell
+												className={isNumeric ? 'text-right tabular-nums' : undefined}
+												key={`skeleton-cell-${i}-${col.id}`}
+											>
+												<Skeleton className={`h-5 ${w} inline-block`} />
 											</TableCell>
 										);
 									})}
@@ -281,11 +284,17 @@ export function DataTable<TData extends { id?: string }, TValue>({ columns }: Da
 									data-state={row.getIsSelected() && 'selected'}
 									key={row.id}
 								>
-									{row.getVisibleCells().map((cell) => (
-										<TableCell key={cell.id}>
-											{flexRender(cell.column.columnDef.cell, cell.getContext())}
-										</TableCell>
-									))}
+									{row.getVisibleCells().map((cell) => {
+										const isNumeric = numericColumns.has(cell.column.id);
+										return (
+											<TableCell
+												className={isNumeric ? 'text-right tabular-nums' : undefined}
+												key={cell.id}
+											>
+												{flexRender(cell.column.columnDef.cell, cell.getContext())}
+											</TableCell>
+										);
+									})}
 								</TableRow>
 							))
 						) : (

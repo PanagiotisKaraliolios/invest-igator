@@ -45,10 +45,10 @@ export const transactionsRouter = createTRPCRouter({
 		.input(
 			z.object({
 				date: z.string().transform((s) => new Date(s)),
-				fee: z.number().finite().optional(),
+				fee: z.number().optional(),
 				note: z.string().optional(),
-				price: z.number().finite(),
-				quantity: z.number().finite(),
+				price: z.number(),
+				quantity: z.number(),
 				side: z.enum(['BUY', 'SELL']),
 				symbol: z.string().min(1)
 			})
@@ -220,11 +220,11 @@ export const transactionsRouter = createTRPCRouter({
 					.string()
 					.transform((s) => new Date(s))
 					.optional(),
-				fee: z.number().finite().nullable().optional(),
+				fee: z.number().nullable().optional(),
 				id: z.string().min(1),
 				note: z.string().nullable().optional(),
-				price: z.number().finite().optional(),
-				quantity: z.number().finite().optional(),
+				price: z.number().optional(),
+				quantity: z.number().optional(),
 				side: z.enum(['BUY', 'SELL']).optional(),
 				symbol: z.string().min(1).optional()
 			})
