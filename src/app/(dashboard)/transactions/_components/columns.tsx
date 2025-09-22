@@ -26,6 +26,11 @@ function CurrencyCell({ value, currency }: { value: number; currency: Currency }
 	return <span>{fx(value, currency)}</span>;
 }
 
+function formatDate(dateString: string): string {
+	const date = new Date(dateString);
+	return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+}
+
 export const columns: ColumnDef<TransactionRow>[] = [
 	{
 		cell: ({ row }) => (
@@ -49,10 +54,7 @@ export const columns: ColumnDef<TransactionRow>[] = [
 	},
 	{
 		accessorKey: 'date',
-		cell: ({ getValue }) => {
-			const d = new Date(String(getValue()));
-			return <span>{d.toLocaleDateString()}</span>;
-		},
+		cell: ({ row }) => formatDate(row.original.date),
 		header: ({ column }) => (
 			<Button onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')} variant='ghost'>
 				Date
