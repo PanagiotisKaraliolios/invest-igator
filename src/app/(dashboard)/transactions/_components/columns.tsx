@@ -5,6 +5,8 @@ import { ArrowUpDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import type { Currency } from '@/lib/currency';
+import { formatCurrency as fx } from '@/lib/currency';
 import { RowActions } from './row-actions';
 
 export type TransactionRow = {
@@ -16,10 +18,12 @@ export type TransactionRow = {
 	price: number; // per unit
 	fee?: number | null;
 	note?: string | null;
+	priceCurrency: Currency;
+	feeCurrency?: Currency | null;
 };
 
-function formatCurrency(n: number): string {
-	return new Intl.NumberFormat(undefined, { currency: 'USD', style: 'currency' }).format(n);
+function CurrencyCell({ value, currency }: { value: number; currency: Currency }) {
+	return <span>{fx(value, currency)}</span>;
 }
 
 export const columns: ColumnDef<TransactionRow>[] = [
@@ -88,7 +92,7 @@ export const columns: ColumnDef<TransactionRow>[] = [
 	},
 	{
 		accessorKey: 'price',
-		cell: ({ getValue }) => formatCurrency(Number(getValue())),
+		cell: ({ row }) => <CurrencyCell currency={row.original.priceCurrency} value={Number(row.original.price)} />,
 		header: ({ column }) => (
 			<Button onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')} variant='ghost'>
 				Price
@@ -102,7 +106,8 @@ export const columns: ColumnDef<TransactionRow>[] = [
 			const p = Number(row.original.price);
 			const fee = Number(row.original.fee ?? 0);
 			const signed = row.original.side === 'BUY' ? -1 : 1; // buys are cash outflows
-			return formatCurrency(signed * (q * p - fee));
+			const v = signed * (q * p - fee);
+			return <CurrencyCell currency={row.original.priceCurrency} value={v} />;
 		},
 		enableSorting: false,
 		header: 'Total',

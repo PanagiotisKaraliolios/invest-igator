@@ -13,14 +13,24 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useDebounce } from '@/hooks/use-debounce';
+import { supportedCurrencies } from '@/lib/currency';
 import { cn } from '@/lib/utils';
 import { api, type RouterOutputs } from '@/trpc/react';
+
+type SymbolSuggestionsHandle = {
+	end: () => void;
+	home: () => void;
+	move: (delta: number) => void;
+	select: () => void;
+};
 
 const schema = z.object({
 	date: z.string().min(1),
 	fee: z.string().optional(),
+	feeCurrency: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']).optional(),
 	note: z.string().optional(),
 	price: z.coerce.number().gt(0),
+	priceCurrency: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']).default('USD'),
 	quantity: z.coerce.number().gt(0),
 	side: z.enum(['BUY', 'SELL']),
 	symbol: z.string().min(1)
@@ -39,6 +49,7 @@ export function TransactionForm(props: {
 	const form = useForm<TransactionFormInput>({
 		defaultValues: {
 			date: new Date().toISOString().slice(0, 10),
+			priceCurrency: 'USD',
 			side: 'BUY',
 			...defaultValues
 		},
@@ -220,7 +231,7 @@ export function TransactionForm(props: {
 					/>
 				</div>
 
-				<div className='grid grid-cols-3 gap-4'>
+				<div className='grid grid-cols-1 gap-4'>
 					<FormField
 						control={form.control}
 						name='quantity'
@@ -247,13 +258,44 @@ export function TransactionForm(props: {
 							<FormItem className='grid gap-2'>
 								<FormLabel>Price</FormLabel>
 								<FormControl>
-									<Input
-										inputMode='decimal'
-										onChange={(e) => field.onChange(e.target.value)}
-										step='any'
-										type='number'
-										value={(field.value as number | string | undefined) ?? ''}
-									/>
+									<div className='flex'>
+										<Input
+											className='rounded-r-none border-r-0'
+											inputMode='decimal'
+											onChange={(e) => field.onChange(e.target.value)}
+											step='any'
+											type='number'
+											value={(field.value as number | string | undefined) ?? ''}
+										/>
+										<FormField
+											control={form.control}
+											name='priceCurrency'
+											render={({ field: curField }) => (
+												<Select onValueChange={curField.onChange} value={curField.value}>
+													<FormControl>
+														<SelectTrigger
+															className='h-9 w-24 shrink-0 rounded-l-none border-l-0'
+															data-testid='price-currency'
+															id='priceCurrency'
+														>
+															<SelectValue />
+														</SelectTrigger>
+													</FormControl>
+													<SelectContent>
+														{supportedCurrencies.map((c) => (
+															<SelectItem
+																data-testid={`price-currency-${c}`}
+																key={c}
+																value={c}
+															>
+																{c}
+															</SelectItem>
+														))}
+													</SelectContent>
+												</Select>
+											)}
+										/>
+									</div>
 								</FormControl>
 								<FormMessage />
 							</FormItem>
@@ -266,14 +308,51 @@ export function TransactionForm(props: {
 							<FormItem className='grid gap-2'>
 								<FormLabel>Fee</FormLabel>
 								<FormControl>
-									<Input
-										inputMode='decimal'
-										onChange={field.onChange}
-										placeholder='0'
-										step='any'
-										type='number'
-										value={(field.value as string | number | undefined) ?? ''}
-									/>
+									<div className='flex'>
+										<Input
+											className='rounded-r-none border-r-0'
+											inputMode='decimal'
+											onChange={field.onChange}
+											placeholder='0'
+											step='any'
+											type='number'
+											value={(field.value as string | number | undefined) ?? ''}
+										/>
+										<FormField
+											control={form.control}
+											name='feeCurrency'
+											render={({ field: curField }) => (
+												<Select
+													onValueChange={(v) =>
+														curField.onChange(v === 'SAME' ? undefined : v)
+													}
+													value={(curField.value as string | undefined) ?? 'SAME'}
+												>
+													<FormControl>
+														<SelectTrigger
+															className='h-9 w-28 shrink-0 rounded-l-none border-l-0'
+															data-testid='fee-currency'
+															id='feeCurrency'
+														>
+															<SelectValue />
+														</SelectTrigger>
+													</FormControl>
+													<SelectContent>
+														<SelectItem value='SAME'>Same</SelectItem>
+														{supportedCurrencies.map((c) => (
+															<SelectItem
+																data-testid={`fee-currency-${c}`}
+																key={c}
+																value={c}
+															>
+																{c}
+															</SelectItem>
+														))}
+													</SelectContent>
+												</Select>
+											)}
+										/>
+									</div>
 								</FormControl>
 								<FormMessage />
 							</FormItem>
@@ -311,14 +390,6 @@ export function TransactionForm(props: {
 		</Form>
 	);
 }
-
-type SymbolSuggestionsHandle = {
-	move: (delta: number) => void;
-	home: () => void;
-	end: () => void;
-	select: () => void;
-};
-
 const SymbolSuggestions = forwardRef<
 	SymbolSuggestionsHandle,
 	{

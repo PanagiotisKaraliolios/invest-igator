@@ -1,13 +1,14 @@
+import { cookies } from 'next/headers';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { type Currency, formatCurrency, supportedCurrencies } from '@/lib/currency';
 import { api, HydrateClient } from '@/trpc/server';
 import PieAllocation from './_components/pie-allocation';
 
-function formatCurrency(n: number) {
-	return new Intl.NumberFormat(undefined, { currency: 'USD', maximumFractionDigits: 0, style: 'currency' }).format(n);
-}
-
 export default async function PortfolioStructurePage() {
-	const data = await api.portfolio.structure();
+	const jar = await cookies();
+	const c = jar.get('ui-currency')?.value as Currency | undefined;
+	const currency: Currency = c && (supportedCurrencies as readonly string[]).includes(c) ? c : 'USD';
+	const data = await api.portfolio.structure({ currency });
 
 	// Prepare lightweight props for client pie component
 	const slices = data.items.map((i: { symbol: string; weight: number }) => ({ symbol: i.symbol, weight: i.weight }));
@@ -24,7 +25,7 @@ export default async function PortfolioStructurePage() {
 					<CardContent>
 						<div className='grid gap-6'>
 							<div className='flex justify-center'>
-								<PieAllocation items={slices} totalValue={data.totalValue} />
+								<PieAllocation currency={currency} items={slices} totalValue={data.totalValue} />
 							</div>
 
 							<div className='overflow-x-auto'>
@@ -53,10 +54,10 @@ export default async function PortfolioStructurePage() {
 														{row.quantity.toLocaleString()}
 													</td>
 													<td className='px-2 py-2 text-right font-mono tabular-nums'>
-														{formatCurrency(row.price)}
+														{formatCurrency(row.price, currency, 0)}
 													</td>
 													<td className='px-2 py-2 text-right font-mono tabular-nums'>
-														{formatCurrency(row.value)}
+														{formatCurrency(row.value, currency, 0)}
 													</td>
 													<td className='px-2 py-2 text-right font-mono tabular-nums'>
 														{(row.weight * 100).toFixed(2)}%

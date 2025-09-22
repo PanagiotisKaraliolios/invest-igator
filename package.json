@@ -95,6 +95,7 @@
 		"db:studio": "prisma studio",
 		"dev": "next dev --turbo",
 		"ingest:alpha": "bun run src/server/jobs/ingest-alpha.ts",
+		"ingest:fx": "bun run src/server/jobs/ingest-fx.ts",
 		"ingest:yahoo": "bun run src/server/jobs/ingest-yahoo.ts",
 		"postinstall": "prisma generate",
 		"preview": "next build && next start",

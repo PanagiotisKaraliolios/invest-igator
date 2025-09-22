@@ -12,11 +12,20 @@ import {
 
 export type PieSlice = { symbol: string; weight: number };
 
-function formatCurrency(n: number) {
-	return new Intl.NumberFormat(undefined, { currency: 'USD', maximumFractionDigits: 0, style: 'currency' }).format(n);
-}
+import { useCurrencySwitch } from '@/hooks/use-currency';
+import { type Currency, formatCurrency as fx } from '@/lib/currency';
 
-export default function PieAllocation({ items, totalValue }: { items: PieSlice[]; totalValue: number }) {
+export default function PieAllocation({
+	items,
+	totalValue,
+	currency: currencyProp
+}: {
+	items: PieSlice[];
+	totalValue: number;
+	currency?: Currency;
+}) {
+	const { currency: currencyHook } = useCurrencySwitch(true);
+	const currency = currencyProp ?? currencyHook;
 	const valueBySymbol = React.useMemo(() => {
 		const m: Record<string, number> = {};
 		for (const i of items) m[i.symbol] = i.weight * totalValue;
@@ -65,7 +74,7 @@ export default function PieAllocation({ items, totalValue }: { items: PieSlice[]
 											</span>
 											{typeof usd === 'number' ? (
 												<span className='text-muted-foreground font-mono tabular-nums'>
-													{formatCurrency(usd)}
+													{fx(usd, currency, 0)}
 												</span>
 											) : null}
 										</span>
@@ -87,7 +96,7 @@ export default function PieAllocation({ items, totalValue }: { items: PieSlice[]
 								return (
 									<text dominantBaseline='middle' textAnchor='middle' x={viewBox.cx} y={viewBox.cy}>
 										<tspan className='fill-foreground text-3xl font-bold'>
-											{formatCurrency(totalValue)}
+											{fx(totalValue, currency, 0)}
 										</tspan>
 										<tspan
 											className='fill-muted-foreground text-sm'

@@ -18,6 +18,10 @@ services:
       ofelia.job-exec.ingest-yahoo.schedule: 15 2 * * *
       ofelia.job-exec.ingest-yahoo.command: bun run src/server/jobs/ingest-yahoo.ts
       ofelia.job-exec.ingest-yahoo.no-overlap: "true"
+      # Run FX ingest twice daily at 06:00 and 18:00 UTC
+      ofelia.job-exec.ingest-fx.schedule: 0 6,18 * * *
+      ofelia.job-exec.ingest-fx.command: bun run src/server/jobs/ingest-fx.ts
+      ofelia.job-exec.ingest-fx.no-overlap: "true"
     ports:
       - 3311:3000
     depends_on:

@@ -1,6 +1,8 @@
+import type { Currency } from '@prisma/client';
 import { z } from 'zod';
 import { env } from '@/env';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
+import { convertAmount, getFxMatrix } from '@/server/fx';
 import { influxQueryApi, measurement } from '@/server/influx';
 
 type Holding = {
@@ -31,48 +33,118 @@ async function getLatestCloses(symbols: string[]): Promise<Record<string, number
 }
 
 export const portfolioRouter = createTRPCRouter({
-	structure: protectedProcedure.input(z.void()).query(async ({ ctx }) => {
-		const userId = ctx.session.user.id;
-		const txs = await ctx.db.transaction.findMany({
-			select: { quantity: true, side: true, symbol: true },
-			where: { userId }
-		});
-
-		const bySymbol = new Map<string, Holding>();
-		for (const t of txs) {
-			const up = t.symbol.trim().toUpperCase();
-			const sign = t.side === 'BUY' ? 1 : -1;
-			const prev = bySymbol.get(up)?.quantity ?? 0;
-			bySymbol.set(up, { quantity: prev + sign * t.quantity, symbol: up });
-		}
-
-		// Keep only positive quantities (long holdings). Ignore zero/negative for now.
-		const holdings = Array.from(bySymbol.values()).filter((h) => h.quantity > 0);
-		const symbols = holdings.map((h) => h.symbol);
-		const latest = await getLatestCloses(symbols);
-
-		console.log('🚀 ~ portfolio.ts:58 ~ latest:', latest);
-
-		const items = holdings
-			.map((h) => {
-				const price = latest[h.symbol] ?? 0;
-				const value = h.quantity * (price ?? 0);
-				return {
-					price: price ?? 0,
-					quantity: h.quantity,
-					symbol: h.symbol,
-					value
-				};
+	structure: protectedProcedure
+		.input(
+			z.object({
+				currency: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']).default('USD')
 			})
-			.filter((i) => i.value > 0);
+		)
+		.query(async ({ ctx, input }) => {
+			const target: Currency = input.currency as Currency;
+			const userId = ctx.session.user.id;
+			const txs = await ctx.db.transaction.findMany({
+				select: {
+					date: true,
+					fee: true,
+					feeCurrency: true,
+					price: true,
+					priceCurrency: true,
+					quantity: true,
+					side: true,
+					symbol: true
+				},
+				where: { userId }
+			});
 
-		console.log('🚀 ~ portfolio.ts:69 ~ items:', items);
+			// Get FX matrix for conversions
+			const fx = await getFxMatrix();
 
-		const totalValue = items.reduce((acc, i) => acc + i.value, 0);
-		const withWeights = items
-			.map((i) => ({ ...i, weight: totalValue > 0 ? i.value / totalValue : 0 }))
-			.sort((a, b) => b.value - a.value);
+			const bySymbol = new Map<string, { symbol: string; quantity: number; totalCostInTarget: number }>();
+			const latestTxCurrencyBySymbol = new Map<string, { currency: Currency; date: Date }>();
+			for (const t of txs) {
+				const up = t.symbol.trim().toUpperCase();
+				const sign = t.side === 'BUY' ? 1 : -1;
+				const prev = bySymbol.get(up) ?? { quantity: 0, symbol: up, totalCostInTarget: 0 };
 
-		return { items: withWeights, totalValue } as const;
-	})
+				// Convert transaction value to target currency
+				const transactionValue = t.quantity * t.price;
+				const transactionCurrency = (t.priceCurrency as Currency) ?? 'USD';
+				const valueInTarget = convertAmount(transactionValue, transactionCurrency, target, fx);
+
+				// Convert fee to target currency if it exists
+				let feeInTarget = 0;
+				if (t.fee) {
+					const feeCurrency = (t.feeCurrency as Currency) ?? transactionCurrency;
+					feeInTarget = convertAmount(t.fee, feeCurrency, target, fx);
+				}
+
+				// For buys: add cost, for sells: subtract proceeds
+				const costAdjustment = sign === 1 ? valueInTarget + feeInTarget : -(valueInTarget - feeInTarget);
+
+				bySymbol.set(up, {
+					quantity: prev.quantity + sign * t.quantity,
+					symbol: up,
+					totalCostInTarget: prev.totalCostInTarget + costAdjustment
+				});
+
+				// Track latest transaction currency per symbol for fallback pricing currency
+				if (t.date) {
+					const prevCur = latestTxCurrencyBySymbol.get(up);
+					if (!prevCur || t.date > prevCur.date) {
+						latestTxCurrencyBySymbol.set(up, { currency: transactionCurrency, date: t.date });
+					}
+				}
+			}
+
+			// Keep only positive quantities (long holdings). Ignore zero/negative for now.
+			const holdings = Array.from(bySymbol.values()).filter((h) => h.quantity > 0);
+			const symbols = holdings.map((h) => h.symbol);
+
+			// Get watchlist items to know the trading currency of each symbol
+			const watchlistItems = await ctx.db.watchlistItem.findMany({
+				select: {
+					currency: true,
+					symbol: true
+				},
+				where: {
+					symbol: { in: symbols },
+					userId
+				}
+			});
+
+			const symbolCurrencies = new Map<string, Currency>();
+
+			for (const item of watchlistItems) {
+				symbolCurrencies.set(item.symbol.trim().toUpperCase(), item.currency);
+			}
+			
+			const latest = await getLatestCloses(symbols);
+			
+			// Market prices are in the currency specified by the watchlist item,
+			// or fall back to the latest transaction currency for the symbol, else USD.
+			const items = holdings
+				.map((h) => {
+					const price = latest[h.symbol] ?? 0;
+					const marketCurrency =
+						symbolCurrencies.get(h.symbol) ?? latestTxCurrencyBySymbol.get(h.symbol)?.currency ?? 'USD';
+					const priceInTarget = convertAmount(price, marketCurrency, target, fx);
+					const currentValue = h.quantity * priceInTarget;
+					return {
+						avgCost: h.quantity > 0 ? h.totalCostInTarget / h.quantity : 0,
+						price: priceInTarget,
+						quantity: h.quantity,
+						symbol: h.symbol,
+						totalCost: h.totalCostInTarget,
+						value: currentValue
+					};
+				})
+				.filter((i) => i.value > 0);
+
+			const totalValue = items.reduce((acc, i) => acc + i.value, 0);
+			const withWeights = items
+				.map((i) => ({ ...i, weight: totalValue > 0 ? i.value / totalValue : 0 }))
+				.sort((a, b) => b.value - a.value);
+
+			return { items: withWeights, totalValue } as const;
+		})
 });

@@ -3,6 +3,8 @@ import { authRouter } from '@/server/api/routers/auth';
 import { postRouter } from '@/server/api/routers/post';
 import { watchlistRouter } from '@/server/api/routers/watchlist';
 import { createCallerFactory, createTRPCRouter } from '@/server/api/trpc';
+import { currencyProcedures } from './routers/currency';
+import { fxRouter } from './routers/fx';
 import { portfolioRouter } from './routers/portfolio';
 import { themeProcedures } from './routers/theme';
 import { transactionsRouter } from './routers/transactions';
@@ -15,6 +17,8 @@ import { transactionsRouter } from './routers/transactions';
 export const appRouter = createTRPCRouter({
 	account: accountRouter,
 	auth: authRouter,
+	currency: currencyProcedures,
+	fx: fxRouter,
 	portfolio: portfolioRouter,
 	post: postRouter,
 	theme: themeProcedures,

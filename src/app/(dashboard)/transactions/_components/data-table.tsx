@@ -90,7 +90,15 @@ export function DataTable<TData extends { id?: string }, TValue>({ columns }: Da
 
 	const showSkeletons = isLoading || (isFetching && (data?.items?.length ?? 0) === 0);
 
-	const rows: TransactionRow[] = useMemo(() => (data?.items ?? []).map((t) => ({ ...t })), [data]);
+	const rows: TransactionRow[] = useMemo(
+		() =>
+			(data?.items ?? []).map((t: any) => ({
+				...t,
+				feeCurrency: t.feeCurrency ?? null,
+				priceCurrency: t.priceCurrency ?? 'USD'
+			})),
+		[data]
+	);
 
 	const table = useReactTable({
 		columns,
@@ -379,8 +387,10 @@ export function DataTable<TData extends { id?: string }, TValue>({ columns }: Da
 							createMutation.mutate({
 								date: vals.date,
 								fee: vals.fee ? Number(vals.fee) : undefined,
+								feeCurrency: vals.feeCurrency,
 								note: vals.note,
 								price: vals.price,
+								priceCurrency: vals.priceCurrency,
 								quantity: vals.quantity,
 								side: vals.side,
 								symbol: vals.symbol

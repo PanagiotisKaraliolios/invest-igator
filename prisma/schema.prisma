@@ -28,7 +28,9 @@ model Transaction {
     side      TransactionSide
     quantity  Float
     price     Float
+    priceCurrency Currency @default(USD)
     fee       Float?
+    feeCurrency  Currency? // optional; if null, treat as priceCurrency
     note      String?
     createdAt DateTime        @default(now())
 
@@ -84,6 +86,7 @@ model User {
     image         String?
     passwordHash  String?
     theme         Theme     @default(LIGHT)
+    currency      Currency  @default(USD)
     accounts      Account[]
     sessions      Session[]
     posts         Post[]
@@ -118,6 +121,15 @@ enum Theme {
     DARK
 }
 
+enum Currency {
+    EUR
+    USD
+    GBP
+    HKD
+    CHF
+    RUB
+}
+
 model WatchlistItem {
     id            String    @id @default(cuid())
     user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -126,10 +138,23 @@ model WatchlistItem {
     displaySymbol String?
     description   String?
     type          String?
+    currency      Currency @default(USD)
     createdAt     DateTime @default(now())
     starred       Boolean  @default(false)
 
     @@unique([userId, symbol])
     @@index([userId])
     @@index([symbol])
+}
+
+// Store latest FX rates by base->quote with timestamp
+model FxRate {
+    id        String   @id @default(cuid())
+    base      Currency
+    quote     Currency
+    rate      Float
+    fetchedAt DateTime @default(now())
+
+    @@unique([base, quote])
+    @@index([fetchedAt])
 }

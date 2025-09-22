@@ -1,3 +1,4 @@
+import type { Currency } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { env } from '@/env';
@@ -46,8 +47,10 @@ export const transactionsRouter = createTRPCRouter({
 			z.object({
 				date: z.string().transform((s) => new Date(s)),
 				fee: z.number().optional(),
+				feeCurrency: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']).optional(),
 				note: z.string().optional(),
 				price: z.number(),
+				priceCurrency: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']).default('USD'),
 				quantity: z.number(),
 				side: z.enum(['BUY', 'SELL']),
 				symbol: z.string().min(1)
@@ -74,8 +77,10 @@ export const transactionsRouter = createTRPCRouter({
 				data: {
 					date: input.date,
 					fee: input.fee,
+					feeCurrency: (input.feeCurrency as Currency | undefined) ?? null,
 					note: input.note,
 					price: input.price,
+					priceCurrency: input.priceCurrency as Currency,
 					quantity: input.quantity,
 					side: input.side,
 					symbol,
@@ -127,7 +132,17 @@ export const transactionsRouter = createTRPCRouter({
 				take: 10000,
 				where
 			});
-			const header = ['date', 'symbol', 'side', 'quantity', 'price', 'fee', 'note'];
+			const header = [
+				'date',
+				'symbol',
+				'side',
+				'quantity',
+				'price',
+				'priceCurrency',
+				'fee',
+				'feeCurrency',
+				'note'
+			];
 			const escapeCsv = (val: string) => '"' + val.replaceAll('"', '""') + '"';
 			const lines = [header.join(',')];
 			for (const t of rows) {
@@ -140,7 +155,9 @@ export const transactionsRouter = createTRPCRouter({
 					t.side,
 					String(t.quantity),
 					String(t.price),
+					(t as any).priceCurrency,
 					t.fee == null ? '' : String(t.fee),
+					(t as any).feeCurrency ?? '',
 					t.note ? escapeCsv(t.note) : ''
 				].join(',');
 				lines.push(line);
@@ -190,9 +207,11 @@ export const transactionsRouter = createTRPCRouter({
 				items: rows.map((t) => ({
 					date: t.date.toISOString(),
 					fee: t.fee ?? null,
+					feeCurrency: (t as any).feeCurrency ?? null,
 					id: t.id,
 					note: t.note ?? null,
 					price: t.price,
+					priceCurrency: (t as any).priceCurrency,
 					quantity: t.quantity,
 					side: t.side,
 					symbol: t.symbol
@@ -221,9 +240,11 @@ export const transactionsRouter = createTRPCRouter({
 					.transform((s) => new Date(s))
 					.optional(),
 				fee: z.number().nullable().optional(),
+				feeCurrency: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']).nullable().optional(),
 				id: z.string().min(1),
 				note: z.string().nullable().optional(),
 				price: z.number().optional(),
+				priceCurrency: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']).optional(),
 				quantity: z.number().optional(),
 				side: z.enum(['BUY', 'SELL']).optional(),
 				symbol: z.string().min(1).optional()
@@ -257,8 +278,10 @@ export const transactionsRouter = createTRPCRouter({
 				data: {
 					date: input.date ?? undefined,
 					fee: input.fee ?? undefined,
+					feeCurrency: (input.feeCurrency as Currency | null | undefined) ?? undefined,
 					note: input.note ?? undefined,
 					price: input.price ?? undefined,
+					priceCurrency: (input.priceCurrency as Currency | undefined) ?? undefined,
 					quantity: input.quantity ?? undefined,
 					side: input.side ?? undefined,
 					symbol: nextSymbol ?? undefined

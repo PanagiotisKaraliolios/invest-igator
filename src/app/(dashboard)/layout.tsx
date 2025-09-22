@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { AppSidebar } from '@/app/(dashboard)/_components/app-sidebar';
 import DashboardBreadcrumbs from '@/app/(dashboard)/_components/breadcrumbs';
+import CurrencySwitch from '@/app/(dashboard)/_components/currency-switch';
 import ThemeSwitch from '@/app/(dashboard)/_components/theme-switch';
 import { Separator } from '@/components/ui/separator';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
@@ -27,7 +28,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
 						<Separator className='mr-2 data-[orientation=vertical]:h-4' orientation='vertical' />
 						<DashboardBreadcrumbs />
 					</div>
-					<div className='mr-4 ml-auto'>
+					<div className='mr-4 ml-auto flex items-center gap-3'>
+						<CurrencySwitch isAuthenticated={Boolean(session?.user)} />
 						<ThemeSwitch isAuthenticated={Boolean(session?.user)} />
 					</div>
 				</header>

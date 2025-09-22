@@ -155,7 +155,6 @@ export const authConfig = {
 		}),
 		Credentials({
 			authorize: async (credentials) => {
-				console.log('🚀 ~ config.ts:66 ~ credentials:', credentials);
 
 				// Basic input guards
 				const email = credentials?.email?.toString().trim().toLowerCase();
@@ -182,8 +181,6 @@ export const authConfig = {
 
 				// Compare provided password + app-level pepper with stored bcrypt hash
 				const ok = await bcrypt.compare(`${password}${env.PASSWORD_PEPPER}`, user.passwordHash);
-
-				console.log('🚀 ~ config.ts:96 ~ ok:', ok);
 
 				if (!ok) throw new InvalidLoginError();
 

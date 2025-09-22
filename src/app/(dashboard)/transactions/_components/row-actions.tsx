@@ -13,17 +13,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { api } from '@/trpc/react';
 import { TransactionForm, type TransactionFormValues } from './transaction-form';
+import type { RowData } from './types';
 
-export type RowData = {
-	id: string;
-	date: string;
-	symbol: string;
-	side: 'BUY' | 'SELL';
-	quantity: number;
-	price: number;
-	fee?: number | null;
-	note?: string | null;
-};
+// RowData moved to ./types
 
 export function RowActions({ row }: { row: RowData }) {
 	const [editOpen, setEditOpen] = useState(false);
@@ -99,8 +91,10 @@ export function RowActions({ row }: { row: RowData }) {
 						defaultValues={{
 							date: row.date.slice(0, 10),
 							fee: row.fee != null ? String(row.fee) : undefined,
+							feeCurrency: row.feeCurrency ?? undefined,
 							note: row.note ?? undefined,
 							price: row.price,
+							priceCurrency: row.priceCurrency,
 							quantity: row.quantity,
 							side: row.side,
 							symbol: row.symbol
@@ -110,9 +104,11 @@ export function RowActions({ row }: { row: RowData }) {
 							updateMutation.mutate({
 								date: vals.date,
 								fee: parseFee(vals.fee),
+								feeCurrency: vals.feeCurrency,
 								id: row.id,
 								note: vals.note,
 								price: vals.price,
+								priceCurrency: vals.priceCurrency,
 								quantity: vals.quantity,
 								side: vals.side,
 								symbol: vals.symbol
@@ -133,8 +129,10 @@ export function RowActions({ row }: { row: RowData }) {
 						defaultValues={{
 							date: row.date.slice(0, 10),
 							fee: row.fee != null ? String(row.fee) : undefined,
+							feeCurrency: row.feeCurrency ?? undefined,
 							note: row.note ?? undefined,
 							price: row.price,
+							priceCurrency: row.priceCurrency,
 							quantity: row.quantity,
 							side: row.side,
 							symbol: row.symbol
@@ -144,8 +142,10 @@ export function RowActions({ row }: { row: RowData }) {
 							createMutation.mutate({
 								date: vals.date,
 								fee: parseFee(vals.fee),
+								feeCurrency: vals.feeCurrency,
 								note: vals.note,
 								price: vals.price,
+								priceCurrency: vals.priceCurrency,
 								quantity: vals.quantity,
 								side: vals.side,
 								symbol: vals.symbol

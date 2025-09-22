@@ -1,10 +1,34 @@
+import type { Currency } from '@prisma/client';
 import { env } from '@/env';
+import { db } from '@/server/db';
 import { buildPoint, type DailyBar, influxWriteApi, Point, symbolHasAnyData } from '@/server/influx';
+
+function mapCurrencyString(currencyStr?: string): Currency {
+	if (!currencyStr) return 'USD';
+
+	const upper = currencyStr.toUpperCase();
+	switch (upper) {
+		case 'EUR':
+			return 'EUR';
+		case 'USD':
+			return 'USD';
+		case 'GBP':
+			return 'GBP';
+		case 'HKD':
+			return 'HKD';
+		case 'CHF':
+			return 'CHF';
+		case 'RUB':
+			return 'RUB';
+		default:
+			return 'USD'; // Default fallback
+	}
+}
 
 interface YahooChartResponse {
 	chart?: {
 		result?: Array<{
-			meta?: { gmtoffset?: number };
+			meta?: { currency: string; gmtoffset?: number };
 			timestamp?: number[];
 			events?: {
 				dividends?: Record<string, { amount?: number; date?: number }>;
@@ -55,7 +79,13 @@ export async function fetchYahooDaily(
 		includePrePost?: boolean;
 		events?: string;
 	}
-): Promise<{ bars: DailyBar[]; dividends: DividendEvent[]; splits: SplitEvent[]; capitalGains: CapitalGainEvent[] }> {
+): Promise<{
+	bars: DailyBar[];
+	dividends: DividendEvent[];
+	splits: SplitEvent[];
+	capitalGains: CapitalGainEvent[];
+	currency?: string;
+}> {
 	const base = env.YAHOO_CHART_API_URL.replace(/\/$/, '');
 	const url = new URL(`${base}/${encodeURIComponent(symbol)}`);
 	url.searchParams.set('interval', options?.interval ?? '1d');
@@ -80,6 +110,7 @@ export async function fetchYahooDaily(
 	const res = json.chart?.result?.[0];
 	if (!res) return { bars: [], capitalGains: [], dividends: [], splits: [] };
 
+	const currency = res.meta?.currency;
 	const quote = res.indicators?.quote?.[0];
 	const gmtoffset = res.meta?.gmtoffset;
 	const bars: DailyBar[] = [];
@@ -165,7 +196,7 @@ export async function fetchYahooDaily(
 	}
 	capitalGains.sort((a, b) => a.date.localeCompare(b.date));
 
-	return { bars, capitalGains, dividends, splits };
+	return { bars, capitalGains, currency, dividends, splits };
 }
 
 export async function writeBars(symbol: string, bars: DailyBar[]) {
@@ -273,18 +304,44 @@ export async function writeCapitalGains(symbol: string, events: CapitalGainEvent
 	}
 }
 
-export async function ingestYahooSymbol(symbol: string) {
-	//   const has = await symbolHasAnyData(symbol);
-	//   if (has) return { skipped: true } as const;
-	const { bars, dividends, splits, capitalGains } = await fetchYahooDaily(symbol, {
+export async function ingestYahooSymbol(symbol: string, options?: { userId?: string }) {
+	const has = await symbolHasAnyData(symbol);
+	
+	// Always fetch currency metadata, even if we have data
+	const { bars, dividends, splits, capitalGains, currency } = await fetchYahooDaily(symbol, {
 		includePrePost: false,
 		interval: '1d',
 		period1: 1,
 		period2: Date.now()
 	});
+
+	// Update watchlist item with currency if userId is provided
+	if (options?.userId && currency) {
+		try {
+			const mappedCurrency = mapCurrencyString(currency);
+			await db.watchlistItem.updateMany({
+				data: {
+					currency: mappedCurrency
+				},
+				where: {
+					symbol: symbol,
+					userId: options.userId
+				}
+			});
+		} catch (error) {
+			// Log error but don't fail the ingestion
+			console.warn(`Failed to update watchlist currency for ${symbol}:`, error);
+		}
+	}
+
+	// Only write data if we don't already have it
+	if (has) {
+		return { count: 0, currency: mapCurrencyString(currency), skipped: true } as const;
+	}
+
 	if (bars.length > 0) await writeBars(symbol, bars);
 	if (dividends.length > 0) await writeDividends(symbol, dividends);
 	if (splits.length > 0) await writeSplits(symbol, splits);
 	if (capitalGains.length > 0) await writeCapitalGains(symbol, capitalGains);
-	return { count: bars.length, skipped: false } as const;
+	return { count: bars.length, currency: mapCurrencyString(currency), skipped: false } as const;
 }
