@@ -7,9 +7,9 @@ import { cn } from '@/lib/utils';
 
 function ScrollArea({ className, children, ...props }: React.ComponentProps<typeof ScrollAreaPrimitive.Root>) {
 	return (
-		<ScrollAreaPrimitive.Root className={cn('relative', className)} data-slot='scroll-area' {...props}>
+		<ScrollAreaPrimitive.Root className={cn('relative overflow-hidden', className)} data-slot='scroll-area' {...props}>
 			<ScrollAreaPrimitive.Viewport
-				className='focus-visible:ring-ring/50 size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:outline-1'
+				className='focus-visible:ring-ring/50 size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:outline-1 h-full w-full overflow-auto'
 				data-slot='scroll-area-viewport'
 			>
 				{children}
