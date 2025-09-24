@@ -103,17 +103,37 @@ export const columns: ColumnDef<TransactionRow>[] = [
 		)
 	},
 	{
+		id: 'total',
 		cell: ({ row }) => {
 			const q = Number(row.original.quantity);
 			const p = Number(row.original.price);
-			const fee = Number(row.original.fee ?? 0);
-			const signed = row.original.side === 'BUY' ? -1 : 1; // buys are cash outflows
-			const v = signed * (q * p - fee);
-			return <CurrencyCell currency={row.original.priceCurrency} value={v} />;
+			const total = q * p; // exclude fee from total
+			const isBuy = row.original.side === 'BUY';
+			const sign = isBuy ? '- ' : '+ ';
+			const cls = isBuy ? 'text-destructive' : 'text-emerald-600 dark:text-emerald-400';
+			return (
+				<span className={cls}>
+					{sign}
+					{fx(total, row.original.priceCurrency)}
+				</span>
+			);
 		},
 		enableSorting: false,
-		header: 'Total',
-		id: 'total'
+		header: 'Total'
+	},
+	{
+		accessorKey: 'fee',
+		cell: ({ row }) =>
+			row.original.fee == null ? (
+				<span className='text-muted-foreground'>—</span>
+			) : (
+				<CurrencyCell
+					currency={(row.original.feeCurrency ?? row.original.priceCurrency) as Currency}
+					value={Number(row.original.fee)}
+				/>
+			),
+		enableSorting: false,
+		header: 'Fee'
 	},
 	{
 		accessorKey: 'note',

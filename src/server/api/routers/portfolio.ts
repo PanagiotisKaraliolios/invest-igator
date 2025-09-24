@@ -351,6 +351,9 @@ export const portfolioRouter = createTRPCRouter({
 
 			// Keep only positive quantities (long holdings). Ignore zero/negative for now.
 			const holdings = Array.from(bySymbol.values()).filter((h) => h.quantity > 0);
+
+			console.log('🚀 ~ portfolio.ts:355 ~ holdings:', holdings);
+
 			const symbols = holdings.map((h) => h.symbol);
 
 			// Get watchlist items to know the trading currency of each symbol
@@ -397,6 +400,9 @@ export const portfolioRouter = createTRPCRouter({
 			const withWeights = items
 				.map((i) => ({ ...i, weight: totalValue > 0 ? i.value / totalValue : 0 }))
 				.sort((a, b) => b.value - a.value);
+
+			console.log('🚀 ~ portfolio.ts:401 ~ withWeights:', withWeights);
+
 
 			return { items: withWeights, totalValue } as const;
 		})

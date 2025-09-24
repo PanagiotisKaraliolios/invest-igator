@@ -244,7 +244,7 @@ export function DataTable<TData extends { id?: string }, TValue>({ columns }: Da
 	});
 
 	// Numeric columns that should be right-aligned
-	const numericColumns = useMemo(() => new Set(['quantity', 'price', 'total']), []);
+	const numericColumns = useMemo(() => new Set(['quantity', 'price', 'fee', 'total']), []);
 
 	async function handleImport() {
 		if (!importFiles[0]) {

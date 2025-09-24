@@ -33,7 +33,7 @@ export default function PieAllocation({
 	}, [items, totalValue]);
 
 	const chartData = items.map((i, idx) => ({
-		fill: `var(--chart-${(idx % 5) + 1})`,
+		fill: `var(--chart-${(idx % 6) + 1})`,
 		symbol: i.symbol,
 		value: Number((i.weight * 100).toFixed(2))
 	}));
