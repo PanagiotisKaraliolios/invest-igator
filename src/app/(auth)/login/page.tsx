@@ -18,7 +18,7 @@ export default async function LoginPage({
 }) {
 	const session = await auth();
 
-	if (session?.user) redirect('/dashboard');
+	if (session?.user) redirect('/portfolio');
 	const sp = await searchParams;
 
 	return (

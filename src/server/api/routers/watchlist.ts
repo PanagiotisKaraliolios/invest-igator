@@ -39,7 +39,7 @@ export const watchlistRouter = createTRPCRouter({
 					const sym = input.symbol.trim().toUpperCase();
 					// const has = await symbolHasAnyData(sym);
 					// if (!has) {
-						await ingestYahooSymbol(sym, { userId });
+					await ingestYahooSymbol(sym, { userId });
 					// }
 				} catch {}
 			})();

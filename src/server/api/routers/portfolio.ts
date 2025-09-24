@@ -403,7 +403,6 @@ export const portfolioRouter = createTRPCRouter({
 
 			console.log('🚀 ~ portfolio.ts:401 ~ withWeights:', withWeights);
 
-
 			return { items: withWeights, totalValue } as const;
 		})
 });

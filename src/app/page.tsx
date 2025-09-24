@@ -35,7 +35,7 @@ export default async function Home() {
 					{session?.user ? (
 						<>
 							<Button asChild size='sm'>
-								<Link href='/dashboard'>Open Dashboard</Link>
+								<Link href='/portfolio'>Open Portfolio</Link>
 							</Button>
 							<Button asChild size='sm' variant='ghost'>
 								<Link href='/signout'>Sign out</Link>
@@ -73,7 +73,7 @@ export default async function Home() {
 					<div className='flex flex-wrap items-center gap-3'>
 						{session?.user ? (
 							<Button asChild size='lg'>
-								<Link href='/dashboard'>Go to Dashboard</Link>
+								<Link href='/portfolio'>Go to Portfolio</Link>
 							</Button>
 						) : (
 							<>
@@ -146,7 +146,7 @@ export default async function Home() {
 						</CardHeader>
 						<CardContent>
 							<Button asChild size='sm' variant='outline'>
-								<Link href='/dashboard'>Explore insights</Link>
+								<Link href='/portfolio'>Explore insights</Link>
 							</Button>
 						</CardContent>
 					</Card>
@@ -161,7 +161,7 @@ export default async function Home() {
 						<CardContent>
 							{session?.user ? (
 								<Button asChild size='sm' variant='outline'>
-									<Link href='/dashboard'>You are signed in</Link>
+									<Link href='/portfolio'>You are signed in</Link>
 								</Button>
 							) : (
 								<Button asChild size='sm' variant='outline'>
@@ -186,7 +186,7 @@ export default async function Home() {
 						<div className='flex flex-wrap gap-3'>
 							{session?.user ? (
 								<Button asChild size='lg'>
-									<Link href='/dashboard'>Open Dashboard</Link>
+									<Link href='/portfolio'>Open Portfolio</Link>
 								</Button>
 							) : (
 								<>
@@ -253,11 +253,6 @@ export default async function Home() {
 								<li>
 									<Link className='hover:text-foreground' href='/portfolio'>
 										Portfolio
-									</Link>
-								</li>
-								<li>
-									<Link className='hover:text-foreground' href='/dashboard'>
-										Dashboard
 									</Link>
 								</li>
 							</ul>

@@ -155,7 +155,6 @@ export const authConfig = {
 		}),
 		Credentials({
 			authorize: async (credentials) => {
-
 				// Basic input guards
 				const email = credentials?.email?.toString().trim().toLowerCase();
 				const password = credentials?.password?.toString();

@@ -1,4 +1,5 @@
 {
+	"biome.lsp.bin": null,
 	"biome.requireConfiguration": true,
-	"biome.lsp.bin": null
+	"chatgpt.openOnStartup": true
 }

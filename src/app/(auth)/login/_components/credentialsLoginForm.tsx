@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 export function CredentialsLoginForm() {
 	const router = useRouter();
 	const sp = useSearchParams();
-	const callbackUrl = sp.get('callbackUrl') ?? '/dashboard';
+	const callbackUrl = sp.get('callbackUrl') ?? '/portfolio';
 
 	const [showPassword, setShowPassword] = useState(false);
 	const [error, setError] = useState<string | null>(null);

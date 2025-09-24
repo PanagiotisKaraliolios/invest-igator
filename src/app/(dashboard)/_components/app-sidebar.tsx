@@ -23,13 +23,11 @@ const data = {
 			icon: PieChart,
 			isActive: true,
 			items: [
-				{ title: 'Dashboard', url: '/dashboard' },
 				{ title: 'Portfolio', url: '/portfolio' },
 				{ title: 'Transactions', url: '/transactions' },
 				{ title: 'Watchlist', url: '/watchlist' }
 			],
-			title: 'Portfolio',
-			url: '/dashboard'
+			title: 'Dashboard'
 		},
 		{
 			icon: AudioWaveform,
@@ -39,8 +37,7 @@ const data = {
 				{ title: 'Risk', url: '/analytics/risk' },
 				{ title: 'Reports', url: '/analytics/reports' }
 			],
-			title: 'Analytics',
-			url: '/analytics'
+			title: 'Analytics'
 		},
 		{
 			icon: BookOpen,
@@ -50,8 +47,7 @@ const data = {
 				{ title: 'Stocks', url: '/research/stocks' },
 				{ title: 'News', url: '/research/news' }
 			],
-			title: 'Research',
-			url: '/research'
+			title: 'Research'
 		},
 		{
 			icon: Command,
@@ -61,19 +57,8 @@ const data = {
 				{ title: 'Taxes', url: '/tools/taxes' },
 				{ title: 'Notes', url: '/tools/notes' }
 			],
-			title: 'Tools',
-			url: '/tools'
+			title: 'Tools'
 		}
-		// {
-		// 	icon: Settings2,
-		// 	items: [
-		// 		{ title: 'Profile', url: '/account/profile' },
-		// 		{ title: 'Settings', url: '/account/settings' },
-		// 		{ title: 'Support', url: '/account/support' }
-		// 	],
-		// 	title: 'Account',
-		// 	url: '/account'
-		// }
 	]
 };
 

@@ -9,7 +9,7 @@ import { providerIcons } from '@/lib/auth/providerMeta';
 export default function ProviderLoginButton({ provider }: { provider: string }) {
 	const searchParams = useSearchParams();
 
-	const callbackUrl = searchParams.get('callbackUrl') ?? '/dashboard';
+	const callbackUrl = searchParams.get('callbackUrl') ?? '/portfolio';
 
 	const Icon = providerIcons[provider];
 

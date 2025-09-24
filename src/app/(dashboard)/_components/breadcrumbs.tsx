@@ -22,7 +22,6 @@ const LABELS: Record<string, string> = {
 	account: 'Account',
 	allocation: 'Allocation',
 	analytics: 'Analytics',
-	dashboard: 'Dashboard',
 	etfs: 'ETFs',
 	goals: 'Goals',
 	markets: 'Markets',
@@ -50,17 +49,11 @@ export default function DashboardBreadcrumbs() {
 	const crumbs = useMemo(() => {
 		const segs = pathname.split('/').filter(Boolean);
 
-		// Always start with Dashboard home.
-		const items: { label: string; href?: string }[] = [{ href: '/dashboard', label: 'Dashboard' }];
+		// Build breadcrumbs from actual path segments.
+		const items: { label: string; href?: string }[] = [];
 
-		if (segs.length === 0 || (segs.length === 1 && segs[0] === 'dashboard')) {
-			return items; // Only Dashboard
-		}
-
-		const paths: string[] = [];
 		segs.forEach((seg, idx) => {
 			const href = `/${segs.slice(0, idx + 1).join('/')}`;
-			paths.push(href);
 			const label = LABELS[seg] ?? toTitleCase(seg);
 			items.push({ href, label });
 		});

@@ -306,7 +306,7 @@ export async function writeCapitalGains(symbol: string, events: CapitalGainEvent
 
 export async function ingestYahooSymbol(symbol: string, options?: { userId?: string }) {
 	const has = await symbolHasAnyData(symbol);
-	
+
 	// Always fetch currency metadata, even if we have data
 	const { bars, dividends, splits, capitalGains, currency } = await fetchYahooDaily(symbol, {
 		includePrePost: false,

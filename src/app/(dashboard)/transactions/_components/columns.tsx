@@ -103,7 +103,6 @@ export const columns: ColumnDef<TransactionRow>[] = [
 		)
 	},
 	{
-		id: 'total',
 		cell: ({ row }) => {
 			const q = Number(row.original.quantity);
 			const p = Number(row.original.price);
@@ -119,7 +118,8 @@ export const columns: ColumnDef<TransactionRow>[] = [
 			);
 		},
 		enableSorting: false,
-		header: 'Total'
+		header: 'Total',
+		id: 'total'
 	},
 	{
 		accessorKey: 'fee',

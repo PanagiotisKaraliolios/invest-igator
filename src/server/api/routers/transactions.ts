@@ -292,29 +292,29 @@ export const transactionsRouter = createTRPCRouter({
 			});
 
 			if (records.length === 0) {
-				return { errors, imported: 0, duplicates: [] } as const;
+				return { duplicates: [], errors, imported: 0 } as const;
 			}
 
 			const symbolsInUpload = Array.from(new Set(records.map((r) => r.symbol)));
 			const existing = symbolsInUpload.length
 				? await ctx.db.transaction.findMany({
-					select: {
-						date: true,
-						fee: true,
-						feeCurrency: true,
-						id: true,
-						note: true,
-						price: true,
-						priceCurrency: true,
-						quantity: true,
-						side: true,
-						symbol: true
-					},
-					where: {
-						symbol: { in: symbolsInUpload },
-						userId
-					}
-				})
+						select: {
+							date: true,
+							fee: true,
+							feeCurrency: true,
+							id: true,
+							note: true,
+							price: true,
+							priceCurrency: true,
+							quantity: true,
+							side: true,
+							symbol: true
+						},
+						where: {
+							symbol: { in: symbolsInUpload },
+							userId
+						}
+					})
 				: [];
 			const existingByKey = new Map<string, typeof existing>();
 			for (const row of existing) {
@@ -377,6 +377,22 @@ export const transactionsRouter = createTRPCRouter({
 						record.priceCurrency
 					);
 					duplicates.push({
+						existing: matches.map((row) => ({
+							date: toDateOnlyISOString(row.date),
+							fee: row.fee ?? null,
+							feeCurrency: normalizeFeeCurrencyValue(
+								row.fee ?? null,
+								(row.feeCurrency ?? null) as Currency | null,
+								row.priceCurrency as Currency
+							),
+							id: row.id,
+							note: row.note ?? null,
+							price: row.price,
+							priceCurrency: row.priceCurrency as Currency,
+							quantity: row.quantity,
+							side: row.side,
+							symbol: row.symbol
+						})),
 						id: `${key}#${indexForKey}`,
 						incoming: {
 							date: toDateOnlyISOString(record.date),
@@ -388,23 +404,7 @@ export const transactionsRouter = createTRPCRouter({
 							quantity: record.quantity,
 							side: record.side,
 							symbol: record.symbol
-						},
-						existing: matches.map((row) => ({
-							id: row.id,
-							date: toDateOnlyISOString(row.date),
-							fee: row.fee ?? null,
-							feeCurrency: normalizeFeeCurrencyValue(
-								row.fee ?? null,
-								(row.feeCurrency ?? null) as Currency | null,
-								row.priceCurrency as Currency
-							),
-							note: row.note ?? null,
-							price: row.price,
-							priceCurrency: row.priceCurrency as Currency,
-							quantity: row.quantity,
-							side: row.side,
-							symbol: row.symbol
-						}))
+						}
 					});
 				} else {
 					toInsert.push(record);
@@ -439,7 +439,7 @@ export const transactionsRouter = createTRPCRouter({
 				});
 			}
 
-			return { errors, imported: toInsert.length, duplicates } as const;
+			return { duplicates, errors, imported: toInsert.length } as const;
 		}),
 	importDuplicates: protectedProcedure
 		.input(
@@ -447,8 +447,8 @@ export const transactionsRouter = createTRPCRouter({
 				items: z
 					.array(
 						z.object({
-							duplicateId: z.string().min(1),
 							date: z.string().min(1),
+							duplicateId: z.string().min(1),
 							fee: z.number().nonnegative().nullable().optional(),
 							feeCurrency: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']).nullable().optional(),
 							note: z.string().nullable().optional(),
@@ -504,7 +504,6 @@ export const transactionsRouter = createTRPCRouter({
 				const noteTrimmed = item.note?.trim() ?? '';
 				const note = noteTrimmed === '' ? null : noteTrimmed;
 				return {
-					duplicateId: item.duplicateId,
 					data: {
 						date,
 						fee,
@@ -515,7 +514,8 @@ export const transactionsRouter = createTRPCRouter({
 						quantity: item.quantity,
 						side: item.side,
 						symbol
-					}
+					},
+					duplicateId: item.duplicateId
 				};
 			});
 

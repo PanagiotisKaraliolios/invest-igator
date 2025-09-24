@@ -21,7 +21,7 @@ export default async function SignOutPage() {
 					</CardHeader>
 					<CardContent className='flex items-center justify-between gap-3'>
 						<Button asChild variant='ghost'>
-							<Link href='/dashboard'>Cancel</Link>
+							<Link href='/portfolio'>Cancel</Link>
 						</Button>
 						<SignOutButton label='Sign out' size='sm' variant='destructive' />
 					</CardContent>
