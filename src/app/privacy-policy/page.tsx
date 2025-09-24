@@ -11,6 +11,9 @@ export const metadata: Metadata = {
 	title: 'Privacy Policy'
 };
 
+// Ensure this route is statically generated at build time
+export const dynamic = 'force-static';
+
 export default function PrivacyPolicyPage() {
 	const appName = env.APP_NAME ?? 'Invest-igator';
 	const updated = new Date().toLocaleDateString(undefined, {

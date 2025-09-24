@@ -11,6 +11,9 @@ export const metadata: Metadata = {
 	title: 'Terms of Service'
 };
 
+// Ensure this route is statically generated at build time
+export const dynamic = 'force-static';
+
 export default function TermsOfServicePage() {
 	const appName = env.APP_NAME ?? 'Invest-igator';
 	const updated = new Date().toLocaleDateString(undefined, {
