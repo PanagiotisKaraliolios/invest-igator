@@ -5,6 +5,7 @@ import { watchlistRouter } from '@/server/api/routers/watchlist';
 import { createCallerFactory, createTRPCRouter } from '@/server/api/trpc';
 import { currencyProcedures } from './routers/currency';
 import { fxRouter } from './routers/fx';
+import { goalsRouter } from './routers/goals';
 import { portfolioRouter } from './routers/portfolio';
 import { themeProcedures } from './routers/theme';
 import { transactionsRouter } from './routers/transactions';
@@ -19,6 +20,7 @@ export const appRouter = createTRPCRouter({
 	auth: authRouter,
 	currency: currencyProcedures,
 	fx: fxRouter,
+	goals: goalsRouter,
 	portfolio: portfolioRouter,
 	post: postRouter,
 	theme: themeProcedures,

@@ -93,6 +93,7 @@ model User {
     transactions  Transaction[]
     watchlist     WatchlistItem[]
     emailChangeTokens EmailChangeToken[]
+    goals         Goal[]
 }
 
 model VerificationToken {
@@ -157,4 +158,21 @@ model FxRate {
 
     @@unique([base, quote])
     @@index([fetchedAt])
+}
+
+/// Personal financial goals for a user (e.g., buy a house, retirement)
+model Goal {
+    id             String    @id @default(cuid())
+    user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId         String
+    title          String
+    targetAmount   Float
+    targetCurrency Currency  @default(USD)
+    targetDate     DateTime?
+    note           String?
+    createdAt      DateTime  @default(now())
+    updatedAt      DateTime  @updatedAt
+
+    @@index([userId])
+    @@index([targetDate])
 }

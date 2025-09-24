@@ -32,8 +32,6 @@ const data = {
 		{
 			icon: AudioWaveform,
 			items: [
-				{ title: 'Performance', url: '/analytics/performance' },
-				{ title: 'Allocation', url: '/analytics/allocation' },
 				{ title: 'Risk', url: '/analytics/risk' },
 				{ title: 'Reports', url: '/analytics/reports' }
 			],
