@@ -5,8 +5,36 @@ import { z } from 'zod';
 import { env } from '@/env';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
 import { sendVerificationRequest } from '@/server/auth/send-verification-request';
+import {
+	createRecoveryCodes,
+	findMatchingRecoveryCode,
+	generateTwoFactorSecret,
+	verifyTotpToken
+} from '@/server/auth/two-factor';
 
 export const accountRouter = createTRPCRouter({
+	cancelTwoFactorSetup: protectedProcedure.mutation(async ({ ctx }) => {
+		const user = await ctx.db.user.findUnique({
+			select: { twoFactorEnabled: true },
+			where: { id: ctx.session.user.id }
+		});
+		if (!user) throw new TRPCError({ code: 'NOT_FOUND' });
+		if (user.twoFactorEnabled) {
+			throw new TRPCError({
+				code: 'BAD_REQUEST',
+				message: 'Two-factor authentication is enabled. Disable it instead.'
+			});
+		}
+		await ctx.db.user.update({
+			data: {
+				twoFactorConfirmedAt: null,
+				twoFactorRecoveryCodes: [],
+				twoFactorSecret: null
+			},
+			where: { id: ctx.session.user.id }
+		});
+		return { ok: true } as const;
+	}),
 	changePassword: protectedProcedure
 		.input(
 			z.object({
@@ -69,11 +97,91 @@ export const accountRouter = createTRPCRouter({
 			return { ok: true } as const;
 		}),
 
+	confirmTwoFactorSetup: protectedProcedure
+		.input(z.object({ code: z.string().min(6).max(20) }))
+		.mutation(async ({ ctx, input }) => {
+			const user = await ctx.db.user.findUnique({
+				select: { twoFactorEnabled: true, twoFactorSecret: true },
+				where: { id: ctx.session.user.id }
+			});
+			if (!user?.twoFactorSecret) {
+				throw new TRPCError({ code: 'BAD_REQUEST', message: 'No two-factor setup in progress.' });
+			}
+			if (user.twoFactorEnabled) return { ok: true } as const;
+			const valid = verifyTotpToken(user.twoFactorSecret, input.code);
+			if (!valid) {
+				throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid authentication code.' });
+			}
+			await ctx.db.user.update({
+				data: { twoFactorConfirmedAt: new Date(), twoFactorEnabled: true },
+				where: { id: ctx.session.user.id }
+			});
+			return { ok: true } as const;
+		}),
+
 	deleteAccount: protectedProcedure.input(z.object({ confirm: z.literal(true) })).mutation(async ({ ctx }) => {
 		// Cascade relations are set in Prisma schema
 		await ctx.db.user.delete({ where: { id: ctx.session.user.id } });
 		return { ok: true } as const;
 	}),
+
+	disableTwoFactor: protectedProcedure
+		.input(
+			z.object({
+				code: z.string().min(6).max(64),
+				password: z.string().min(1).optional()
+			})
+		)
+		.mutation(async ({ ctx, input }) => {
+			const user = await ctx.db.user.findUnique({
+				select: {
+					passwordHash: true,
+					twoFactorEnabled: true,
+					twoFactorRecoveryCodes: true,
+					twoFactorSecret: true
+				},
+				where: { id: ctx.session.user.id }
+			});
+			if (!user) throw new TRPCError({ code: 'NOT_FOUND' });
+			if (!user.twoFactorEnabled) {
+				throw new TRPCError({ code: 'BAD_REQUEST', message: 'Two-factor authentication is not enabled.' });
+			}
+			const providedPassword = input.password?.trim() ?? '';
+			const providedCode = input.code?.trim() ?? '';
+			if (user.passwordHash) {
+				if (!providedPassword) {
+					throw new TRPCError({ code: 'BAD_REQUEST', message: 'Password is required.' });
+				}
+				const passwordOk = await bcrypt.compare(`${providedPassword}${env.PASSWORD_PEPPER ?? ''}`, user.passwordHash);
+				if (!passwordOk) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Password is incorrect.' });
+			}
+			if (!providedCode) {
+				throw new TRPCError({ code: 'BAD_REQUEST', message: 'Authentication code required.' });
+			}
+			let codeOk = false;
+			if (user.twoFactorSecret) {
+				codeOk = verifyTotpToken(user.twoFactorSecret, providedCode);
+			}
+			if (!codeOk && user.twoFactorRecoveryCodes.length > 0) {
+				const match = await findMatchingRecoveryCode(providedCode, user.twoFactorRecoveryCodes);
+				if (match.matchedHash) {
+					codeOk = true;
+				}
+			}
+			if (!codeOk) {
+				throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid authentication code.' });
+			}
+			await ctx.db.user.update({
+				data: {
+					twoFactorConfirmedAt: null,
+					twoFactorEnabled: false,
+					twoFactorRecoveryCodes: [],
+					twoFactorSecret: null
+				},
+				where: { id: ctx.session.user.id }
+			});
+			return { ok: true } as const;
+		}),
 
 	disconnectOAuthAccount: protectedProcedure
 		.input(z.object({ accountId: z.string().min(1) }))
@@ -119,6 +227,29 @@ export const accountRouter = createTRPCRouter({
 		const { passwordHash, ...rest } = user;
 		return { ...rest, hasPassword: Boolean(passwordHash) } as const;
 	}),
+
+	getTwoFactorState: protectedProcedure.query(async ({ ctx }) => {
+		const user = await ctx.db.user.findUnique({
+			select: {
+				email: true,
+				passwordHash: true,
+				twoFactorConfirmedAt: true,
+				twoFactorEnabled: true,
+				twoFactorRecoveryCodes: true,
+				twoFactorSecret: true
+			},
+			where: { id: ctx.session.user.id }
+		});
+		if (!user) throw new TRPCError({ code: 'NOT_FOUND' });
+		return {
+			confirmedAt: user.twoFactorConfirmedAt?.toISOString() ?? null,
+			enabled: user.twoFactorEnabled,
+			hasPassword: Boolean(user.passwordHash),
+			hasSecret: Boolean(user.twoFactorSecret),
+			pending: Boolean(user.twoFactorSecret && !user.twoFactorEnabled),
+			recoveryCodesRemaining: user.twoFactorRecoveryCodes.length
+		} as const;
+	}),
 	listOAuthAccounts: protectedProcedure.query(async ({ ctx }) => {
 		const accounts = await ctx.db.account.findMany({
 			select: { id: true, provider: true, providerAccountId: true, type: true },
@@ -126,6 +257,55 @@ export const accountRouter = createTRPCRouter({
 		});
 		return accounts;
 	}),
+
+	regenerateTwoFactorRecoveryCodes: protectedProcedure
+		.input(
+			z.object({
+				code: z.string().min(6, 'Authentication code is required').max(64),
+				password: z.string().min(1, 'Password is required')
+			})
+		)
+		.mutation(async ({ ctx, input }) => {
+			const user = await ctx.db.user.findUnique({
+				select: {
+					passwordHash: true,
+					twoFactorEnabled: true,
+					twoFactorRecoveryCodes: true,
+					twoFactorSecret: true
+				},
+				where: { id: ctx.session.user.id }
+			});
+			if (!user) throw new TRPCError({ code: 'NOT_FOUND' });
+			if (!user.twoFactorEnabled || !user.twoFactorSecret) {
+				throw new TRPCError({
+					code: 'BAD_REQUEST',
+					message: 'Two-factor authentication must be enabled before regenerating codes.'
+				});
+			}
+			if (!user.passwordHash) {
+				throw new TRPCError({ code: 'BAD_REQUEST', message: 'Password verification is required before regenerating codes.' });
+			}
+			const providedPassword = input.password.trim();
+			const passwordOk = await bcrypt.compare(`${providedPassword}${env.PASSWORD_PEPPER ?? ''}`, user.passwordHash);
+			if (!passwordOk) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Password is incorrect.' });
+			const providedCode = input.code.trim();
+			let codeOk = verifyTotpToken(user.twoFactorSecret, providedCode);
+			if (!codeOk && user.twoFactorRecoveryCodes.length > 0) {
+				const match = await findMatchingRecoveryCode(providedCode, user.twoFactorRecoveryCodes);
+				if (match.matchedHash) {
+					codeOk = true;
+				}
+			}
+			if (!codeOk) {
+				throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid authentication code.' });
+			}
+			const { hashed, plain } = await createRecoveryCodes();
+			await ctx.db.user.update({
+				data: { twoFactorRecoveryCodes: hashed },
+				where: { id: ctx.session.user.id }
+			});
+			return { recoveryCodes: plain } as const;
+		}),
 	requestEmailChange: protectedProcedure
 		.input(z.object({ currentPassword: z.string().optional(), newEmail: z.string().email() }))
 		.mutation(async ({ ctx, input }) => {
@@ -242,6 +422,32 @@ export const accountRouter = createTRPCRouter({
 			await ctx.db.user.update({ data: { passwordHash: nextHash }, where: { id: ctx.session.user.id } });
 			return { ok: true } as const;
 		}),
+
+	startTwoFactorSetup: protectedProcedure.mutation(async ({ ctx }) => {
+		const user = await ctx.db.user.findUnique({
+			select: { email: true, id: true, twoFactorEnabled: true },
+			where: { id: ctx.session.user.id }
+		});
+		if (!user) throw new TRPCError({ code: 'NOT_FOUND' });
+		if (user.twoFactorEnabled) {
+			throw new TRPCError({
+				code: 'BAD_REQUEST',
+				message: 'Two-factor authentication is already enabled.'
+			});
+		}
+		const { otpauthUrl, secret } = generateTwoFactorSecret(user.email ?? `user-${user.id}`);
+		const { hashed, plain } = await createRecoveryCodes();
+		await ctx.db.user.update({
+			data: {
+				twoFactorConfirmedAt: null,
+				twoFactorEnabled: false,
+				twoFactorRecoveryCodes: hashed,
+				twoFactorSecret: secret
+			},
+			where: { id: user.id }
+		});
+		return { otpauthUrl, recoveryCodes: plain, secret } as const;
+	}),
 
 	updateProfile: protectedProcedure
 		.input(

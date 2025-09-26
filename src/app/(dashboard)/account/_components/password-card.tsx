@@ -28,14 +28,14 @@ export default function PasswordCard() {
 				.superRefine((vals, ctx) => {
 					if (vals.newPassword !== vals.confirmPassword) {
 						ctx.addIssue({
-							code: z.ZodIssueCode.custom,
+							code: 'custom',
 							message: 'Passwords do not match',
 							path: ['confirmPassword']
 						});
 					}
 					if (profile.data?.hasPassword && !vals.currentPassword) {
 						ctx.addIssue({
-							code: z.ZodIssueCode.custom,
+							code: 'custom',
 							message: 'Current password is required',
 							path: ['currentPassword']
 						});

@@ -47,3 +47,14 @@ Specialized instructions live under `docs/*/agents.md`:
 - `docs/server/agents.md`
 - `docs/tests/agents.md`
 Consult them before modifying those areas.
+
+## Alignment With Copilot
+This project also maintains `.github/copilot-instructions.md` for GitHub Copilot. Autonomous agents should mirror those conventions. Key alignments:
+- API patterns: define procedures in `src/server/api/routers/*`, register in `src/server/api/root.ts`, use `publicProcedure` vs `protectedProcedure` appropriately, and rely on `ctx.db` for Prisma access. Expect timing middleware logs in `src/server/api/trpc.ts`.
+- Server vs client usage: on the server, import from `@/trpc/server` (e.g., `HydrateClient`, `api` helpers). On the client, use hooks from `@/trpc/react` and invalidate via `api.useUtils()` after mutations.
+- Charts: wrap Recharts with `ChartContainer` and provide a config whose keys match `dataKey`s; it exposes `--color-<key>` CSS vars. If a series key includes special characters (e.g., `VUSA.L`), sanitize IDs for gradients or pass explicit colors instead of relying on CSS vars.
+- External calls: keep third‑party fetches inside tRPC procedures; read all configuration from the `env` helper and never expose secrets to clients.
+- Prisma specifics: `WatchlistItem` has a composite unique `(userId, symbol)`; use `upsert`/`update` patterns rather than catching unique violations.
+- Testing: Playwright e2e lives in `tests/e2e`; add `data-testid` to interactive elements and prefer accessible roles for queries. Use the shared fixtures and keep selectors stable.
+
+If any discrepancy exists between this guide and `.github/copilot-instructions.md`, prefer the stricter rule or ask for clarification in a PR description.

@@ -53,6 +53,8 @@
 		"next-auth": "5.0.0-beta.25",
 		"next-themes": "^0.4.6",
 		"nodemailer": "^7.0.6",
+		"otplib": "^12.0.1",
+		"qrcode.react": "^4.2.0",
 		"radix-ui": "^1.4.3",
 		"react": "^19.1.1",
 		"react-day-picker": "^9.10.0",
@@ -109,6 +111,9 @@
 		"typecheck": "tsc --noEmit",
 		"verify:secrets": "bash scripts/verify-secrets.sh"
 	},
+	"trustedDependencies": [
+		"@tailwindcss/oxide"
+	],
 	"type": "module",
 	"version": "0.1.0"
 }

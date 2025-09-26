@@ -11,6 +11,7 @@ import { env } from '@/env';
 
 import { db } from '@/server/db';
 import { sendVerificationRequest } from './send-verification-request';
+import { findMatchingRecoveryCode, verifyTotpToken } from './two-factor';
 
 /**
  * Module augmentation for `next-auth` types. Allows us to add custom properties to the `session`
@@ -35,7 +36,24 @@ declare module 'next-auth' {
 }
 
 class InvalidLoginError extends CredentialsSignin {
-	code = 'Invalid Email or Password';
+	code = 'invalid_credentials';
+	constructor() {
+		super('Invalid Email or Password');
+	}
+}
+
+class TwoFactorRequiredError extends CredentialsSignin {
+	code = 'two_factor_required';
+	constructor() {
+		super('TwoFactorRequired');
+	}
+}
+
+class InvalidTwoFactorCodeError extends CredentialsSignin {
+	code = 'invalid_two_factor_code';
+	constructor() {
+		super('InvalidTwoFactorCode');
+	}
 }
 
 /**
@@ -168,7 +186,10 @@ export const authConfig = {
 						id: true,
 						image: true,
 						name: true,
-						passwordHash: true
+						passwordHash: true,
+						twoFactorEnabled: true,
+						twoFactorRecoveryCodes: true,
+						twoFactorSecret: true
 					},
 					where: { email }
 				});
@@ -183,6 +204,30 @@ export const authConfig = {
 
 				if (!ok) throw new InvalidLoginError();
 
+				if (user.twoFactorEnabled) {
+					const otp = credentials?.otp?.toString().trim() ?? '';
+					if (!otp) throw new TwoFactorRequiredError();
+					let totpValid = false;
+					if (user.twoFactorSecret) {
+						totpValid = verifyTotpToken(user.twoFactorSecret, otp);
+					}
+					let consumedRecoveryHash: string | null = null;
+					if (!totpValid && user.twoFactorRecoveryCodes.length > 0) {
+						const match = await findMatchingRecoveryCode(otp, user.twoFactorRecoveryCodes);
+						if (match.matchedHash) {
+							consumedRecoveryHash = match.matchedHash;
+							const nextCodes = user.twoFactorRecoveryCodes.filter((hash) => hash !== match.matchedHash);
+							await db.user.update({
+								data: { twoFactorRecoveryCodes: nextCodes },
+								where: { id: user.id }
+							});
+						}
+					}
+					if (!totpValid && !consumedRecoveryHash) {
+						throw new InvalidTwoFactorCodeError();
+					}
+				}
+
 				// Return a safe user object; NextAuth will include `id` in the session via callback
 				return {
 					email: user.email,
@@ -194,6 +239,7 @@ export const authConfig = {
 			},
 			credentials: {
 				email: { label: 'Email', type: 'email' },
+				otp: { label: 'Authentication code', type: 'text' },
 				password: { label: 'Password', type: 'password' }
 			}
 		})

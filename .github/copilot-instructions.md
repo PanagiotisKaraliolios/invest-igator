@@ -49,3 +49,6 @@ Next.js App Router (T3-ish) with tRPC v11, Prisma/PostgreSQL, NextAuth, shadcn/u
 - Always add `data-testid` attributes to interactive elements (buttons, inputs) for stable selectors.
 - Test patterns: use `data-testid` attributes for stable selectors; prefer `getByRole` with name/label for accessibility-aligned queries.
 - CI: GitHub Actions workflow in `.github/workflows/ci.yml` runs lint, typecheck, build, and e2e tests on pushes and PRs.
+
+## Agent Alignment
+For autonomous assistants (non-Copilot), follow `agents.md` at the repo root for norms and safety constraints. These Copilot notes and `agents.md` are intended to be consistent; if they diverge, prefer the stricter guidance and open a PR to reconcile.
