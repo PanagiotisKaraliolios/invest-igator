@@ -84,7 +84,7 @@ export function PendingTwoFactorSection({ initialSetup, onSetupChange, onRefetch
 	const setupDetails = generated ? (
 		<div className='grid gap-4 md:grid-cols-[minmax(0,320px)_1fr]'>
 			<div className='flex items-center justify-center rounded-lg border bg-muted/30 p-4'>
-				<QRCodeSVG className='h-auto w-52' value={generated.otpauthUrl} />
+				<QRCodeSVG className='size-56' value={generated.otpauthUrl} />
 			</div>
 			<div className='space-y-4'>
 				<div>
