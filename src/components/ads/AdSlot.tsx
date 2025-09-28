@@ -54,7 +54,6 @@ export function AdSlot({
 }) {
 	useEffect(() => {
 		try {
-			// @ts-expect-error adsbygoogle is injected by the AdSense script
 			(window.adsbygoogle = window.adsbygoogle || []).push({});
 		} catch (e) {
 			// no-op

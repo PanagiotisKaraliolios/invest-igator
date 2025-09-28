@@ -1,5 +1,6 @@
 import '@/styles/globals.css';
 
+import { GoogleAnalytics  } from '@next/third-parties/google';
 import type { Metadata } from 'next';
 import { Geist } from 'next/font/google';
 import { cookies } from 'next/headers';
@@ -11,6 +12,7 @@ import { auth } from '@/server/auth';
 import { TRPCReactProvider } from '@/trpc/react';
 
 const siteUrl = env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+const gaMeasurementId = env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
 export const metadata: Metadata = {
 	description: 'An open-source investment portfolio tracker',
@@ -63,6 +65,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
 				</TRPCReactProvider>
 				<Toaster position='top-right' richColors />
 			</body>
+			{gaMeasurementId && <GoogleAnalytics gaId={gaMeasurementId} />}
 		</html>
 	);
 }
