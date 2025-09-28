@@ -1,9 +1,10 @@
 import '@/styles/globals.css';
 
-import { GoogleAnalytics  } from '@next/third-parties/google';
+import { GoogleAnalytics } from '@next/third-parties/google';
 import type { Metadata } from 'next';
 import { Geist } from 'next/font/google';
 import { cookies } from 'next/headers';
+import Script from 'next/script';
 import { ConsentProvider } from '@/components/consent/ConsentProvider';
 import { ThemeProvider } from '@/components/theme/ThemeProvider';
 import { Toaster } from '@/components/ui/sonner';
@@ -66,6 +67,11 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
 				<Toaster position='top-right' richColors />
 			</body>
 			{gaMeasurementId && <GoogleAnalytics gaId={gaMeasurementId} />}
+			<Script
+				data-website-id='36d7b2ca-d770-4e1a-80d2-3a3d3e6bbd2c'
+				defer
+				src='https://cloud.umami.is/script.js'
+			/>
 		</html>
 	);
 }
