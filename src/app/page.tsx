@@ -1,12 +1,17 @@
-import { ChartLine, Github, ListChecks, Shield, Wallet } from 'lucide-react';
+import { ChartLine, Github } from 'lucide-react';
 import Link from 'next/link';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { env } from '@/env';
 import { auth } from '@/server/auth';
 import HeroCharts from './_components/hero-charts';
+import { BenefitsSection } from './_components/landing/benefits';
+import { FAQSection } from './_components/landing/faq';
+import { HowItWorksSection } from './_components/landing/how-it-works';
+import { PartnersRow } from './_components/landing/partners';
+import { PricingSection } from './_components/landing/pricing';
+import { TestimonialsSection } from './_components/landing/testimonials';
 import ThemeSwitch from './(dashboard)/_components/theme-switch';
 
 export const revalidate = 60;
@@ -99,82 +104,26 @@ export default async function Home() {
 				</div>
 			</section>
 
-			{/* Features */}
-			<section className='container mx-auto px-6 py-12 md:py-20' id='features'>
-				<div className='mx-auto mb-10 max-w-2xl text-center'>
-					<h2 className='text-3xl font-semibold md:text-4xl'>All your investing, organized</h2>
-					<p className='text-muted-foreground mt-3'>
-						Purpose-built tools to help you stay on top of markets and your portfolio.
-					</p>
-				</div>
+			{/* Partners / stack logos */}
+			<PartnersRow />
 
-				<div className='grid gap-6 md:grid-cols-2 lg:grid-cols-4'>
-					<Card>
-						<CardHeader>
-							<CardTitle className='flex items-center gap-2'>
-								<ListChecks className='text-primary' /> Watchlist
-							</CardTitle>
-							<CardDescription>Track tickers and quickly spot movers.</CardDescription>
-						</CardHeader>
-						<CardContent>
-							<Button asChild size='sm' variant='outline'>
-								<Link href='/watchlist'>View watchlist</Link>
-							</Button>
-						</CardContent>
-					</Card>
+			{/* Benefits grid */}
+			<BenefitsSection />
 
-					<Card>
-						<CardHeader>
-							<CardTitle className='flex items-center gap-2'>
-								<Wallet className='text-primary' /> Portfolio
-							</CardTitle>
-							<CardDescription>Aggregate holdings and see performance.</CardDescription>
-						</CardHeader>
-						<CardContent>
-							<Button asChild size='sm' variant='outline'>
-								<Link href='/portfolio'>Open portfolio</Link>
-							</Button>
-						</CardContent>
-					</Card>
+			{/* How it works */}
+			<HowItWorksSection />
 
-					<Card>
-						<CardHeader>
-							<CardTitle className='flex items-center gap-2'>
-								<ChartLine className='text-primary' /> Insights
-							</CardTitle>
-							<CardDescription>Charts powered by InfluxDB time-series.</CardDescription>
-						</CardHeader>
-						<CardContent>
-							<Button asChild size='sm' variant='outline'>
-								<Link href='/portfolio'>Explore insights</Link>
-							</Button>
-						</CardContent>
-					</Card>
+			{/* Pricing */}
+			<PricingSection signedIn={Boolean(session?.user)} />
 
-					<Card>
-						<CardHeader>
-							<CardTitle className='flex items-center gap-2'>
-								<Shield className='text-primary' /> Secure Auth
-							</CardTitle>
-							<CardDescription>NextAuth with email/Discord sign-in.</CardDescription>
-						</CardHeader>
-						<CardContent>
-							{session?.user ? (
-								<Button asChild size='sm' variant='outline'>
-									<Link href='/portfolio'>You are signed in</Link>
-								</Button>
-							) : (
-								<Button asChild size='sm' variant='outline'>
-									<Link href='/signup'>Create account</Link>
-								</Button>
-							)}
-						</CardContent>
-					</Card>
-				</div>
-			</section>
+			{/* Testimonials */}
+			<TestimonialsSection />
 
-			{/* CTA */}
-			<section className='container mx-auto px-6 pb-16 md:pb-24'>
+			{/* FAQ */}
+			<FAQSection />
+
+			{/* Final CTA */}
+			<section className='container mx-auto px-6 pb-16 md:pb-24' data-testid='landing-cta'>
 				<div className='relative overflow-hidden rounded-2xl border bg-gradient-to-br from-primary/10 via-background to-background p-8 md:p-12'>
 					<div className='flex flex-col items-start gap-6 md:flex-row md:items-center md:justify-between'>
 						<div>

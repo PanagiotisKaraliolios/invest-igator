@@ -4,8 +4,10 @@ import type { Metadata } from 'next';
 import { Geist } from 'next/font/google';
 import { cookies } from 'next/headers';
 import { ConsentProvider } from '@/components/consent/ConsentProvider';
+import { ThemeProvider } from '@/components/theme/ThemeProvider';
 import { Toaster } from '@/components/ui/sonner';
 import { env } from '@/env';
+import { auth } from '@/server/auth';
 import { TRPCReactProvider } from '@/trpc/react';
 
 const siteUrl = env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
@@ -48,12 +50,16 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
 	const cookieStore = await cookies();
 	const themeCookie = cookieStore.get('ui-theme')?.value;
 	const isDark = themeCookie ? themeCookie === 'dark' : true;
+	const session = await auth();
+	const isAuthenticated = Boolean(session?.user);
 
 	return (
 		<html className={`${geist.variable} ${isDark ? 'dark' : ''}`} lang='en'>
 			<body className='min-h-screen bg-background' suppressHydrationWarning>
 				<TRPCReactProvider>
-					<ConsentProvider>{children}</ConsentProvider>
+					<ThemeProvider initialTheme={isDark ? 'dark' : 'light'} isAuthenticated={isAuthenticated}>
+						<ConsentProvider>{children}</ConsentProvider>
+					</ThemeProvider>
 				</TRPCReactProvider>
 				<Toaster position='top-right' richColors />
 			</body>

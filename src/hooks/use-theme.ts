@@ -5,6 +5,7 @@ import { api } from '@/trpc/react';
 
 type Theme = 'light' | 'dark';
 
+
 function applyTheme(theme: Theme) {
 	if (typeof document === 'undefined') return;
 	const root = document.documentElement;
@@ -12,7 +13,7 @@ function applyTheme(theme: Theme) {
 	else root.classList.remove('dark');
 }
 
-export function useThemeSwitch(isAuthenticated = false) {
+export function useThemeSwitch(isAuthenticated = false, initialTheme?: Theme) {
 	const [mounted, setMounted] = useState(false);
 	const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const skipNextPersistRef = useRef(false);
@@ -33,6 +34,7 @@ export function useThemeSwitch(isAuthenticated = false) {
 
 	// Initialize from SSR-applied class which comes from the session
 	const [theme, _setTheme] = useState<Theme>(() => {
+		if (initialTheme) return initialTheme;
 		if (typeof document !== 'undefined') {
 			return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
 		}

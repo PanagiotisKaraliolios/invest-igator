@@ -2,12 +2,13 @@
 
 import { Moon, Sun } from 'lucide-react';
 import { useId } from 'react';
+import { useTheme } from '@/components/theme/ThemeProvider';
 import { Switch, SwitchIndicator, SwitchWrapper } from '@/components/ui/switch';
-import { useThemeSwitch } from '@/hooks/use-theme';
 
 export default function ThemeSwitch({ isAuthenticated = false }: { isAuthenticated: boolean }) {
+	// isAuthenticated currently unused; persistence handled by ThemeProvider higher in tree if provided
 	const id = useId();
-	const { isLight, setIsLight, mounted } = useThemeSwitch(isAuthenticated);
+	const { isLight, setIsLight, mounted } = useTheme();
 	return (
 		<div className='flex items-center space-x-2.5'>
 			<SwitchWrapper>

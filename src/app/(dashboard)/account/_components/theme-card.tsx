@@ -1,19 +1,29 @@
 'use client';
+import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
+import { useTheme } from '@/components/theme/ThemeProvider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { api } from '@/trpc/react';
 
 export default function ThemeCard({ initialTheme }: { initialTheme?: 'light' | 'dark' }) {
-	const utils = api.useContext();
-	const setTheme = api.theme.setTheme.useMutation({
-		onError: (e) => toast.error(e.message || 'Failed to update theme'),
-		onSuccess: async () => {
-			await utils.theme.getTheme.invalidate();
-			toast.success('Theme updated');
-		}
-	});
+	const { theme, setTheme } = useTheme();
+	const first = useRef(true);
+
+	// Sync provided initialTheme (from server) once if differs
+	useEffect(() => {
+		if (!initialTheme || first.current === false) return;
+		first.current = false;
+		if (initialTheme !== theme) setTheme(initialTheme);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [initialTheme]);
+
+	// Provide optimistic feedback immediately on change
+	const handleChange = (v: 'light' | 'dark') => {
+		if (v === theme) return;
+		setTheme(v);
+		toast.success('Theme updated');
+	};
 
 	return (
 		<Card>
@@ -22,8 +32,8 @@ export default function ThemeCard({ initialTheme }: { initialTheme?: 'light' | '
 			</CardHeader>
 			<CardContent className='space-y-2'>
 				<Label>Appearance</Label>
-				<Select defaultValue={initialTheme} onValueChange={(v: 'light' | 'dark') => setTheme.mutate(v)}>
-					<SelectTrigger className='w-[220px]'>
+				<Select onValueChange={handleChange} value={theme}>
+					<SelectTrigger className='w-[220px]' data-testid='theme-select'>
 						<SelectValue placeholder='Select theme' />
 					</SelectTrigger>
 					<SelectContent>
