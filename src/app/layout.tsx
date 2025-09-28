@@ -14,6 +14,7 @@ import { TRPCReactProvider } from '@/trpc/react';
 
 const siteUrl = env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 const gaMeasurementId = env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+const umamiWebsiteId = env.NEXT_PUBLIC_UMAMI_WEBSITE_ID;
 
 export const metadata: Metadata = {
 	description: 'An open-source investment portfolio tracker',
@@ -57,21 +58,19 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
 	const isAuthenticated = Boolean(session?.user);
 
 	return (
-		<html className={`${geist.variable} ${isDark ? 'dark' : ''}`} lang='en'>
-			<body className='min-h-screen bg-background' suppressHydrationWarning>
-				<TRPCReactProvider>
-					<ThemeProvider initialTheme={isDark ? 'dark' : 'light'} isAuthenticated={isAuthenticated}>
-						<ConsentProvider>{children}</ConsentProvider>
-					</ThemeProvider>
-				</TRPCReactProvider>
-				<Toaster position='top-right' richColors />
-				<Script
-					data-website-id='36d7b2ca-d770-4e1a-80d2-3a3d3e6bbd2c'
-					defer
-					src='https://cloud.umami.is/script.js'
-				/>
-			</body>
+		<>
+			{umamiWebsiteId && <Script data-website-id={umamiWebsiteId} defer src='https://cloud.umami.is/script.js' />}
 			{gaMeasurementId && <GoogleAnalytics gaId={gaMeasurementId} />}
-		</html>
+			<html className={`${geist.variable} ${isDark ? 'dark' : ''}`} lang='en'>
+				<body className='min-h-screen bg-background' suppressHydrationWarning>
+					<TRPCReactProvider>
+						<ThemeProvider initialTheme={isDark ? 'dark' : 'light'} isAuthenticated={isAuthenticated}>
+							<ConsentProvider>{children}</ConsentProvider>
+						</ThemeProvider>
+					</TRPCReactProvider>
+					<Toaster position='top-right' richColors />
+				</body>
+			</html>
+		</>
 	);
 }

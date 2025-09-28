@@ -14,7 +14,8 @@ export const env = createEnv({
 		NEXT_PUBLIC_ADSENSE_SLOT_WATCHLIST: z.string().optional(),
 		NEXT_PUBLIC_GA_MEASUREMENT_ID: z.string().optional(),
 		// NEXT_PUBLIC_CLIENTVAR: z.string(),
-		NEXT_PUBLIC_SITE_URL: z.string().default('http://localhost:3000')
+		NEXT_PUBLIC_SITE_URL: z.string().default('http://localhost:3000'),
+		NEXT_PUBLIC_UMAMI_WEBSITE_ID: z.string().optional()
 	},
 	/**
 	 * Makes it so that empty strings are treated as undefined. `SOME_VAR: z.string()` and
@@ -48,6 +49,7 @@ export const env = createEnv({
 		NEXT_PUBLIC_ADSENSE_SLOT_WATCHLIST: process.env.NEXT_PUBLIC_ADSENSE_SLOT_WATCHLIST,
 		NEXT_PUBLIC_GA_MEASUREMENT_ID: process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID,
 		NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
+		NEXT_PUBLIC_UMAMI_WEBSITE_ID: process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID,
 		NODE_ENV: process.env.NODE_ENV,
 		PASSWORD_PEPPER: process.env.PASSWORD_PEPPER,
 		POLYGON_API_KEY: process.env.POLYGON_API_KEY,
