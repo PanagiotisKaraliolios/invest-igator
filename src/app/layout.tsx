@@ -65,13 +65,13 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
 					</ThemeProvider>
 				</TRPCReactProvider>
 				<Toaster position='top-right' richColors />
+				<Script
+					data-website-id='36d7b2ca-d770-4e1a-80d2-3a3d3e6bbd2c'
+					defer
+					src='https://cloud.umami.is/script.js'
+				/>
 			</body>
 			{gaMeasurementId && <GoogleAnalytics gaId={gaMeasurementId} />}
-			<Script
-				data-website-id='36d7b2ca-d770-4e1a-80d2-3a3d3e6bbd2c'
-				defer
-				src='https://cloud.umami.is/script.js'
-			/>
 		</html>
 	);
 }
