@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from '@/components/ui/input-otp';
+import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from '@/components/ui/input-otp';
 
 export function CredentialsLoginForm() {
 	const router = useRouter();
@@ -47,7 +47,10 @@ export function CredentialsLoginForm() {
 	});
 
 	const otpSchema = z.object({
-		otp: z.string().min(6, 'Enter the code from your authenticator app or recovery code').max(64, 'Code is too long')
+		otp: z
+			.string()
+			.min(6, 'Enter the code from your authenticator app or recovery code')
+			.max(64, 'Code is too long')
 	});
 
 	const form = useForm<z.infer<typeof schema>>({
@@ -122,7 +125,7 @@ export function CredentialsLoginForm() {
 			setOtpOpen(false);
 			return;
 		}
-	try {
+		try {
 			const raw = values.otp.trim();
 			const normalized = useRecoveryCode
 				? raw.replace(/[^0-9a-z]/gi, '').toUpperCase()
@@ -238,7 +241,7 @@ export function CredentialsLoginForm() {
 								</FormControl>
 								<FormMessage />
 							</FormItem>
-					)}
+						)}
 					/>
 					<Button
 						className='w-full'
@@ -255,7 +258,8 @@ export function CredentialsLoginForm() {
 					<DialogHeader>
 						<DialogTitle>Two-factor authentication</DialogTitle>
 						<DialogDescription>
-							Enter the code from your authenticator app or one of your recovery codes to finish signing in.
+							Enter the code from your authenticator app or one of your recovery codes to finish signing
+							in.
 						</DialogDescription>
 					</DialogHeader>
 					<Form {...otpForm}>
@@ -273,17 +277,17 @@ export function CredentialsLoginForm() {
 														autoComplete='one-time-code'
 														disabled={otpForm.formState.isSubmitting}
 														id='otp-input'
+														onChange={field.onChange}
 														placeholder='ABCDE-FGHIJ'
 														value={field.value ?? ''}
-														onChange={field.onChange}
 													/>
 												) : (
 													<InputOTP
 														autoFocus
 														disabled={otpForm.formState.isSubmitting}
 														maxLength={6}
-														value={field.value || ''}
 														onChange={(val) => field.onChange(val)}
+														value={field.value || ''}
 													>
 														<InputOTPGroup>
 															{Array.from({ length: 3 }).map((_, index) => (
@@ -293,7 +297,10 @@ export function CredentialsLoginForm() {
 														<InputOTPSeparator />
 														<InputOTPGroup>
 															{Array.from({ length: 3 }).map((_, index) => (
-																<InputOTPSlot index={index + 3} key={`otp-${index + 3}`} />
+																<InputOTPSlot
+																	index={index + 3}
+																	key={`otp-${index + 3}`}
+																/>
 															))}
 														</InputOTPGroup>
 													</InputOTP>
@@ -308,9 +315,15 @@ export function CredentialsLoginForm() {
 														}}
 														type='button'
 													>
-														{useRecoveryCode ? 'Use authenticator code instead' : 'Use a recovery code instead'}
+														{useRecoveryCode
+															? 'Use authenticator code instead'
+															: 'Use a recovery code instead'}
 													</button>
-													<span>{useRecoveryCode ? 'Recovery codes are 10 characters.' : 'Six digits from your authenticator app.'}</span>
+													<span>
+														{useRecoveryCode
+															? 'Recovery codes are 10 characters.'
+															: 'Six digits from your authenticator app.'}
+													</span>
 												</div>
 											</div>
 										</FormControl>
@@ -322,10 +335,7 @@ export function CredentialsLoginForm() {
 								<p className='text-destructive text-sm'>{otpError}</p>
 							) : null}
 							<DialogFooter>
-								<Button
-									disabled={otpForm.formState.isSubmitting}
-									type='submit'
-								>
+								<Button disabled={otpForm.formState.isSubmitting} type='submit'>
 									{otpForm.formState.isSubmitting ? 'Verifying…' : 'Verify code'}
 								</Button>
 							</DialogFooter>

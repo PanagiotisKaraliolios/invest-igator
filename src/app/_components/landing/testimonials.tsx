@@ -1,5 +1,6 @@
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Marquee } from '@/components/ui/marquee';
 
 interface Testimonial {
 	quote: string;
@@ -38,26 +39,29 @@ export function TestimonialsSection() {
 					Early adopters already rely on Invest-igator for daily insight.
 				</p>
 			</div>
-			<div className='grid gap-6 md:grid-cols-3'>
-				{testimonials.map((t) => (
-					<Card key={t.name}>
-						<CardHeader className='pb-0'>
-							<div className='flex items-center gap-3'>
-								<Avatar className='h-10 w-10'>
-									<AvatarFallback>{t.initials}</AvatarFallback>
-								</Avatar>
-								<div>
-									<p className='font-medium leading-tight'>{t.name}</p>
-									<p className='text-xs text-muted-foreground'>{t.role}</p>
+			<div className='relative'>
+				<Marquee ariaLabel='Testimonials carousel' className='[--duration:32s] [--gap:1.5rem]' pauseOnHover>
+					{testimonials.map((t) => (
+						<Card className='w-[280px] shrink-0 border-border/50 bg-card/80 backdrop-blur' key={t.name}>
+							<CardHeader className='pb-0'>
+								<div className='flex items-center gap-3'>
+									<Avatar className='h-10 w-10'>
+										<AvatarFallback>{t.initials}</AvatarFallback>
+									</Avatar>
+									<div>
+										<p className='font-medium leading-tight'>{t.name}</p>
+										<p className='text-xs text-muted-foreground'>{t.role}</p>
+									</div>
 								</div>
-							</div>
-						</CardHeader>
-						<CardContent className='pt-4'>
-							<p className='text-sm italic leading-relaxed'>“{t.quote}”</p>
-						</CardContent>
-						<CardFooter />
-					</Card>
-				))}
+							</CardHeader>
+							<CardContent className='pt-4'>
+								<p className='text-sm italic leading-relaxed'>“{t.quote}”</p>
+							</CardContent>
+						</Card>
+					))}
+				</Marquee>
+				<div className='pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-background to-transparent' />
+				<div className='pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-background to-transparent' />
 			</div>
 		</section>
 	);

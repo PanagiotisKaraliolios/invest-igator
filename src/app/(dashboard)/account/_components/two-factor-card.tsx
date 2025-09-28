@@ -10,9 +10,9 @@ import { PendingTwoFactorSection, type TwoFactorSetupPayload } from './pending-t
 export default function TwoFactorCard() {
 	const [pendingSetup, setPendingSetup] = useState<TwoFactorSetupPayload | null>(null);
 	const twoFactor = api.account.getTwoFactorState.useQuery(undefined, {
-		retry: 1,
 		refetchOnMount: true,
-		refetchOnWindowFocus: false
+		refetchOnWindowFocus: false,
+		retry: 1
 	});
 
 	const handleRefetch = async () => {

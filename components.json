@@ -9,8 +9,9 @@
 	},
 	"iconLibrary": "lucide",
 	"registries": {
-    "@svgl": "https://svgl.app/r/{name}.json"
-  },
+		"@reui": "https://reui.io/r/{name}.json",
+		"@svgl": "https://svgl.app/r/{name}.json"
+	},
 	"rsc": true,
 	"style": "new-york",
 	"tailwind": {

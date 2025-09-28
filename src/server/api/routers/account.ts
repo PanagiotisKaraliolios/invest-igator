@@ -152,7 +152,10 @@ export const accountRouter = createTRPCRouter({
 				if (!providedPassword) {
 					throw new TRPCError({ code: 'BAD_REQUEST', message: 'Password is required.' });
 				}
-				const passwordOk = await bcrypt.compare(`${providedPassword}${env.PASSWORD_PEPPER ?? ''}`, user.passwordHash);
+				const passwordOk = await bcrypt.compare(
+					`${providedPassword}${env.PASSWORD_PEPPER ?? ''}`,
+					user.passwordHash
+				);
 				if (!passwordOk) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Password is incorrect.' });
 			}
 			if (!providedCode) {
@@ -283,10 +286,16 @@ export const accountRouter = createTRPCRouter({
 				});
 			}
 			if (!user.passwordHash) {
-				throw new TRPCError({ code: 'BAD_REQUEST', message: 'Password verification is required before regenerating codes.' });
+				throw new TRPCError({
+					code: 'BAD_REQUEST',
+					message: 'Password verification is required before regenerating codes.'
+				});
 			}
 			const providedPassword = input.password.trim();
-			const passwordOk = await bcrypt.compare(`${providedPassword}${env.PASSWORD_PEPPER ?? ''}`, user.passwordHash);
+			const passwordOk = await bcrypt.compare(
+				`${providedPassword}${env.PASSWORD_PEPPER ?? ''}`,
+				user.passwordHash
+			);
 			if (!passwordOk) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Password is incorrect.' });
 			const providedCode = input.code.trim();
 			let codeOk = verifyTotpToken(user.twoFactorSecret, providedCode);

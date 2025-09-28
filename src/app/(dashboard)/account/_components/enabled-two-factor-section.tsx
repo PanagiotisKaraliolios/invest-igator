@@ -32,7 +32,11 @@ const regenVerificationSchema = z
 			ctx.addIssue({ code: 'custom', message: 'Password is required to regenerate codes.', path: ['password'] });
 		}
 		if (!code) {
-			ctx.addIssue({ code: 'custom', message: 'Authentication code is required to regenerate codes.', path: ['code'] });
+			ctx.addIssue({
+				code: 'custom',
+				message: 'Authentication code is required to regenerate codes.',
+				path: ['code']
+			});
 		}
 	});
 
@@ -47,7 +51,11 @@ interface EnabledTwoFactorSectionProps {
 	onRefetch: () => Promise<unknown>;
 }
 
-export function EnabledTwoFactorSection({ hasPassword, recoveryCodesRemaining, onRefetch }: EnabledTwoFactorSectionProps) {
+export function EnabledTwoFactorSection({
+	hasPassword,
+	recoveryCodesRemaining,
+	onRefetch
+}: EnabledTwoFactorSectionProps) {
 	const [regenCodes, setRegenCodes] = useState<string[] | null>(null);
 	const [regenOpen, setRegenOpen] = useState(false);
 	const [disableOpen, setDisableOpen] = useState(false);
@@ -110,15 +118,22 @@ export function EnabledTwoFactorSection({ hasPassword, recoveryCodesRemaining, o
 
 	return (
 		<div className='space-y-4'>
-			<p className='text-sm text-green-600 dark:text-green-400'>Two-factor authentication is active on your account.</p>
+			<p className='text-sm text-green-600 dark:text-green-400'>
+				Two-factor authentication is active on your account.
+			</p>
 			<p className='text-sm'>{message}</p>
 			{regenCodes ? (
 				<div className='space-y-2 rounded-md border border-yellow-300/60 bg-yellow-50 p-4 text-yellow-900 dark:border-yellow-700/60 dark:bg-yellow-950/40 dark:text-yellow-100'>
 					<p className='font-medium'>Your new recovery codes</p>
-					<p className='text-xs text-yellow-900/80 dark:text-yellow-200/80'>Store these now. They will not be shown again.</p>
+					<p className='text-xs text-yellow-900/80 dark:text-yellow-200/80'>
+						Store these now. They will not be shown again.
+					</p>
 					<div className='mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3'>
 						{regenCodes.map((code) => (
-							<code className='rounded border bg-background px-2 py-1 text-center font-mono text-sm' key={code}>
+							<code
+								className='rounded border bg-background px-2 py-1 text-center font-mono text-sm'
+								key={code}
+							>
 								{code}
 							</code>
 						))}
@@ -134,7 +149,8 @@ export function EnabledTwoFactorSection({ hasPassword, recoveryCodesRemaining, o
 						<DialogHeader>
 							<DialogTitle>Regenerate recovery codes</DialogTitle>
 							<DialogDescription>
-								Provide your password and an authentication/recovery code to confirm. New codes replace existing ones.
+								Provide your password and an authentication/recovery code to confirm. New codes replace
+								existing ones.
 							</DialogDescription>
 						</DialogHeader>
 						<Form {...regenForm}>
@@ -212,22 +228,35 @@ export function EnabledTwoFactorSection({ hasPassword, recoveryCodesRemaining, o
 									const rawPassword = values.password?.trim() ?? '';
 									let code = values.code?.trim() ?? '';
 									const errors: { field: 'password' | 'code'; message: string }[] = [];
-									if (!code) errors.push({ field: 'code', message: 'Enter your authenticator or recovery code.' });
-									if (hasPassword && rawPassword.length === 0) errors.push({ field: 'password', message: 'Enter your password.' });
+									if (!code)
+										errors.push({
+											field: 'code',
+											message: 'Enter your authenticator or recovery code.'
+										});
+									if (hasPassword && rawPassword.length === 0)
+										errors.push({ field: 'password', message: 'Enter your password.' });
 									if (errors.length > 0) {
-										errors.forEach((err) => disableForm.setError(err.field, { message: err.message, type: 'manual' }));
+										errors.forEach((err) =>
+											disableForm.setError(err.field, { message: err.message, type: 'manual' })
+										);
 										return;
 									}
 									if (disableUseRecoveryCode) {
 										code = code.replace(/[^0-9a-z]/gi, '').toUpperCase();
 										if (code.length < 10) {
-											disableForm.setError('code', { message: 'Recovery codes are 10 characters long.', type: 'manual' });
+											disableForm.setError('code', {
+												message: 'Recovery codes are 10 characters long.',
+												type: 'manual'
+											});
 											return;
 										}
 									} else {
 										code = code.replace(/[^0-9]/g, '');
 										if (code.length !== 6) {
-											disableForm.setError('code', { message: 'Enter the 6-digit authenticator code.', type: 'manual' });
+											disableForm.setError('code', {
+												message: 'Enter the 6-digit authenticator code.',
+												type: 'manual'
+											});
 											return;
 										}
 									}
@@ -265,9 +294,9 @@ export function EnabledTwoFactorSection({ hasPassword, recoveryCodesRemaining, o
 													{disableUseRecoveryCode ? (
 														<Input
 															disabled={disableTwoFactor.isPending}
+															onChange={field.onChange}
 															placeholder='ABCDE-FGHIJ'
 															value={field.value ?? ''}
-															onChange={field.onChange}
 														/>
 													) : (
 														<InputOTP
@@ -278,13 +307,19 @@ export function EnabledTwoFactorSection({ hasPassword, recoveryCodesRemaining, o
 														>
 															<InputOTPGroup>
 																{Array.from({ length: 3 }).map((_, index) => (
-																	<InputOTPSlot index={index} key={`disable-otp-${index}`} />
+																	<InputOTPSlot
+																		index={index}
+																		key={`disable-otp-${index}`}
+																	/>
 																))}
 															</InputOTPGroup>
 															<InputOTPSeparator />
 															<InputOTPGroup>
 																{Array.from({ length: 3 }).map((_, index) => (
-																	<InputOTPSlot index={index + 3} key={`disable-otp-${index + 3}`} />
+																	<InputOTPSlot
+																		index={index + 3}
+																		key={`disable-otp-${index + 3}`}
+																	/>
 																))}
 															</InputOTPGroup>
 														</InputOTP>
@@ -293,21 +328,27 @@ export function EnabledTwoFactorSection({ hasPassword, recoveryCodesRemaining, o
 														<button
 															className='hover:text-primary'
 															onClick={() => {
-															setDisableUseRecoveryCode((prev) => !prev);
-															disableForm.setValue('code', '');
-															disableForm.clearErrors('code');
-														}}
+																setDisableUseRecoveryCode((prev) => !prev);
+																disableForm.setValue('code', '');
+																disableForm.clearErrors('code');
+															}}
 															type='button'
 														>
-															{disableUseRecoveryCode ? 'Use authenticator code instead' : 'Use a recovery code instead'}
+															{disableUseRecoveryCode
+																? 'Use authenticator code instead'
+																: 'Use a recovery code instead'}
 														</button>
-														<span>{disableUseRecoveryCode ? 'Recovery codes are 10 characters.' : 'Six digits from your authenticator app.'}</span>
+														<span>
+															{disableUseRecoveryCode
+																? 'Recovery codes are 10 characters.'
+																: 'Six digits from your authenticator app.'}
+														</span>
+													</div>
 												</div>
-											</div>
-										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
 								/>
 								<DialogFooter>
 									<Button disabled={disableTwoFactor.isPending} type='submit' variant='destructive'>

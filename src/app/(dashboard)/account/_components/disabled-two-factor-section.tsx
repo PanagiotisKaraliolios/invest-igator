@@ -1,8 +1,8 @@
 'use client';
 
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { api } from '@/trpc/react';
-import { toast } from 'sonner';
 import type { TwoFactorSetupPayload } from './pending-two-factor-section';
 
 interface DisabledTwoFactorSectionProps {
@@ -11,9 +11,9 @@ interface DisabledTwoFactorSectionProps {
 }
 
 export function DisabledTwoFactorSection({ onRefetch, onSetupStarted }: DisabledTwoFactorSectionProps) {
-const startSetup = api.account.startTwoFactorSetup.useMutation({
-	onError: (err) => toast.error(err.message || 'Failed to start setup')
-});
+	const startSetup = api.account.startTwoFactorSetup.useMutation({
+		onError: (err) => toast.error(err.message || 'Failed to start setup')
+	});
 
 	return (
 		<div className='space-y-4'>
@@ -21,17 +21,17 @@ const startSetup = api.account.startTwoFactorSetup.useMutation({
 			<Button
 				disabled={startSetup.isPending}
 				onClick={async () => {
-				try {
-					const payload = await startSetup.mutateAsync();
-					if (payload) {
-						onSetupStarted(payload);
-						await onRefetch();
-						toast.success('Two-factor setup started');
+					try {
+						const payload = await startSetup.mutateAsync();
+						if (payload) {
+							onSetupStarted(payload);
+							await onRefetch();
+							toast.success('Two-factor setup started');
+						}
+					} catch {
+						// toast handled by mutation
 					}
-				} catch {
-					// toast handled by mutation
-				}
-			}}
+				}}
 			>
 				{startSetup.isPending ? 'Preparing…' : 'Enable two-factor authentication'}
 			</Button>

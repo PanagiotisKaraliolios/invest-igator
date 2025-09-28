@@ -42,7 +42,10 @@ export function PricingSection({ signedIn }: { signedIn: boolean }) {
 			</div>
 			<div className='grid gap-6 md:grid-cols-3'>
 				{tiers.map((t) => (
-					<Card className={t.highlight ? 'border-primary/60 shadow-lg shadow-primary/10' : ''} key={t.name}>
+					<Card
+						className={t.highlight ? 'border-primary/60 shadow-lg shadow-primary/10' : 'md:my-6'}
+						key={t.name}
+					>
 						<CardHeader>
 							<CardTitle className='flex items-center justify-between text-xl'>
 								{t.name}

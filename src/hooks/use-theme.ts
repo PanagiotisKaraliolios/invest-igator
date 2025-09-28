@@ -5,7 +5,6 @@ import { api } from '@/trpc/react';
 
 type Theme = 'light' | 'dark';
 
-
 function applyTheme(theme: Theme) {
 	if (typeof document === 'undefined') return;
 	const root = document.documentElement;
