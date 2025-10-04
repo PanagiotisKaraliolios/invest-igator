@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from '@/components/ui/input-otp';
+import { Spinner } from '@/components/ui/spinner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { api } from '@/trpc/react';
 
@@ -209,6 +210,7 @@ export function PendingTwoFactorSection({ initialSetup, onSetupChange, onRefetch
 						)}
 					/>
 					<Button className='w-full' disabled={!generated || confirmSetup.isPending} type='submit'>
+						{confirmSetup.isPending && <Spinner className='mr-2' />}
 						{confirmSetup.isPending ? 'Enabling…' : 'Confirm & enable'}
 					</Button>
 				</form>
@@ -231,9 +233,11 @@ export function PendingTwoFactorSection({ initialSetup, onSetupChange, onRefetch
 					}}
 					variant='outline'
 				>
+					{startSetup.isPending && <Spinner className='mr-2' />}
 					{startSetup.isPending ? 'Refreshing…' : 'Generate new QR code'}
 				</Button>
 				<Button disabled={cancelSetup.isPending} onClick={() => cancelSetup.mutate()} variant='ghost'>
+					{cancelSetup.isPending && <Spinner className='mr-2' />}
 					Cancel setup
 				</Button>
 			</div>

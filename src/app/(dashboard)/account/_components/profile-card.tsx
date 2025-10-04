@@ -1,7 +1,10 @@
 'use client';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
+import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -13,8 +16,10 @@ import {
 	DialogTitle,
 	DialogTrigger
 } from '@/components/ui/dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Spinner } from '@/components/ui/spinner';
 import { api, type RouterOutputs } from '@/trpc/react';
 
 export default function ProfileCard({ initial }: { initial: RouterOutputs['account']['getProfile'] }) {
@@ -112,6 +117,7 @@ export default function ProfileCard({ initial }: { initial: RouterOutputs['accou
 					Cancel
 				</Button>
 				<Button disabled={!dirty || update.isPending} onClick={onSave}>
+					{update.isPending && <Spinner className='mr-2' />}
 					Save changes
 				</Button>
 			</CardFooter>
@@ -120,50 +126,85 @@ export default function ProfileCard({ initial }: { initial: RouterOutputs['accou
 }
 
 function EmailChangeForm({ onDone }: { onDone?: () => void }) {
-	const [newEmail, setNewEmail] = useState('');
-	const [currentPassword, setCurrentPassword] = useState('');
+	const emailChangeSchema = z.object({
+		currentPassword: z.string().optional(),
+		newEmail: z.email('Enter a valid email')
+	});
+	type EmailChangeFormInput = z.infer<typeof emailChangeSchema>;
+
+	const form = useForm<EmailChangeFormInput>({
+		defaultValues: { currentPassword: '', newEmail: '' },
+		resolver: zodResolver(emailChangeSchema)
+	});
+
 	const request = api.account.requestEmailChange.useMutation({
 		onError: (e) => toast.error(e.message || 'Failed to start email change'),
 		onSuccess: () => {
-			setNewEmail('');
-			setCurrentPassword('');
+			form.reset({ currentPassword: '', newEmail: '' });
 			toast.success('Check your new email for a confirmation link');
 			onDone?.();
 		}
 	});
-	const onSubmit = (e: React.FormEvent) => {
-		e.preventDefault();
-		request.mutate({ currentPassword: currentPassword || undefined, newEmail });
-	};
+
 	return (
-		<form className='space-y-3' onSubmit={onSubmit}>
-			<div className='space-y-2'>
-				<Label htmlFor='new-email'>New email</Label>
-				<Input
-					disabled={request.isPending}
-					id='new-email'
-					onChange={(e) => setNewEmail(e.target.value)}
-					required
-					type='email'
-					value={newEmail}
+		<Form {...form}>
+			<form
+				className='space-y-3'
+				onSubmit={form.handleSubmit((vals) =>
+					request.mutate({
+						currentPassword: vals.currentPassword?.trim() || undefined,
+						newEmail: vals.newEmail.trim()
+					})
+				)}
+			>
+				<FormField
+					control={form.control}
+					name='newEmail'
+					render={({ field }) => (
+						<FormItem>
+							<FormLabel>New email</FormLabel>
+							<FormControl>
+								<Input
+									disabled={request.isPending}
+									id='new-email'
+									onChange={field.onChange}
+									type='email'
+									value={field.value ?? ''}
+								/>
+							</FormControl>
+							<FormMessage />
+						</FormItem>
+					)}
 				/>
-			</div>
-			<div className='space-y-2'>
-				<Label htmlFor='curr-pass'>Current password (if set)</Label>
-				<Input
-					disabled={request.isPending}
-					id='curr-pass'
-					onChange={(e) => setCurrentPassword(e.target.value)}
-					type='password'
-					value={currentPassword}
+
+				<FormField
+					control={form.control}
+					name='currentPassword'
+					render={({ field }) => (
+						<FormItem>
+							<FormLabel>Current password (if set)</FormLabel>
+							<FormControl>
+								<Input
+									disabled={request.isPending}
+									id='curr-pass'
+									onChange={field.onChange}
+									type='password'
+									value={field.value ?? ''}
+								/>
+							</FormControl>
+							<FormMessage />
+						</FormItem>
+					)}
 				/>
-			</div>
-			<div className='flex justify-end gap-2'>
-				<Button disabled={request.isPending} type='submit'>
-					Send confirmation link
-				</Button>
-			</div>
-		</form>
+
+				<div className='flex justify-end gap-2'>
+					<Button disabled={request.isPending} type='submit'>
+						{request.isPending && <Spinner className='mr-2' />}
+						Send confirmation link
+					</Button>
+				</div>
+			</form>
+		</Form>
 	);
 }
 
@@ -174,6 +215,7 @@ function RequestVerifyButton() {
 	});
 	return (
 		<Button disabled={request.isPending} onClick={() => request.mutate()} size='sm' variant='default'>
+			{request.isPending && <Spinner className='mr-2' />}
 			{request.isPending ? 'Sending…' : 'Verify email'}
 		</Button>
 	);

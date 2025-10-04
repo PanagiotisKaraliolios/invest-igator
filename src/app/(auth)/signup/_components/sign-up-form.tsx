@@ -2,6 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { useEffect, useState } from 'react';
@@ -11,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group';
 import { api } from '@/trpc/react';
 
 const schema = z
@@ -109,28 +111,30 @@ export function SignUpForm() {
 							name='password'
 							render={({ field }) => (
 								<FormItem>
-									<FormLabel>Password</FormLabel>
+									<FormLabel htmlFor='signup-password'>Password</FormLabel>
 									<FormControl>
-										<div className='relative'>
-											<Input
-												className='pr-10'
+										<InputGroup>
+											<InputGroupInput
+												id='signup-password'
 												placeholder='••••••••'
 												type={showPassword ? 'text' : 'password'}
 												{...field}
 											/>
-											<button
-												aria-label={showPassword ? 'Hide password' : 'Show password'}
-												className='absolute inset-y-0 right-2 flex items-center text-muted-foreground hover:text-foreground'
-												onClick={() => setShowPassword((s) => !s)}
-												type='button'
-											>
-												{showPassword ? (
-													<EyeOff className='h-4 w-4' />
-												) : (
-													<Eye className='h-4 w-4' />
-												)}
-											</button>
-										</div>
+											<InputGroupAddon align='inline-end'>
+												<InputGroupButton
+													aria-label={showPassword ? 'Hide password' : 'Show password'}
+													onClick={() => setShowPassword((s) => !s)}
+													size='icon-xs'
+													variant='ghost'
+												>
+													{showPassword ? (
+														<EyeOff className='h-4 w-4' />
+													) : (
+														<Eye className='h-4 w-4' />
+													)}
+												</InputGroupButton>
+											</InputGroupAddon>
+										</InputGroup>
 									</FormControl>
 									<FormMessage />
 								</FormItem>
@@ -141,28 +145,30 @@ export function SignUpForm() {
 							name='confirmPassword'
 							render={({ field }) => (
 								<FormItem>
-									<FormLabel>Confirm password</FormLabel>
+									<FormLabel htmlFor='signup-confirm-password'>Confirm password</FormLabel>
 									<FormControl>
-										<div className='relative'>
-											<Input
-												className='pr-10'
+										<InputGroup>
+											<InputGroupInput
+												id='signup-confirm-password'
 												placeholder='••••••••'
 												type={showConfirmPassword ? 'text' : 'password'}
 												{...field}
 											/>
-											<button
-												aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-												className='absolute inset-y-0 right-2 flex items-center text-muted-foreground hover:text-foreground'
-												onClick={() => setShowConfirmPassword((s) => !s)}
-												type='button'
-											>
-												{showConfirmPassword ? (
-													<EyeOff className='h-4 w-4' />
-												) : (
-													<Eye className='h-4 w-4' />
-												)}
-											</button>
-										</div>
+											<InputGroupAddon align='inline-end'>
+												<InputGroupButton
+													aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+													onClick={() => setShowConfirmPassword((s) => !s)}
+													size='icon-xs'
+													variant='ghost'
+												>
+													{showConfirmPassword ? (
+														<EyeOff className='h-4 w-4' />
+													) : (
+														<Eye className='h-4 w-4' />
+													)}
+												</InputGroupButton>
+											</InputGroupAddon>
+										</InputGroup>
 									</FormControl>
 									<FormMessage />
 								</FormItem>
@@ -183,6 +189,12 @@ export function SignUpForm() {
 						>
 							{signupMutation.isPending ? 'Creating…' : 'Create account'}
 						</Button>
+						<div className='text-muted-foreground mt-2 text-center text-sm'>
+							Already have an account?{' '}
+							<Link className='underline underline-offset-4 hover:text-foreground' href='/login'>
+								Log in
+							</Link>
+						</div>
 					</form>
 				</Form>
 			</CardContent>

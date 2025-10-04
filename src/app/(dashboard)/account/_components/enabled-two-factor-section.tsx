@@ -18,6 +18,7 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from '@/components/ui/input-otp';
+import { Spinner } from '@/components/ui/spinner';
 import { api } from '@/trpc/react';
 
 const regenVerificationSchema = z
@@ -200,6 +201,7 @@ export function EnabledTwoFactorSection({
 								/>
 								<DialogFooter>
 									<Button disabled={regenerateRecoveryCodes.isPending} type='submit'>
+										{regenerateRecoveryCodes.isPending && <Spinner className='mr-2' />}
 										{regenerateRecoveryCodes.isPending ? 'Generating…' : 'Generate new codes'}
 									</Button>
 								</DialogFooter>
@@ -352,6 +354,7 @@ export function EnabledTwoFactorSection({
 								/>
 								<DialogFooter>
 									<Button disabled={disableTwoFactor.isPending} type='submit' variant='destructive'>
+										{disableTwoFactor.isPending && <Spinner className='mr-2' />}
 										{disableTwoFactor.isPending ? 'Disabling…' : 'Disable two-factor'}
 									</Button>
 								</DialogFooter>

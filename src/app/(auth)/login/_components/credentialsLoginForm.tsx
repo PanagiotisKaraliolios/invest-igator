@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group';
 import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from '@/components/ui/input-otp';
 
 export function CredentialsLoginForm() {
@@ -215,29 +216,30 @@ export function CredentialsLoginForm() {
 									</Link>
 								</div>
 								<FormControl>
-									<div className='relative'>
-										<Input
-											className='pr-10'
+									<InputGroup>
+										<InputGroupInput
 											data-testid='cred-password'
 											disabled={form.formState.isSubmitting}
 											id='cred-password'
 											type={showPassword ? 'text' : 'password'}
 											{...field}
 										/>
-										<button
-											aria-label={showPassword ? 'Hide password' : 'Show password'}
-											className='absolute inset-y-0 right-2 flex items-center text-muted-foreground hover:text-foreground'
-											data-testid='toggle-password-visibility'
-											onClick={() => setShowPassword((s) => !s)}
-											type='button'
-										>
-											{showPassword ? (
-												<EyeOff className='h-4 w-4' />
-											) : (
-												<Eye className='h-4 w-4' />
-											)}
-										</button>
-									</div>
+										<InputGroupAddon align='inline-end'>
+											<InputGroupButton
+												aria-label={showPassword ? 'Hide password' : 'Show password'}
+												data-testid='toggle-password-visibility'
+												onClick={() => setShowPassword((s) => !s)}
+												size='icon-xs'
+												variant='ghost'
+											>
+												{showPassword ? (
+													<EyeOff className='h-4 w-4' />
+												) : (
+													<Eye className='h-4 w-4' />
+												)}
+											</InputGroupButton>
+										</InputGroupAddon>
+									</InputGroup>
 								</FormControl>
 								<FormMessage />
 							</FormItem>

@@ -11,6 +11,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
+import { Spinner } from '@/components/ui/spinner';
 import { api } from '@/trpc/react';
 import { TransactionForm, type TransactionFormValues } from './transaction-form';
 import type { RowData } from './types';
@@ -172,6 +173,7 @@ export function RowActions({ row }: { row: RowData }) {
 							onClick={() => deleteMutation.mutate({ id: row.id })}
 							variant='destructive'
 						>
+							{deleteMutation.isPending && <Spinner className='mr-2' />}
 							{deleteMutation.isPending ? 'Deleting...' : 'Delete'}
 						</Button>
 					</DialogFooter>

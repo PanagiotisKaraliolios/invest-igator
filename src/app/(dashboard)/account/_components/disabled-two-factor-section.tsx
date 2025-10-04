@@ -2,6 +2,7 @@
 
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { api } from '@/trpc/react';
 import type { TwoFactorSetupPayload } from './pending-two-factor-section';
 
@@ -33,6 +34,7 @@ export function DisabledTwoFactorSection({ onRefetch, onSetupStarted }: Disabled
 					}
 				}}
 			>
+				{startSetup.isPending && <Spinner className='mr-2' />}
 				{startSetup.isPending ? 'Preparing…' : 'Enable two-factor authentication'}
 			</Button>
 		</div>
