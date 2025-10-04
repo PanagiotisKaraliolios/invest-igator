@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group';
 import { api } from '@/trpc/react';
 
 export default function PasswordCard() {
@@ -106,27 +106,27 @@ export default function PasswordCard() {
 									<FormItem>
 										<FormLabel>Current password</FormLabel>
 										<FormControl>
-											<div className='relative'>
-												<Input
+											<InputGroup>
+												<InputGroupInput
 													data-testid='current-password-input'
 													disabled={change.isPending}
 													placeholder='••••••••'
 													type={showCurrent ? 'text' : 'password'}
 													{...field}
 												/>
-												<button
-													aria-label={showCurrent ? 'Hide password' : 'Show password'}
-													className='absolute inset-y-0 right-2 flex items-center text-muted-foreground hover:text-foreground'
-													onClick={() => setShowCurrent((s) => !s)}
-													type='button'
-												>
-													{showCurrent ? (
-														<EyeOff className='h-4 w-4' />
-													) : (
-														<Eye className='h-4 w-4' />
-													)}
-												</button>
-											</div>
+												<InputGroupAddon align='inline-end'>
+													<InputGroupButton
+														aria-label={showCurrent ? 'Hide password' : 'Show password'}
+														onClick={() => setShowCurrent((s) => !s)}
+													>
+														{showCurrent ? (
+															<EyeOff className='h-4 w-4' />
+														) : (
+															<Eye className='h-4 w-4' />
+														)}
+													</InputGroupButton>
+												</InputGroupAddon>
+											</InputGroup>
 										</FormControl>
 										<FormMessage />
 									</FormItem>
@@ -140,23 +140,27 @@ export default function PasswordCard() {
 								<FormItem>
 									<FormLabel>{profile.data?.hasPassword ? 'New password' : 'Password'}</FormLabel>
 									<FormControl>
-										<div className='relative'>
-											<Input
+										<InputGroup>
+											<InputGroupInput
 												data-testid='new-password-input'
 												disabled={change.isPending || setPw.isPending}
 												placeholder='••••••••'
 												type={showNew ? 'text' : 'password'}
 												{...field}
 											/>
-											<button
-												aria-label={showNew ? 'Hide password' : 'Show password'}
-												className='absolute inset-y-0 right-2 flex items-center text-muted-foreground hover:text-foreground'
-												onClick={() => setShowNew((s) => !s)}
-												type='button'
-											>
-												{showNew ? <EyeOff className='h-4 w-4' /> : <Eye className='h-4 w-4' />}
-											</button>
-										</div>
+											<InputGroupAddon align='inline-end'>
+												<InputGroupButton
+													aria-label={showNew ? 'Hide password' : 'Show password'}
+													onClick={() => setShowNew((s) => !s)}
+												>
+													{showNew ? (
+														<EyeOff className='h-4 w-4' />
+													) : (
+														<Eye className='h-4 w-4' />
+													)}
+												</InputGroupButton>
+											</InputGroupAddon>
+										</InputGroup>
 									</FormControl>
 									<FormMessage />
 								</FormItem>
@@ -171,27 +175,27 @@ export default function PasswordCard() {
 										Confirm {profile.data?.hasPassword ? 'new password' : 'password'}
 									</FormLabel>
 									<FormControl>
-										<div className='relative'>
-											<Input
+										<InputGroup>
+											<InputGroupInput
 												data-testid='confirm-password-input'
 												disabled={change.isPending || setPw.isPending}
 												placeholder='••••••••'
 												type={showConfirm ? 'text' : 'password'}
 												{...field}
 											/>
-											<button
-												aria-label={showConfirm ? 'Hide password' : 'Show password'}
-												className='absolute inset-y-0 right-2 flex items-center text-muted-foreground hover:text-foreground'
-												onClick={() => setShowConfirm((s) => !s)}
-												type='button'
-											>
-												{showConfirm ? (
-													<EyeOff className='h-4 w-4' />
-												) : (
-													<Eye className='h-4 w-4' />
-												)}
-											</button>
-										</div>
+											<InputGroupAddon align='inline-end'>
+												<InputGroupButton
+													aria-label={showConfirm ? 'Hide password' : 'Show password'}
+													onClick={() => setShowConfirm((s) => !s)}
+												>
+													{showConfirm ? (
+														<EyeOff className='h-4 w-4' />
+													) : (
+														<Eye className='h-4 w-4' />
+													)}
+												</InputGroupButton>
+											</InputGroupAddon>
+										</InputGroup>
 									</FormControl>
 									<FormMessage />
 								</FormItem>
