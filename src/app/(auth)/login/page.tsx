@@ -25,9 +25,9 @@ export default async function LoginPage({
 		<div className='flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10'>
 			<div className='flex w-full max-w-sm flex-col gap-6'>
 				<a className='flex items-center gap-2 self-center font-medium' href='/'>
-					<div className='flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground'>
-						<ChartLine className='size-4' />
-					</div>
+					<span className='grid size-9 place-items-center rounded-md bg-primary/10 text-primary'>
+						<ChartLine className='size-5' />
+					</span>
 					{env.APP_NAME}
 				</a>
 				<LoginForm errorCode={Array.isArray(sp?.error) ? sp?.error?.[0] : sp?.error} />
