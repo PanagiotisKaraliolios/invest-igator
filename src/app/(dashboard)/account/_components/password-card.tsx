@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group';
+import { Spinner } from '@/components/ui/spinner';
 import { api } from '@/trpc/react';
 
 export default function PasswordCard() {
@@ -206,6 +207,7 @@ export default function PasswordCard() {
 							disabled={change.isPending || setPw.isPending}
 							type='submit'
 						>
+							{(change.isPending || setPw.isPending) && <Spinner className='mr-2' />}
 							{profile.data?.hasPassword ? 'Change password' : 'Set password'}
 						</Button>
 					</form>
