@@ -335,9 +335,9 @@ export async function ingestYahooSymbol(symbol: string, options?: { userId?: str
 	}
 
 	// Only write data if we don't already have it
-	if (has) {
-		return { count: 0, currency: mapCurrencyString(currency), skipped: true } as const;
-	}
+	// if (has) {
+	// 	return { count: 0, currency: mapCurrencyString(currency), skipped: true } as const;
+	// }
 
 	if (bars.length > 0) await writeBars(symbol, bars);
 	if (dividends.length > 0) await writeDividends(symbol, dividends);
