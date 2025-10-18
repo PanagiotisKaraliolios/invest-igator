@@ -23,6 +23,7 @@ ENV SKIP_ENV_VALIDATION=1 \
 	INFLUXDB_TOKEN=dummy \
 	DATABASE_URL=postgres://user:pass@localhost:5432/db \
 	AUTH_SECRET=dummy \
+	AUTH_TRUST_HOST=true \
 	PASSWORD_PEPPER=dummy \
 	FINNHUB_API_URL=https://finnhub.io/api/v1 \
 	FINNHUB_API_KEY=dummy \
