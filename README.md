@@ -55,7 +55,7 @@ Run (set env vars appropriately):
 ```sh
 docker run --rm -p 3000:3000 \
   -e DATABASE_URL=postgresql://user:pass@host:5432/db \
-  -e AUTH_SECRET=change-me \
+  -e BETTER_AUTH_SECRET=change-me \
   -e AUTH_TRUST_HOST=true \
   -e PASSWORD_PEPPER=change-me \
   -e FINNHUB_API_KEY=... \

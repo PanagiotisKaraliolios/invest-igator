@@ -91,7 +91,7 @@ export const auth = betterAuth({
 			// Recovery codes are generated automatically
 		})
 	],
-	secret: env.AUTH_SECRET,
+	secret: env.BETTER_AUTH_SECRET,
 	session: {
 		cookieCache: {
 			enabled: true,
