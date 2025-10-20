@@ -3,8 +3,9 @@
 FROM oven/bun:1.3-debian AS base
 WORKDIR /app
 
-# Build arguments for Next.js public env vars
+# Build arguments for Next.js public env vars and Better Auth
 ARG NEXT_PUBLIC_SITE_URL=http://localhost:3000
+ARG BETTER_AUTH_URL=http://localhost:3000
 
 FROM base AS deps
 # Ensure SSL certs and openssl are present for Prisma and fetch
@@ -25,8 +26,7 @@ ENV SKIP_ENV_VALIDATION=1 \
 	INFLUXDB_BUCKET=dummy \
 	INFLUXDB_TOKEN=dummy \
 	DATABASE_URL=postgres://user:pass@localhost:5432/db \
-	BETTER_AUTH_SECRET=dummy \
-	BETTER_AUTH_URL=http://localhost:3000 \
+	BETTER_AUTH_SECRET=dummy_secret_at_least_32_characters_long_for_validation \
 	AUTH_TRUST_HOST=true \
 	PASSWORD_PEPPER=dummy \
 	FINNHUB_API_URL=https://finnhub.io/api/v1 \
@@ -42,9 +42,11 @@ ENV SKIP_ENV_VALIDATION=1 \
 	ALPHAVANTAGE_API_KEY=dummy \
 	POLYGON_API_KEY=dummy
 
-# Use build arg for public env vars that get baked into client bundle
+# Use build args for env vars that affect build-time code
 ARG NEXT_PUBLIC_SITE_URL
-ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
+ARG BETTER_AUTH_URL
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL \
+	BETTER_AUTH_URL=$BETTER_AUTH_URL
 
 WORKDIR /app
 
