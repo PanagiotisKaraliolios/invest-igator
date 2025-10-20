@@ -23,7 +23,7 @@ export const authRouter = createTRPCRouter({
 		await ctx.db.verificationToken.deleteMany({ where: { identifier } });
 		await ctx.db.verificationToken.create({ data: { expires, identifier, token } });
 
-		const baseUrl = env.NEXT_PUBLIC_SITE_URL;
+		const baseUrl = env.BETTER_AUTH_URL;
 		const url = `${baseUrl}/forgot-password/reset?token=${encodeURIComponent(token)}`;
 		try {
 			await sendVerificationRequest({
