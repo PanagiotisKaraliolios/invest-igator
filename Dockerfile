@@ -3,6 +3,9 @@
 FROM oven/bun:1.3-debian AS base
 WORKDIR /app
 
+# Build arguments for Next.js public env vars
+ARG NEXT_PUBLIC_SITE_URL=http://localhost:3000
+
 FROM base AS deps
 # Ensure SSL certs and openssl are present for Prisma and fetch
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
@@ -33,7 +36,16 @@ ENV SKIP_ENV_VALIDATION=1 \
 	CLOUDFLARE_ACCOUNT_ID=dummy \
 	CLOUDFLARE_BUCKET_NAME=dummy \
 	CLOUDFLARE_R2_PUBLIC_URL=dummy \
-	CLOUDFLARE_SECRET_ACCESS_KEY=dummy
+	CLOUDFLARE_SECRET_ACCESS_KEY=dummy \
+	AUTH_DISCORD_ID=dummy \
+	AUTH_DISCORD_SECRET=dummy \
+	ALPHAVANTAGE_API_KEY=dummy \
+	POLYGON_API_KEY=dummy
+
+# Use build arg for public env vars that get baked into client bundle
+ARG NEXT_PUBLIC_SITE_URL
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
+
 WORKDIR /app
 
 # Generate Prisma client
