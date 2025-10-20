@@ -3,36 +3,31 @@ import * as bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
 import { z } from 'zod';
 import { env } from '@/env';
+import { auth } from '@/lib/auth';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
 import { sendVerificationRequest } from '@/server/auth/send-verification-request';
-import {
-	createRecoveryCodes,
-	findMatchingRecoveryCode,
-	generateTwoFactorSecret,
-	verifyTotpToken
-} from '@/server/auth/two-factor';
 
 export const accountRouter = createTRPCRouter({
 	cancelTwoFactorSetup: protectedProcedure.mutation(async ({ ctx }) => {
+		const userId = ctx.session.user.id;
 		const user = await ctx.db.user.findUnique({
 			select: { twoFactorEnabled: true },
-			where: { id: ctx.session.user.id }
+			where: { id: userId }
 		});
-		if (!user) throw new TRPCError({ code: 'NOT_FOUND' });
-		if (user.twoFactorEnabled) {
+
+		// Only allow cancellation if 2FA is not yet enabled
+		if (user?.twoFactorEnabled) {
 			throw new TRPCError({
 				code: 'BAD_REQUEST',
-				message: 'Two-factor authentication is enabled. Disable it instead.'
+				message: 'Cannot cancel an already enabled two-factor authentication'
 			});
 		}
-		await ctx.db.user.update({
-			data: {
-				twoFactorConfirmedAt: null,
-				twoFactorRecoveryCodes: [],
-				twoFactorSecret: null
-			},
-			where: { id: ctx.session.user.id }
+
+		// Delete the TwoFactor record to clean up the pending setup
+		await ctx.db.twoFactor.deleteMany({
+			where: { userId }
 		});
+
 		return { ok: true } as const;
 	}),
 	changePassword: protectedProcedure
@@ -43,22 +38,23 @@ export const accountRouter = createTRPCRouter({
 			})
 		)
 		.mutation(async ({ ctx, input }) => {
-			const user = await ctx.db.user.findUnique({
-				select: { passwordHash: true },
-				where: { id: ctx.session.user.id }
+			// Fetch password from Account table (Better Auth)
+			const account = await ctx.db.account.findFirst({
+				select: { id: true, password: true },
+				where: { providerId: 'credential', userId: ctx.session.user.id }
 			});
-			if (!user?.passwordHash) {
+			if (!account?.password) {
 				throw new TRPCError({
 					code: 'BAD_REQUEST',
 					message: 'Password change not available for this account.'
 				});
 			}
 			const pepper = env.PASSWORD_PEPPER ?? '';
-			const ok = await bcrypt.compare(`${input.currentPassword}${pepper}`, user.passwordHash);
+			const ok = await bcrypt.compare(`${input.currentPassword}${pepper}`, account.password);
 			if (!ok) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Current password is incorrect' });
 
 			// Prevent reusing the current password
-			const sameAsCurrent = await bcrypt.compare(`${input.newPassword}${pepper}`, user.passwordHash);
+			const sameAsCurrent = await bcrypt.compare(`${input.newPassword}${pepper}`, account.password);
 			if (sameAsCurrent) {
 				throw new TRPCError({
 					code: 'BAD_REQUEST',
@@ -66,7 +62,7 @@ export const accountRouter = createTRPCRouter({
 				});
 			}
 			const nextHash = await bcrypt.hash(`${input.newPassword}${pepper}`, 12);
-			await ctx.db.user.update({ data: { passwordHash: nextHash }, where: { id: ctx.session.user.id } });
+			await ctx.db.account.update({ data: { password: nextHash }, where: { id: account.id } });
 			return { ok: true } as const;
 		}),
 
@@ -89,33 +85,11 @@ export const accountRouter = createTRPCRouter({
 
 			await ctx.db.$transaction([
 				ctx.db.user.update({
-					data: { email: rec.newEmail, emailVerified: new Date() },
+					data: { email: rec.newEmail, emailVerified: true, emailVerifiedAt: new Date() },
 					where: { id: rec.userId }
 				}),
 				ctx.db.emailChangeToken.delete({ where: { token: input.token } })
 			]);
-			return { ok: true } as const;
-		}),
-
-	confirmTwoFactorSetup: protectedProcedure
-		.input(z.object({ code: z.string().min(6).max(20) }))
-		.mutation(async ({ ctx, input }) => {
-			const user = await ctx.db.user.findUnique({
-				select: { twoFactorEnabled: true, twoFactorSecret: true },
-				where: { id: ctx.session.user.id }
-			});
-			if (!user?.twoFactorSecret) {
-				throw new TRPCError({ code: 'BAD_REQUEST', message: 'No two-factor setup in progress.' });
-			}
-			if (user.twoFactorEnabled) return { ok: true } as const;
-			const valid = verifyTotpToken(user.twoFactorSecret, input.code);
-			if (!valid) {
-				throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid authentication code.' });
-			}
-			await ctx.db.user.update({
-				data: { twoFactorConfirmedAt: new Date(), twoFactorEnabled: true },
-				where: { id: ctx.session.user.id }
-			});
 			return { ok: true } as const;
 		}),
 
@@ -124,67 +98,6 @@ export const accountRouter = createTRPCRouter({
 		await ctx.db.user.delete({ where: { id: ctx.session.user.id } });
 		return { ok: true } as const;
 	}),
-
-	disableTwoFactor: protectedProcedure
-		.input(
-			z.object({
-				code: z.string().min(6).max(64),
-				password: z.string().min(1).optional()
-			})
-		)
-		.mutation(async ({ ctx, input }) => {
-			const user = await ctx.db.user.findUnique({
-				select: {
-					passwordHash: true,
-					twoFactorEnabled: true,
-					twoFactorRecoveryCodes: true,
-					twoFactorSecret: true
-				},
-				where: { id: ctx.session.user.id }
-			});
-			if (!user) throw new TRPCError({ code: 'NOT_FOUND' });
-			if (!user.twoFactorEnabled) {
-				throw new TRPCError({ code: 'BAD_REQUEST', message: 'Two-factor authentication is not enabled.' });
-			}
-			const providedPassword = input.password?.trim() ?? '';
-			const providedCode = input.code?.trim() ?? '';
-			if (user.passwordHash) {
-				if (!providedPassword) {
-					throw new TRPCError({ code: 'BAD_REQUEST', message: 'Password is required.' });
-				}
-				const passwordOk = await bcrypt.compare(
-					`${providedPassword}${env.PASSWORD_PEPPER ?? ''}`,
-					user.passwordHash
-				);
-				if (!passwordOk) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Password is incorrect.' });
-			}
-			if (!providedCode) {
-				throw new TRPCError({ code: 'BAD_REQUEST', message: 'Authentication code required.' });
-			}
-			let codeOk = false;
-			if (user.twoFactorSecret) {
-				codeOk = verifyTotpToken(user.twoFactorSecret, providedCode);
-			}
-			if (!codeOk && user.twoFactorRecoveryCodes.length > 0) {
-				const match = await findMatchingRecoveryCode(providedCode, user.twoFactorRecoveryCodes);
-				if (match.matchedHash) {
-					codeOk = true;
-				}
-			}
-			if (!codeOk) {
-				throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid authentication code.' });
-			}
-			await ctx.db.user.update({
-				data: {
-					twoFactorConfirmedAt: null,
-					twoFactorEnabled: false,
-					twoFactorRecoveryCodes: [],
-					twoFactorSecret: null
-				},
-				where: { id: ctx.session.user.id }
-			});
-			return { ok: true } as const;
-		}),
 
 	disconnectOAuthAccount: protectedProcedure
 		.input(z.object({ accountId: z.string().min(1) }))
@@ -197,11 +110,13 @@ export const accountRouter = createTRPCRouter({
 			if (!account) throw new TRPCError({ code: 'NOT_FOUND' });
 
 			// Safety: prevent removing last authentication method
-			const [accountCount, user] = await Promise.all([
-				ctx.db.account.count({ where: { userId } }),
-				ctx.db.user.findUnique({ select: { passwordHash: true }, where: { id: userId } })
-			]);
-			const hasPassword = Boolean(user?.passwordHash);
+			const accountCount = await ctx.db.account.count({ where: { userId } });
+			// Check if user has a credential account (Better Auth)
+			const credentialAccount = await ctx.db.account.findFirst({
+				select: { password: true },
+				where: { providerId: 'credential', userId }
+			});
+			const hasPassword = Boolean(credentialAccount?.password);
 			if (accountCount <= 1 && !hasPassword) {
 				throw new TRPCError({
 					code: 'BAD_REQUEST',
@@ -213,6 +128,7 @@ export const accountRouter = createTRPCRouter({
 			await ctx.db.account.delete({ where: { id: input.accountId } });
 			return { ok: true } as const;
 		}),
+
 	getProfile: protectedProcedure.query(async ({ ctx }) => {
 		const user = await ctx.db.user.findUnique({
 			select: {
@@ -221,117 +137,105 @@ export const accountRouter = createTRPCRouter({
 				id: true,
 				image: true,
 				name: true,
-				passwordHash: true,
 				theme: true
 			},
 			where: { id: ctx.session.user.id }
 		});
 		if (!user) throw new TRPCError({ code: 'NOT_FOUND' });
-		const { passwordHash, ...rest } = user;
-		return { ...rest, hasPassword: Boolean(passwordHash) } as const;
+		// Check if user has a credential account (Better Auth)
+		const credentialAccount = await ctx.db.account.findFirst({
+			select: { password: true },
+			where: { providerId: 'credential', userId: ctx.session.user.id }
+		});
+		return { ...user, hasPassword: Boolean(credentialAccount?.password) } as const;
 	}),
 
 	getTwoFactorState: protectedProcedure.query(async ({ ctx }) => {
 		const user = await ctx.db.user.findUnique({
 			select: {
 				email: true,
-				passwordHash: true,
-				twoFactorConfirmedAt: true,
-				twoFactorEnabled: true,
-				twoFactorRecoveryCodes: true,
-				twoFactorSecret: true
+				twoFactorEnabled: true
 			},
 			where: { id: ctx.session.user.id }
 		});
 		if (!user) throw new TRPCError({ code: 'NOT_FOUND' });
+
+		// Check if user has a credential account (Better Auth)
+		const credentialAccount = await ctx.db.account.findFirst({
+			select: { password: true },
+			where: { providerId: 'credential', userId: ctx.session.user.id }
+		});
+
+		// Query TwoFactor table for secret and backup codes
+		const twoFactor = await ctx.db.twoFactor.findFirst({
+			select: {
+				backupCodes: true,
+				secret: true
+			},
+			where: { userId: ctx.session.user.id }
+		});
+
+		// Better Auth encrypts backup codes, so we use their API to get the actual count
+		let recoveryCodesRemaining = 0;
+		if (twoFactor?.backupCodes) {
+			try {
+				const backupCodesData = await auth.api.viewBackupCodes({
+					body: {
+						userId: ctx.session.user.id
+					}
+				});
+
+				console.log('🚀 ~ account.ts:166 ~ backupCodesData:', backupCodesData);
+
+				if (backupCodesData && Array.isArray(backupCodesData)) {
+					recoveryCodesRemaining = backupCodesData.length;
+				}
+			} catch {
+				// If we can't view backup codes, assume they exist but count is unknown
+				recoveryCodesRemaining = 10; // Default assumption
+			}
+		}
+
 		return {
-			confirmedAt: user.twoFactorConfirmedAt?.toISOString() ?? null,
+			confirmedAt: null, // Better Auth doesn't track confirmation time
 			enabled: user.twoFactorEnabled,
-			hasPassword: Boolean(user.passwordHash),
-			hasSecret: Boolean(user.twoFactorSecret),
-			pending: Boolean(user.twoFactorSecret && !user.twoFactorEnabled),
-			recoveryCodesRemaining: user.twoFactorRecoveryCodes.length
+			hasPassword: Boolean(credentialAccount?.password),
+			hasSecret: Boolean(twoFactor?.secret),
+			pending: Boolean(twoFactor?.secret && !user.twoFactorEnabled),
+			recoveryCodesRemaining
 		} as const;
 	}),
+
 	listOAuthAccounts: protectedProcedure.query(async ({ ctx }) => {
 		const accounts = await ctx.db.account.findMany({
-			select: { id: true, provider: true, providerAccountId: true, type: true },
-			where: { userId: ctx.session.user.id }
+			select: { accountId: true, id: true, providerId: true },
+			where: { providerId: { not: 'credential' }, userId: ctx.session.user.id }
 		});
 		return accounts;
 	}),
 
-	regenerateTwoFactorRecoveryCodes: protectedProcedure
-		.input(
-			z.object({
-				code: z.string().min(6, 'Authentication code is required').max(64),
-				password: z.string().min(1, 'Password is required')
-			})
-		)
-		.mutation(async ({ ctx, input }) => {
-			const user = await ctx.db.user.findUnique({
-				select: {
-					passwordHash: true,
-					twoFactorEnabled: true,
-					twoFactorRecoveryCodes: true,
-					twoFactorSecret: true
-				},
-				where: { id: ctx.session.user.id }
-			});
-			if (!user) throw new TRPCError({ code: 'NOT_FOUND' });
-			if (!user.twoFactorEnabled || !user.twoFactorSecret) {
-				throw new TRPCError({
-					code: 'BAD_REQUEST',
-					message: 'Two-factor authentication must be enabled before regenerating codes.'
-				});
-			}
-			if (!user.passwordHash) {
-				throw new TRPCError({
-					code: 'BAD_REQUEST',
-					message: 'Password verification is required before regenerating codes.'
-				});
-			}
-			const providedPassword = input.password.trim();
-			const passwordOk = await bcrypt.compare(
-				`${providedPassword}${env.PASSWORD_PEPPER ?? ''}`,
-				user.passwordHash
-			);
-			if (!passwordOk) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Password is incorrect.' });
-			const providedCode = input.code.trim();
-			let codeOk = verifyTotpToken(user.twoFactorSecret, providedCode);
-			if (!codeOk && user.twoFactorRecoveryCodes.length > 0) {
-				const match = await findMatchingRecoveryCode(providedCode, user.twoFactorRecoveryCodes);
-				if (match.matchedHash) {
-					codeOk = true;
-				}
-			}
-			if (!codeOk) {
-				throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid authentication code.' });
-			}
-			const { hashed, plain } = await createRecoveryCodes();
-			await ctx.db.user.update({
-				data: { twoFactorRecoveryCodes: hashed },
-				where: { id: ctx.session.user.id }
-			});
-			return { recoveryCodes: plain } as const;
-		}),
 	requestEmailChange: protectedProcedure
 		.input(z.object({ currentPassword: z.string().optional(), newEmail: z.string().email() }))
 		.mutation(async ({ ctx, input }) => {
 			const userId = ctx.session.user.id;
 			const user = await ctx.db.user.findUnique({
-				select: { email: true, passwordHash: true },
+				select: { email: true },
 				where: { id: userId }
 			});
 			if (!user) throw new TRPCError({ code: 'NOT_FOUND' });
 
+			// Fetch password from Account table (Better Auth)
+			const account = await ctx.db.account.findFirst({
+				select: { password: true },
+				where: { providerId: 'credential', userId }
+			});
 			// If user has a password, require correct current password
-			if (user.passwordHash) {
+			if (account?.password) {
 				if (!input.currentPassword)
 					throw new TRPCError({ code: 'BAD_REQUEST', message: 'Current password required' });
 				const ok = await bcrypt.compare(
 					`${input.currentPassword}${env.PASSWORD_PEPPER ?? ''}`,
-					user.passwordHash
+					account.password
 				);
 				if (!ok) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Current password is incorrect' });
 			}
@@ -371,6 +275,19 @@ export const accountRouter = createTRPCRouter({
 			return { ok: true } as const;
 		}),
 
+	/**
+	 * @deprecated This procedure exists for backward compatibility.
+	 * 
+	 * New implementations should use Better Auth's native email verification:
+	 * 
+	 * Client-side:
+	 *   import { sendVerificationEmail } from '@/lib/auth-client';
+	 *   await sendVerificationEmail({ email: user.email, callbackURL: '/' });
+	 * 
+	 * Better Auth handles the verification at /api/auth/verify-email
+	 * 
+	 * This can be removed once all clients are migrated to Better Auth.
+	 */
 	requestEmailVerification: protectedProcedure.mutation(async ({ ctx }) => {
 		const userId = ctx.session.user.id;
 		const user = await ctx.db.user.findUnique({
@@ -408,6 +325,7 @@ export const accountRouter = createTRPCRouter({
 
 		return { ok: true } as const;
 	}),
+
 	setPassword: protectedProcedure
 		.input(
 			z.object({
@@ -415,48 +333,53 @@ export const accountRouter = createTRPCRouter({
 			})
 		)
 		.mutation(async ({ ctx, input }) => {
+			const userId = ctx.session.user.id;
 			const user = await ctx.db.user.findUnique({
-				select: { passwordHash: true },
-				where: { id: ctx.session.user.id }
+				select: { email: true },
+				where: { id: userId }
 			});
 			if (!user) throw new TRPCError({ code: 'NOT_FOUND' });
-			if (user.passwordHash) {
+			// Check if user already has a credential account with a password
+			const existingAccount = await ctx.db.account.findFirst({
+				select: { id: true, password: true },
+				where: { providerId: 'credential', userId }
+			});
+
+			if (existingAccount?.password) {
 				throw new TRPCError({
 					code: 'BAD_REQUEST',
 					message: 'Password already set. Use change password instead.'
 				});
 			}
+			if (!user.email) {
+				throw new TRPCError({
+					code: 'BAD_REQUEST',
+					message: 'Email is required to set a password.'
+				});
+			}
 			const pepper = env.PASSWORD_PEPPER ?? '';
 			const nextHash = await bcrypt.hash(`${input.newPassword}${pepper}`, 12);
-			await ctx.db.user.update({ data: { passwordHash: nextHash }, where: { id: ctx.session.user.id } });
+
+			// Create or update Account record for Better Auth
+			if (existingAccount) {
+				// Update existing account with password
+				await ctx.db.account.update({
+					data: { password: nextHash },
+					where: { id: existingAccount.id }
+				});
+			} else {
+				// Create new Account record
+				await ctx.db.account.create({
+					data: {
+						accountId: user.email,
+						password: nextHash,
+						providerId: 'credential',
+						userId
+					}
+				});
+			}
 			return { ok: true } as const;
 		}),
-
-	startTwoFactorSetup: protectedProcedure.mutation(async ({ ctx }) => {
-		const user = await ctx.db.user.findUnique({
-			select: { email: true, id: true, twoFactorEnabled: true },
-			where: { id: ctx.session.user.id }
-		});
-		if (!user) throw new TRPCError({ code: 'NOT_FOUND' });
-		if (user.twoFactorEnabled) {
-			throw new TRPCError({
-				code: 'BAD_REQUEST',
-				message: 'Two-factor authentication is already enabled.'
-			});
-		}
-		const { otpauthUrl, secret } = generateTwoFactorSecret(user.email ?? `user-${user.id}`);
-		const { hashed, plain } = await createRecoveryCodes();
-		await ctx.db.user.update({
-			data: {
-				twoFactorConfirmedAt: null,
-				twoFactorEnabled: false,
-				twoFactorRecoveryCodes: hashed,
-				twoFactorSecret: secret
-			},
-			where: { id: user.id }
-		});
-		return { otpauthUrl, recoveryCodes: plain, secret } as const;
-	}),
 
 	updateProfile: protectedProcedure
 		.input(
@@ -472,5 +395,46 @@ export const accountRouter = createTRPCRouter({
 			}
 			await ctx.db.user.update({ data, select: { id: true }, where: { id: ctx.session.user.id } });
 			return { ok: true } as const;
+		}),
+
+	uploadProfilePicture: protectedProcedure
+		.input(
+			z.object({
+				dataUrl: z.string().regex(/^data:image\/(png|jpeg|jpg|gif|webp);base64,/)
+			})
+		)
+		.mutation(async ({ ctx, input }) => {
+			try {
+				const { dataUrlToBuffer, generateProfilePictureKey, uploadToR2 } = await import('@/server/r2');
+				
+				// Parse the data URL
+				const { buffer, contentType } = dataUrlToBuffer(input.dataUrl);
+				
+				// Extract file extension from content type
+				const extension = contentType.split('/')[1] ?? 'jpg';
+				
+				// Generate unique key
+				const key = generateProfilePictureKey(ctx.session.user.id, extension);
+				
+				// Upload to R2
+				const { url } = await uploadToR2(buffer, key, contentType);
+
+				console.log('🚀 ~ account.ts:422 ~ url:', url);
+
+				
+				// Update user's profile image
+				await ctx.db.user.update({
+					data: { image: url },
+					where: { id: ctx.session.user.id }
+				});
+				
+				return { url };
+			} catch (error) {
+				console.error('Upload error:', error);
+				throw new TRPCError({
+					code: 'INTERNAL_SERVER_ERROR',
+					message: error instanceof Error ? error.message : 'Failed to upload profile picture'
+				});
+			}
 		})
 });

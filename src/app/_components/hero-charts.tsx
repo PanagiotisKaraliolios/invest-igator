@@ -53,8 +53,8 @@ export function HeroCharts() {
 		<div className='relative'>
 			{/* shimmer handled by Framer Motion below */}
 
-			<div className='grid grid-cols-3 gap-4'>
-				<div className='h-28 rounded-lg border bg-background/60 p-3'>
+			<div className='grid grid-cols-3 gap-2 sm:gap-4'>
+				<div className='h-20 rounded-lg border bg-background/60 p-2 sm:h-20 sm:p-3'>
 					<ChartContainer
 						className='h-full w-full aspect-auto'
 						config={colors}
@@ -73,7 +73,7 @@ export function HeroCharts() {
 						</LineChart>
 					</ChartContainer>
 				</div>
-				<div className='h-28 rounded-lg border bg-background/60 p-3'>
+				<div className='h-20 rounded-lg border bg-background/60 p-2 sm:h-28 sm:p-3'>
 					<ChartContainer
 						className='h-full w-full aspect-auto'
 						config={colors}
@@ -85,7 +85,7 @@ export function HeroCharts() {
 						</BarChart>
 					</ChartContainer>
 				</div>
-				<div className='h-28 rounded-lg border bg-background/60 p-3'>
+				<div className='h-20 rounded-lg border bg-background/60 p-2 sm:h-28 sm:p-3'>
 					<ChartContainer
 						className='h-full w-full aspect-auto'
 						config={colors}
@@ -105,7 +105,7 @@ export function HeroCharts() {
 						</LineChart>
 					</ChartContainer>
 				</div>
-				<div className='relative col-span-3 h-40 rounded-lg border bg-background/60 p-4 group'>
+				<div className='relative col-span-3 h-32 rounded-lg border bg-background/60 p-3 group sm:h-40 sm:p-4'>
 					<ChartContainer
 						className='h-full w-full aspect-auto'
 						config={colors}

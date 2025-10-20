@@ -2,6 +2,18 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/server/db';
 
+/**
+ * Legacy email verification endpoint
+ * 
+ * NOTE: This endpoint exists for backward compatibility with old verification tokens.
+ * New email verifications should use Better Auth's native /api/auth/verify-email endpoint.
+ * 
+ * Better Auth handles verification through:
+ * - Client: sendVerificationEmail({ email, callbackURL })
+ * - Better Auth processes at /api/auth/verify-email
+ * 
+ * This route can be removed once all old tokens have expired.
+ */
 export async function GET(req: Request) {
 	const url = new URL(req.url);
 	const token = url.searchParams.get('token');
@@ -19,7 +31,7 @@ export async function GET(req: Request) {
 		}
 
 		await db.$transaction([
-			db.user.update({ data: { emailVerified: new Date() }, where: { email: rec.identifier } }),
+			db.user.update({ data: { emailVerified: true, emailVerifiedAt: new Date() }, where: { email: rec.identifier } }),
 			db.verificationToken.delete({ where: { token: parse.data } })
 		]);
 

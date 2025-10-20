@@ -27,7 +27,12 @@ ENV SKIP_ENV_VALIDATION=1 \
 	PASSWORD_PEPPER=dummy \
 	FINNHUB_API_URL=https://finnhub.io/api/v1 \
 	FINNHUB_API_KEY=dummy \
-	YAHOO_CHART_API_URL=https://query2.finance.yahoo.com/v8/finance/chart
+	YAHOO_CHART_API_URL=https://query2.finance.yahoo.com/v8/finance/chart \
+	CLOUDFLARE_ACCESS_KEY_ID=dummy \
+	CLOUDFLARE_ACCOUNT_ID=dummy \
+	CLOUDFLARE_BUCKET_NAME=dummy \
+	CLOUDFLARE_R2_PUBLIC_URL=dummy \
+	CLOUDFLARE_SECRET_ACCESS_KEY=dummy
 WORKDIR /app
 
 # Generate Prisma client

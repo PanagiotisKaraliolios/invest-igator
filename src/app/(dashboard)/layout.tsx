@@ -1,3 +1,4 @@
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { AppSidebar } from '@/app/(dashboard)/_components/app-sidebar';
 import DashboardBreadcrumbs from '@/app/(dashboard)/_components/breadcrumbs';
@@ -6,10 +7,10 @@ import ThemeSwitch from '@/app/(dashboard)/_components/theme-switch';
 import { Separator } from '@/components/ui/separator';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { env } from '@/env';
-import { auth } from '@/server/auth';
+import { auth } from '@/lib/auth';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-	const session = await auth();
+	const session = await auth.api.getSession({ headers: await headers() });
 	if (!session?.user) redirect('/login');
 
 	const me = {

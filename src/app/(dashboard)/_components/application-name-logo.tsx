@@ -11,7 +11,7 @@ export function ApplicationNameLogo({ applicationName }: { applicationName: stri
 					className='data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
 					size='lg'
 				>
-					<span className='grid size-9 place-items-center rounded-md bg-primary/10 text-primary'>
+					<span className='grid size-8 place-items-center rounded-md bg-primary/10 text-primary'>
 						<ChartLine className='size-5' />
 					</span>
 					<div className='grid flex-1 text-left text-sm leading-tight'>

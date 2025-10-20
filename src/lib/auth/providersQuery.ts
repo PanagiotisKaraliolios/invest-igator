@@ -1,18 +1,18 @@
-import { getProviders } from 'next-auth/react';
-
+// Better Auth providers are configured in src/lib/auth.ts
+// This returns the list of social providers configured in the app
 export const availableAuthProvidersQueryKey = ['authProviders'] as const;
 
 export async function fetchAvailableAuthProviders() {
-	const providers = await getProviders();
-	if (!providers) return [] as string[];
-	return Object.values(providers)
-		.filter((prov) => prov.type !== 'email' && prov.id !== 'credentials')
-		.map((prov) => prov.id);
+	// With Better Auth, we know our configured providers from the server config
+	// Discord is currently the only configured social provider
+	return ['discord'] as string[];
 }
 
 export function availableAuthProvidersQueryOptions() {
 	return {
 		queryFn: fetchAvailableAuthProviders,
-		queryKey: availableAuthProvidersQueryKey
+		queryKey: availableAuthProvidersQueryKey,
+		// This is static, so we can cache it indefinitely
+		staleTime: Number.POSITIVE_INFINITY,
 	} as const;
 }

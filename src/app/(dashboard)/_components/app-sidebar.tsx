@@ -11,10 +11,10 @@ import {
 	Settings2
 } from 'lucide-react';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarRail } from '@/components/ui/sidebar';
+import { ApplicationNameLogo } from './application-name-logo';
 import { NavMain } from './nav-main';
 import { NavProjects } from './nav-projects';
 import { NavUser } from './nav-user';
-import { ApplicationNameLogo } from './team-switcher';
 
 // This is sample data.
 const data = {

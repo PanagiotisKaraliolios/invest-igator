@@ -8,7 +8,8 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { api } from '@/trpc/react';
+import { Spinner } from '@/components/ui/spinner';
+import { forgetPassword } from '@/lib/auth-client';
 
 const schema = z.object({
 	email: z.string().email('Enter a valid email')
@@ -18,27 +19,28 @@ type FormValues = z.infer<typeof schema>;
 
 function ForgotPasswordRequestForm() {
 	const [submitted, setSubmitted] = useState(false);
+	const [isLoading, setIsLoading] = useState(false);
 	const form = useForm<FormValues>({
 		defaultValues: { email: '' },
 		resolver: zodResolver(schema)
 	});
 
-	const utils = api.useUtils();
-	const mutation = api.auth.requestPasswordReset.useMutation({
-		onError: () => {
-			setSubmitted(true);
-			toast.success("If an account exists, we've sent a reset link.");
-		},
-		onSuccess: () => {
+	async function onSubmit(values: FormValues) {
+		setIsLoading(true);
+		try {
+			await forgetPassword({
+				email: values.email,
+				redirectTo: '/forgot-password/reset'
+			});
 			setSubmitted(true);
 			toast.success("If an account exists, we've sent a reset link.");
 			form.reset();
-			void utils.invalidate();
+		} catch (error) {
+			setSubmitted(true);
+			toast.success("If an account exists, we've sent a reset link.");
+		} finally {
+			setIsLoading(false);
 		}
-	});
-
-	function onSubmit(values: FormValues) {
-		mutation.mutate({ email: values.email });
 	}
 
 	if (submitted) {
@@ -70,8 +72,9 @@ function ForgotPasswordRequestForm() {
 						</FormItem>
 					)}
 				/>
-				<Button className='w-full' data-testid='forgot-submit' disabled={mutation.isPending} type='submit'>
-					{mutation.isPending ? 'Sending…' : 'Send reset link'}
+				<Button className='w-full' data-testid='forgot-submit' disabled={isLoading} type='submit'>
+					{isLoading && <Spinner className='mr-2' />}
+					{isLoading ? 'Sending…' : 'Send reset link'}
 				</Button>
 			</form>
 		</Form>

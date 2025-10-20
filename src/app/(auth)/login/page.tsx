@@ -1,7 +1,8 @@
 import { ChartLine } from 'lucide-react';
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { env } from '@/env';
-import { auth } from '@/server/auth';
+import { auth } from '@/lib/auth';
 import { LoginForm } from './_components/login-form';
 
 export const dynamic = 'force-dynamic';
@@ -16,7 +17,7 @@ export default async function LoginPage({
 }: {
 	searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-	const session = await auth();
+	const session = await auth.api.getSession({ headers: await headers() });
 
 	if (session?.user) redirect('/portfolio');
 	const sp = await searchParams;

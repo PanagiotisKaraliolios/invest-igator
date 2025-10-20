@@ -10,7 +10,7 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { api } from '@/trpc/react';
+import { resetPassword } from '@/lib/auth-client';
 
 const schema = z
 	.object({
@@ -30,25 +30,35 @@ type FormValues = z.infer<typeof schema>;
 function ResetPasswordForm({ token }: { token: string }) {
 	const [showNew, setShowNew] = useState(false);
 	const [showConfirm, setShowConfirm] = useState(false);
+	const [isLoading, setIsLoading] = useState(false);
 	const router = useRouter();
 	const form = useForm<FormValues>({
 		defaultValues: { confirm: '', password: '' },
 		resolver: zodResolver(schema)
 	});
 
-	const mutation = api.auth.resetPassword.useMutation({
-		onError: (err) => {
-			const msg = err?.message || 'Reset link is invalid or expired';
-			toast.error(msg);
-		},
-		onSuccess: () => {
+	async function onSubmit(values: FormValues) {
+		setIsLoading(true);
+		try {
+			const result = await resetPassword({
+				newPassword: values.password,
+				token
+			});
+
+			if (result.error) {
+				const msg = result.error.message || 'Reset link is invalid or expired';
+				toast.error(msg);
+				return;
+			}
+
 			toast.success('Password updated. You can now sign in.');
 			router.push('/login');
+		} catch (err) {
+			const msg = (err as { message?: string })?.message || 'Reset link is invalid or expired';
+			toast.error(msg);
+		} finally {
+			setIsLoading(false);
 		}
-	});
-
-	function onSubmit(values: FormValues) {
-		mutation.mutate({ password: values.password, token });
 	}
 
 	return (
@@ -113,8 +123,8 @@ function ResetPasswordForm({ token }: { token: string }) {
 					)}
 				/>
 
-				<Button className='w-full' data-testid='reset-submit' disabled={mutation.isPending} type='submit'>
-					{mutation.isPending ? 'Updating…' : 'Update password'}
+				<Button className='w-full' data-testid='reset-submit' disabled={isLoading} type='submit'>
+					{isLoading ? 'Updating…' : 'Update password'}
 				</Button>
 			</form>
 		</Form>

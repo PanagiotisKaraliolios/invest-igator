@@ -1,12 +1,13 @@
+import { headers } from 'next/headers';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { auth } from '@/server/auth';
+import { auth } from '@/lib/auth';
 import SignOutButton from './_components/signout-button';
 
 export default async function SignOutPage() {
-	const session = await auth();
+	const session = await auth.api.getSession({ headers: await headers() });
 	if (!session?.user) {
 		redirect('/login');
 	}

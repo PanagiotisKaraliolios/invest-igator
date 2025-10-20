@@ -3,7 +3,6 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { CredentialsLoginForm } from './credentialsLoginForm';
-import { EmailProviderLoginForm } from './emailProviderLoginForm';
 import ProvidersList from './providersList';
 
 export function LoginForm({ className, errorCode, ...props }: React.ComponentProps<'div'> & { errorCode?: string }) {
@@ -28,8 +27,6 @@ export function LoginForm({ className, errorCode, ...props }: React.ComponentPro
 							</Alert>
 						) : null}
 						<ProvidersList />
-						{/* Form to login with Email one time link */}
-						<EmailProviderLoginForm />
 						<div className='relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-border after:border-t'>
 							<span className='relative z-10 bg-card px-2 text-muted-foreground'>Or continue with</span>
 						</div>

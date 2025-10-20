@@ -1,10 +1,11 @@
 import { ChartLine, Github } from 'lucide-react';
+import { headers } from 'next/headers';
 import Link from 'next/link';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { env } from '@/env';
-import { auth } from '@/server/auth';
+import { auth } from '@/lib/auth';
 import HeroCharts from './_components/hero-charts';
 import { BenefitsSection } from './_components/landing/benefits';
 import { FAQSection } from './_components/landing/faq';
@@ -17,7 +18,7 @@ import ThemeSwitch from './(dashboard)/_components/theme-switch';
 export const revalidate = 60;
 
 export default async function Home() {
-	const session = await auth();
+	const session = await auth.api.getSession({ headers: await headers() });
 	const appName = env.APP_NAME ?? 'Invest-igator';
 
 	return (
@@ -37,7 +38,7 @@ export default async function Home() {
 				</Link>
 
 				<nav className='flex items-center gap-2'>
-					{session?.user ? (
+					{/* {session?.user ? (
 						<>
 							<Button asChild size='sm'>
 								<Link href='/portfolio'>Open Portfolio</Link>
@@ -55,7 +56,7 @@ export default async function Home() {
 								<Link href='/signup'>Get started</Link>
 							</Button>
 						</>
-					)}
+					)} */}
 					<div className='mr-4 ml-auto'>
 						<ThemeSwitch isAuthenticated={Boolean(session?.user)} />
 					</div>
@@ -63,7 +64,7 @@ export default async function Home() {
 			</header>
 
 			{/* Hero */}
-			<section className='container mx-auto grid gap-8 px-6 py-10 md:grid-cols-2 md:items-center md:py-20'>
+			<section className='container mx-auto grid gap-8 xl:gap-32 2xl:gap-56 px-6 py-10 md:grid-cols-2 md:items-center md:py-20'>
 				<div className='flex flex-col gap-6'>
 					<Badge className='w-fit' variant='secondary'>
 						Open-source portfolio tracker

@@ -1,7 +1,6 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { signIn } from 'next-auth/react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -21,6 +20,7 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { providerLabel, providerIcons as sharedProviderIcons } from '@/lib/auth/providerMeta';
 import { availableAuthProvidersQueryOptions } from '@/lib/auth/providersQuery';
+import { signIn } from '@/lib/auth-client';
 import { api } from '@/trpc/react';
 
 const providerIcons = sharedProviderIcons;
@@ -45,12 +45,15 @@ export default function ConnectedAccountsCard() {
 	}
 
 	async function onConnect(provider: string) {
-		// Use NextAuth helper to initiate OAuth linking for the signed-in user
-		await signIn(provider, { callbackUrl: '/account?tab=security' });
+		// Use Better Auth to initiate OAuth linking for the signed-in user
+		await signIn.social({
+			callbackURL: '/account?tab=security',
+			provider: provider as 'discord'
+		});
 	}
 
 	const connectableProviders = useMemo(() => {
-		const connected = new Set((accounts ?? []).map((a) => a.provider));
+		const connected = new Set((accounts ?? []).map((a) => a.providerId));
 		return (providersQuery.data ?? []).filter((id) => !connected.has(id));
 	}, [accounts, providersQuery.data]);
 
@@ -75,8 +78,8 @@ export default function ConnectedAccountsCard() {
 							) : (
 								<ul className='divide-y'>
 									{(accounts ?? []).map((acc) => {
-										const Icon = providerIcons[acc.provider];
-										const label = providerLabel[acc.provider] ?? acc.provider;
+										const Icon = providerIcons[acc.providerId];
+										const label = providerLabel[acc.providerId] ?? acc.providerId;
 										return (
 											<li className='flex items-center justify-between py-2' key={acc.id}>
 												<div className='flex items-center gap-2'>
@@ -84,9 +87,9 @@ export default function ConnectedAccountsCard() {
 													<span className='font-medium'>{label}</span>
 												</div>
 												<Button
-													data-testid={`disconnect-${acc.provider}`}
+													data-testid={`disconnect-${acc.providerId}`}
 													disabled={disconnect.isPending}
-													onClick={() => setConfirm({ id: acc.id, provider: acc.provider })}
+													onClick={() => setConfirm({ id: acc.id, provider: acc.providerId })}
 													size='sm'
 													variant='outline'
 												>

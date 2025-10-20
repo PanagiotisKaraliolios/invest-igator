@@ -1,8 +1,8 @@
 'use client';
 import { useSearchParams } from 'next/navigation';
-import { signIn } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { providerIcons } from '@/lib/auth/providerMeta';
+import { signIn } from '@/lib/auth-client';
 
 // icons come from providerMeta
 
@@ -17,7 +17,12 @@ export default function ProviderLoginButton({ provider }: { provider: string }) 
 		<>
 			<Button
 				className='flex w-full items-center justify-center gap-2'
-				onClick={() => signIn(provider, { callbackUrl })}
+				onClick={() =>
+					signIn.social({
+						callbackURL: callbackUrl,
+						provider: provider as 'discord'
+					})
+				}
 				variant='outline'
 			>
 				{Icon ? <Icon className='inline-block' /> : null}

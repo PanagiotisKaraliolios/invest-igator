@@ -1,7 +1,8 @@
 import { ChartLine } from 'lucide-react';
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { env } from '@/env';
-import { auth } from '@/server/auth';
+import { auth } from '@/lib/auth';
 import { SignUpForm } from './_components/sign-up-form';
 
 export const dynamic = 'force-dynamic';
@@ -12,7 +13,7 @@ export const metadata = {
 };
 
 export default async function SignUpPage() {
-	const session = await auth();
+	const session = await auth.api.getSession({ headers: await headers() });
 	if (session?.user) redirect('/');
 
 	return (

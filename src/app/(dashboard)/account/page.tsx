@@ -1,15 +1,19 @@
+import { headers } from 'next/headers';
 import ConnectedAccountsCard from '@/app/(dashboard)/account/_components/connected-accounts-card';
 import DangerZoneCard from '@/app/(dashboard)/account/_components/danger-zone-card';
 import PasswordCard from '@/app/(dashboard)/account/_components/password-card';
 import ProfileCard from '@/app/(dashboard)/account/_components/profile-card';
 import TwoFactorCard from '@/app/(dashboard)/account/_components/two-factor-card';
 import { TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { auth } from '@/server/auth';
+import { auth } from '@/lib/auth';
 import { api, HydrateClient } from '@/trpc/server';
 import AccountTabsClient from './_components/account-tabs-client';
 
 export default async function AccountPage() {
-	const session = await auth();
+	const session = await auth.api.getSession({ headers: await headers() });
+
+	console.log('🚀 ~ page.tsx:15 ~ AccountPage ~ session:', session);
+
 
 	// Seed client cache for smoother hydration (pattern-aligned)
 	if (session?.user) {

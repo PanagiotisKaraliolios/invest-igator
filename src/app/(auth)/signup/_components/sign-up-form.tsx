@@ -4,7 +4,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { signIn } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -13,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group';
-import { api } from '@/trpc/react';
+import { signUp } from '@/lib/auth-client';
 
 const schema = z
 	.object({
@@ -42,22 +41,30 @@ export function SignUpForm() {
 	const [showPassword, setShowPassword] = useState(false);
 	const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-	const signupMutation = api.auth.signup.useMutation();
-
 	async function onSubmit(values: z.infer<typeof schema>) {
 		setInfo(null);
 		try {
-			await signupMutation.mutateAsync(values);
-			setInfo('Account created. Check your email for a sign-in link.');
+			const result = await signUp.email({
+				email: values.email,
+				name: values.name,
+				password: values.password
+			});
+
+			if (result.error) {
+				const message = result.error.message ?? 'Failed to create account';
+				if (message.includes('already exists') || message.includes('email')) {
+					form.setError('email', { message, type: 'manual' });
+				} else {
+					form.setError('name', { message, type: 'manual' });
+				}
+				return;
+			}
+
+			setInfo('Account created. Check your email to verify your account.');
 			setCountdown(3);
-			await signIn('nodemailer', { email: values.email, redirect: false });
 		} catch (err) {
 			const message = (err as { message?: string })?.message ?? 'Failed to create account';
-			if (message.includes('already exists')) {
-				form.setError('email', { message, type: 'manual' });
-			} else {
-				form.setError('name', { message, type: 'manual' });
-			}
+			form.setError('email', { message, type: 'manual' });
 		}
 	}
 
@@ -184,10 +191,10 @@ export function SignUpForm() {
 						) : null}
 						<Button
 							className='h-auto w-full whitespace-normal break-words leading-tight'
-							disabled={signupMutation.isPending}
+							disabled={form.formState.isSubmitting}
 							type='submit'
 						>
-							{signupMutation.isPending ? 'Creating…' : 'Create account'}
+							{form.formState.isSubmitting ? 'Creating…' : 'Create account'}
 						</Button>
 						<div className='text-muted-foreground mt-2 text-center text-sm'>
 							Already have an account?{' '}

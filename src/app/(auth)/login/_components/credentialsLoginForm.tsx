@@ -4,12 +4,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { signIn } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
 	Dialog,
 	DialogContent,
@@ -22,6 +22,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group';
 import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from '@/components/ui/input-otp';
+import { authClient } from '@/lib/auth-client';
 
 export function CredentialsLoginForm() {
 	const router = useRouter();
@@ -34,11 +35,13 @@ export function CredentialsLoginForm() {
 	const [otpOpen, setOtpOpen] = useState(false);
 	const [pendingCreds, setPendingCreds] = useState<{ email: string; password: string } | null>(null);
 	const [useRecoveryCode, setUseRecoveryCode] = useState(false);
+	const [trustDevice, setTrustDevice] = useState(false);
 
 	useEffect(() => {
 		if (!otpOpen) {
 			setOtpError(null);
 			setUseRecoveryCode(false);
+			setTrustDevice(false);
 		}
 	}, [otpOpen]);
 
@@ -66,23 +69,17 @@ export function CredentialsLoginForm() {
 
 	async function onSubmit(values: z.infer<typeof schema>) {
 		setError(null);
+		console.log('Submitting login form:', values);
 		try {
-			const result = await signIn('credentials', {
-				callbackUrl,
+			const result = await authClient.signIn.email({
+				callbackURL: callbackUrl,
 				email: values.email.trim().toLowerCase(),
-				password: values.password,
-				redirect: false
+				password: values.password
 			});
 
-			// Success: NextAuth returns a URL when redirect is false. Fallback to callbackUrl.
-			if (!result?.error && (result?.url || result?.ok)) {
-				router.replace(result.url ?? callbackUrl);
-				return;
-			}
-
-			// Normalize error message
-			const code = result?.code ?? result?.error;
-			if (code === 'two_factor_required' || code === 'TwoFactorRequired') {
+			// Check for 2FA requirement - Better Auth sets twoFactorRedirect in data
+			// Using 'in' operator as TypeScript doesn't infer this property
+			if (result.data && 'twoFactorRedirect' in result.data && result.data.twoFactorRedirect) {
 				setPendingCreds({
 					email: values.email.trim().toLowerCase(),
 					password: values.password
@@ -94,26 +91,18 @@ export function CredentialsLoginForm() {
 				form.clearErrors();
 				return;
 			}
-			if (code === 'invalid_two_factor_code' || code === 'InvalidTwoFactorCode') {
-				// Should not reach here without opening modal, but handle defensively
-				setPendingCreds({
-					email: values.email.trim().toLowerCase(),
-					password: values.password
-				});
-				otpForm.reset();
-				setOtpError(null);
-				setUseRecoveryCode(false);
-				setOtpOpen(true);
+
+			// Handle other errors
+			if (result.error) {
+				const message = result.error.message || 'Invalid email or password.';
+				form.setError('email', { message, type: 'manual' });
+				form.setError('password', { message: ' ', type: 'manual' });
+				setError(message);
 				return;
 			}
-			const message =
-				code === 'CredentialsSignin' || code === 'invalid_credentials' || code === 'Invalid Email or Password'
-					? 'Invalid email or password.'
-					: code || 'Invalid email or password.';
-			// Optionally surface on the form fields as well
-			form.setError('email', { message, type: 'manual' });
-			form.setError('password', { message: ' ', type: 'manual' });
-			setError(message);
+
+			// Success - redirect
+			router.replace(callbackUrl);
 		} catch (err) {
 			setError('Something went wrong. Please try again.');
 		}
@@ -141,31 +130,33 @@ export function CredentialsLoginForm() {
 				otpForm.setError('otp', { message, type: 'manual' });
 				return;
 			}
-			const result = await signIn('credentials', {
-				callbackUrl,
-				email: creds.email,
-				otp: normalized,
-				password: creds.password,
-				redirect: false
-			});
 
-			if (!result?.error && (result?.url || result?.ok)) {
-				setOtpOpen(false);
-				router.replace(result.url ?? callbackUrl);
-				return;
-			}
+			// Better Auth 2FA verification - use different methods for TOTP vs backup codes
+			const result = useRecoveryCode
+				? await authClient.twoFactor.verifyBackupCode({
+						code: raw,
+						trustDevice
+					})
+				: await authClient.twoFactor.verifyTotp({
+						code: normalized,
+						trustDevice
+					});
 
-			const code = result?.code ?? result?.error;
-			if (code === 'invalid_two_factor_code' || code === 'InvalidTwoFactorCode') {
-				const message = 'Invalid authentication code. Try again or use a recovery code.';
+			console.log('🚀 ~ credentialsLoginForm.tsx:138 ~ onSubmitOtp ~ result:', result);
+
+			if (result.error) {
+				const message = useRecoveryCode
+					? 'Invalid recovery code. Try again or use an authenticator code.'
+					: 'Invalid authentication code. Try again or use a recovery code.';
 				otpForm.setError('otp', { message, type: 'manual' });
 				setOtpError(null);
 				otpForm.setFocus('otp');
 				return;
 			}
 
-			const message = code || 'Unable to complete sign-in. Please try again.';
-			setOtpError(message);
+			// Success - redirect
+			setOtpOpen(false);
+			router.replace(callbackUrl);
 		} catch {
 			setOtpError('Something went wrong. Please try again.');
 		}
@@ -336,6 +327,19 @@ export function CredentialsLoginForm() {
 							{otpError && !otpForm.formState.errors.otp ? (
 								<p className='text-destructive text-sm'>{otpError}</p>
 							) : null}
+							<div className='flex items-center space-x-2'>
+								<Checkbox
+									checked={trustDevice}
+									id='trust-device'
+									onCheckedChange={(checked) => setTrustDevice(checked === true)}
+								/>
+								<label
+									className='text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70'
+									htmlFor='trust-device'
+								>
+									Trust this device for 30 days
+								</label>
+							</div>
 							<DialogFooter>
 								<Button disabled={otpForm.formState.isSubmitting} type='submit'>
 									{otpForm.formState.isSubmitting ? 'Verifying…' : 'Verify code'}

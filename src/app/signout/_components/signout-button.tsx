@@ -1,8 +1,9 @@
 'use client';
 
-import { signOut } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import React, { useTransition } from 'react';
 import { Button } from '@/components/ui/button';
+import { signOut } from '@/lib/auth-client';
 
 type Props = {
 	callbackUrl?: string;
@@ -20,12 +21,18 @@ export default function SignOutButton({
 	label = 'Sign out'
 }: Props) {
 	const [pending, startTransition] = useTransition();
+	const router = useRouter();
+
+	const handleSignOut = async () => {
+		await signOut();
+		router.push(callbackUrl);
+	};
 
 	return (
 		<Button
 			className={className}
 			disabled={pending}
-			onClick={() => startTransition(() => signOut({ callbackUrl }))}
+			onClick={() => startTransition(() => handleSignOut())}
 			size={size as any}
 			variant={variant as any}
 		>

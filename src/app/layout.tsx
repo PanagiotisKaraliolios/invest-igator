@@ -3,13 +3,13 @@ import '@/styles/globals.css';
 import { GoogleAnalytics } from '@next/third-parties/google';
 import type { Metadata } from 'next';
 import { Geist } from 'next/font/google';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import Script from 'next/script';
 import { ConsentProvider } from '@/components/consent/ConsentProvider';
 import { ThemeProvider } from '@/components/theme/ThemeProvider';
 import { Toaster } from '@/components/ui/sonner';
 import { env } from '@/env';
-import { auth } from '@/server/auth';
+import { auth } from '@/lib/auth';
 import { TRPCReactProvider } from '@/trpc/react';
 
 const siteUrl = env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
@@ -54,7 +54,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
 	const cookieStore = await cookies();
 	const themeCookie = cookieStore.get('ui-theme')?.value;
 	const isDark = themeCookie ? themeCookie === 'dark' : true;
-	const session = await auth();
+	const session = await auth.api.getSession({ headers: await headers() });
 	const isAuthenticated = Boolean(session?.user);
 
 	return (

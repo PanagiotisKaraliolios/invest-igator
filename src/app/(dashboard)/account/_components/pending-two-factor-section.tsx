@@ -12,6 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from '@/components/ui/input-otp';
 import { Spinner } from '@/components/ui/spinner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { authClient } from '@/lib/auth-client';
 import { api } from '@/trpc/react';
 
 export type TwoFactorSetupPayload = {
@@ -32,7 +33,11 @@ interface PendingTwoFactorSectionProps {
 
 export function PendingTwoFactorSection({ initialSetup, onSetupChange, onRefetch }: PendingTwoFactorSectionProps) {
 	const [generated, setGenerated] = useState<TwoFactorSetupPayload | null>(initialSetup ?? null);
+	const [isVerifying, setIsVerifying] = useState(false);
+	const [isCancelling, setIsCancelling] = useState(false);
 	const [setupError, setSetupError] = useState<string | null>(null);
+
+	const cancelSetupMutation = api.account.cancelTwoFactorSetup.useMutation();
 
 	const syncSetup = (payload: TwoFactorSetupPayload | null) => {
 		setGenerated(payload);
@@ -45,38 +50,37 @@ export function PendingTwoFactorSection({ initialSetup, onSetupChange, onRefetch
 		if (initialSetup) setSetupError(null);
 	}, [initialSetup]);
 
-	const startSetup = api.account.startTwoFactorSetup.useMutation({
-		onError: (err) => toast.error(err.message || 'Failed to start setup'),
-		onSuccess: (payload) => {
-			syncSetup(payload);
-			onRefetch();
-			toast.success('Two-factor setup started');
-		}
-	});
-
 	const confirmForm = useForm<z.infer<typeof confirmSchema>>({
 		defaultValues: { code: '' },
 		resolver: zodResolver(confirmSchema)
 	});
 
-	const confirmSetup = api.account.confirmTwoFactorSetup.useMutation({
-		onError: (err) => toast.error(err.message || 'Invalid authentication code'),
-		onSuccess: () => {
-			confirmForm.reset();
-			syncSetup(null);
-			onRefetch();
-			toast.success('Two-factor authentication enabled');
-		}
-	});
+	const handleConfirm = async (values: z.infer<typeof confirmSchema>) => {
+		setIsVerifying(true);
+		try {
+			const { data, error } = await authClient.twoFactor.verifyTotp({
+				code: values.code.replace(/\s+/g, ''),
+				trustDevice: false // Don't trust device during setup
+			});
 
-	const cancelSetup = api.account.cancelTwoFactorSetup.useMutation({
-		onError: (err) => toast.error(err.message || 'Failed to cancel setup'),
-		onSuccess: () => {
-			syncSetup(null);
-			onRefetch();
-			toast.success('Two-factor setup cleared');
+			if (error) {
+				toast.error(error.message || 'Invalid authentication code');
+				setIsVerifying(false);
+				return;
+			}
+
+			if (data) {
+				confirmForm.reset();
+				syncSetup(null);
+				await onRefetch();
+				toast.success('Two-factor authentication enabled');
+			}
+		} catch (err) {
+			toast.error('An unexpected error occurred');
+		} finally {
+			setIsVerifying(false);
 		}
-	});
+	};
 
 	if (initialSetup && !generated) {
 		syncSetup(initialSetup);
@@ -88,34 +92,36 @@ export function PendingTwoFactorSection({ initialSetup, onSetupChange, onRefetch
 				<QRCodeSVG className='size-56' value={generated.otpauthUrl} />
 			</div>
 			<div className='space-y-4'>
-				<div>
-					<div className='flex items-center gap-2'>
-						<p className='font-medium'>Setup key</p>
-						<Tooltip>
-							<TooltipTrigger asChild>
-								<Button
-									className='size-8'
-									onClick={async () => {
-										try {
-											await navigator.clipboard.writeText(generated.secret);
-											toast.success('Setup key copied');
-										} catch {
-											toast.error('Failed to copy setup key');
-										}
-									}}
-									size='icon'
-									variant='outline'
-								>
-									<CopyIcon className='size-3' />
-								</Button>
-							</TooltipTrigger>
-							<TooltipContent>Copy setup key</TooltipContent>
-						</Tooltip>
+				{generated.secret && (
+					<div>
+						<div className='flex items-center gap-2'>
+							<p className='font-medium'>Setup key</p>
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<Button
+										className='size-8'
+										onClick={async () => {
+											try {
+												await navigator.clipboard.writeText(generated.secret);
+												toast.success('Setup key copied');
+											} catch {
+												toast.error('Failed to copy setup key');
+											}
+										}}
+										size='icon'
+										variant='outline'
+									>
+										<CopyIcon className='size-3' />
+									</Button>
+								</TooltipTrigger>
+								<TooltipContent>Copy setup key</TooltipContent>
+							</Tooltip>
+						</div>
+						<code className='mt-2 inline-block rounded border bg-muted/50 px-2 py-1 text-sm'>
+							{generated.secret}
+						</code>
 					</div>
-					<code className='mt-2 inline-block rounded border bg-muted/50 px-2 py-1 text-sm'>
-						{generated.secret}
-					</code>
-				</div>
+				)}
 				<div>
 					<div className='flex items-center gap-2'>
 						<p className='font-medium'>Recovery codes</p>
@@ -168,16 +174,11 @@ export function PendingTwoFactorSection({ initialSetup, onSetupChange, onRefetch
 				setupDetails
 			) : (
 				<div className='rounded border border-dashed p-4 text-sm text-muted-foreground'>
-					Setup details are not available. Generate a new QR code to restart the process.
+					Setup details are not available. This should not happen - please try again.
 				</div>
 			)}
 			<Form {...confirmForm}>
-				<form
-					className='flex w-fit flex-col gap-3'
-					onSubmit={confirmForm.handleSubmit((values) => {
-						confirmSetup.mutate({ code: values.code.replace(/\s+/g, '') });
-					})}
-				>
+				<form className='flex w-fit flex-col gap-3' onSubmit={confirmForm.handleSubmit(handleConfirm)}>
 					<FormField
 						control={confirmForm.control}
 						name='code'
@@ -187,7 +188,7 @@ export function PendingTwoFactorSection({ initialSetup, onSetupChange, onRefetch
 								<FormControl>
 									<InputOTP
 										autoFocus
-										disabled={confirmSetup.isPending}
+										disabled={isVerifying}
 										maxLength={6}
 										onChange={(val) => field.onChange(val)}
 										value={field.value || ''}
@@ -209,36 +210,43 @@ export function PendingTwoFactorSection({ initialSetup, onSetupChange, onRefetch
 							</FormItem>
 						)}
 					/>
-					<Button className='w-full' disabled={!generated || confirmSetup.isPending} type='submit'>
-						{confirmSetup.isPending && <Spinner className='mr-2' />}
-						{confirmSetup.isPending ? 'Enabling…' : 'Confirm & enable'}
+					<Button className='w-full' disabled={!generated || isVerifying} type='submit'>
+						{isVerifying && <Spinner className='mr-2' />}
+						{isVerifying ? 'Enabling…' : 'Confirm & enable'}
 					</Button>
 				</form>
 			</Form>
 			<div className='flex flex-wrap gap-2'>
 				<Button
-					disabled={startSetup.isPending}
-					onClick={async () => {
-						try {
-							const result = await startSetup.mutateAsync();
-							if (result) {
-								syncSetup(result);
-							} else {
-								setSetupError('Failed to generate setup details. Try again.');
-							}
-						} catch {
-							setSetupError('Failed to generate setup details. Try again.');
-						}
-						confirmForm.reset();
+					onClick={() => {
+						// Note: Better Auth doesn't provide a way to regenerate without disabling first
+						// User would need to cancel and start over
+						toast.info('To get a new QR code, cancel setup and start again');
 					}}
 					variant='outline'
 				>
-					{startSetup.isPending && <Spinner className='mr-2' />}
-					{startSetup.isPending ? 'Refreshing…' : 'Generate new QR code'}
+					Generate new QR code
 				</Button>
-				<Button disabled={cancelSetup.isPending} onClick={() => cancelSetup.mutate()} variant='ghost'>
-					{cancelSetup.isPending && <Spinner className='mr-2' />}
-					Cancel setup
+				<Button
+					disabled={isCancelling}
+					onClick={async () => {
+						setIsCancelling(true);
+						try {
+							// Delete the TwoFactor record from the database
+							await cancelSetupMutation.mutateAsync();
+							syncSetup(null);
+							await onRefetch();
+							toast.success('Two-factor setup cancelled');
+						} catch (err) {
+							toast.error('Failed to cancel setup');
+						} finally {
+							setIsCancelling(false);
+						}
+					}}
+					variant='ghost'
+				>
+					{isCancelling && <Spinner className='mr-2' />}
+					{isCancelling ? 'Cancelling…' : 'Cancel setup'}
 				</Button>
 			</div>
 			{setupError ? <p className='text-destructive text-sm'>{setupError}</p> : null}
