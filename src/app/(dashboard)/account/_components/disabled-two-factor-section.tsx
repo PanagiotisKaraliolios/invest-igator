@@ -77,15 +77,16 @@ export function DisabledTwoFactorSection({ onRefetch, onSetupStarted }: Disabled
 		<>
 			<div className='space-y-4'>
 				<p className='text-sm'>Protect your account with an authenticator app.</p>
-				<Button
-				onClick={() => setIsDialogOpen(true)}>Enable two-factor authentication</Button>
+				<Button onClick={() => setIsDialogOpen(true)}>Enable two-factor authentication</Button>
 			</div>
 
 			<Dialog onOpenChange={setIsDialogOpen} open={isDialogOpen}>
 				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>Enable Two-Factor Authentication</DialogTitle>
-						<DialogDescription>Enter your password to begin setting up two-factor authentication.</DialogDescription>
+						<DialogDescription>
+							Enter your password to begin setting up two-factor authentication.
+						</DialogDescription>
 					</DialogHeader>
 
 					<Form {...form}>

@@ -222,7 +222,9 @@ export function EnabledTwoFactorSection({
 					<DialogContent>
 						<DialogHeader>
 							<DialogTitle>Disable two-factor authentication</DialogTitle>
-							<DialogDescription>Enter your password to disable two-factor authentication.</DialogDescription>
+							<DialogDescription>
+								Enter your password to disable two-factor authentication.
+							</DialogDescription>
 						</DialogHeader>
 						<Form {...disableForm}>
 							<form className='space-y-3' onSubmit={disableForm.handleSubmit(handleDisable)}>

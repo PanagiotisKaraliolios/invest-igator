@@ -277,15 +277,15 @@ export const accountRouter = createTRPCRouter({
 
 	/**
 	 * @deprecated This procedure exists for backward compatibility.
-	 * 
+	 *
 	 * New implementations should use Better Auth's native email verification:
-	 * 
+	 *
 	 * Client-side:
 	 *   import { sendVerificationEmail } from '@/lib/auth-client';
 	 *   await sendVerificationEmail({ email: user.email, callbackURL: '/' });
-	 * 
+	 *
 	 * Better Auth handles the verification at /api/auth/verify-email
-	 * 
+	 *
 	 * This can be removed once all clients are migrated to Better Auth.
 	 */
 	requestEmailVerification: protectedProcedure.mutation(async ({ ctx }) => {
@@ -406,28 +406,27 @@ export const accountRouter = createTRPCRouter({
 		.mutation(async ({ ctx, input }) => {
 			try {
 				const { dataUrlToBuffer, generateProfilePictureKey, uploadToR2 } = await import('@/server/r2');
-				
+
 				// Parse the data URL
 				const { buffer, contentType } = dataUrlToBuffer(input.dataUrl);
-				
+
 				// Extract file extension from content type
 				const extension = contentType.split('/')[1] ?? 'jpg';
-				
+
 				// Generate unique key
 				const key = generateProfilePictureKey(ctx.session.user.id, extension);
-				
+
 				// Upload to R2
 				const { url } = await uploadToR2(buffer, key, contentType);
 
 				console.log('🚀 ~ account.ts:422 ~ url:', url);
 
-				
 				// Update user's profile image
 				await ctx.db.user.update({
 					data: { image: url },
 					where: { id: ctx.session.user.id }
 				});
-				
+
 				return { url };
 			} catch (error) {
 				console.error('Upload error:', error);

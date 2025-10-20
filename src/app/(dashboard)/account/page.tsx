@@ -14,7 +14,6 @@ export default async function AccountPage() {
 
 	console.log('🚀 ~ page.tsx:15 ~ AccountPage ~ session:', session);
 
-
 	// Seed client cache for smoother hydration (pattern-aligned)
 	if (session?.user) {
 		await api.account.getProfile.prefetch();

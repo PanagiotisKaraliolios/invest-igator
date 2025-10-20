@@ -13,6 +13,6 @@ export function availableAuthProvidersQueryOptions() {
 		queryFn: fetchAvailableAuthProviders,
 		queryKey: availableAuthProvidersQueryKey,
 		// This is static, so we can cache it indefinitely
-		staleTime: Number.POSITIVE_INFINITY,
+		staleTime: Number.POSITIVE_INFINITY
 	} as const;
 }

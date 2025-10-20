@@ -105,7 +105,7 @@ export const auth = betterAuth({
 			clientSecret: env.AUTH_DISCORD_SECRET
 		}
 	},
-	trustedOrigins: [env.NEXT_PUBLIC_SITE_URL]
+	trustedOrigins: [env.NEXT_PUBLIC_SITE_URL, env.NODE_ENV === 'development' ? 'http://localhost:3000' : '']
 });
 
 export type Session = typeof auth.$Infer.Session.session;
