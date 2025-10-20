@@ -252,7 +252,7 @@ export const accountRouter = createTRPCRouter({
 			await ctx.db.emailChangeToken.create({ data: { expiresAt, newEmail: input.newEmail, token, userId } });
 
 			// Send email with confirmation link (reuse nodemailer via EmailProvider-style server)
-			const baseUrl = env.NEXT_PUBLIC_SITE_URL;
+			const baseUrl = env.BETTER_AUTH_URL;
 			const url = `${baseUrl}/api/email-change/confirm?token=${encodeURIComponent(token)}`;
 			// We can leverage the existing nodemailer config; keep it simple here
 			try {
@@ -305,7 +305,7 @@ export const accountRouter = createTRPCRouter({
 		await ctx.db.verificationToken.deleteMany({ where: { identifier: user.email } });
 		await ctx.db.verificationToken.create({ data: { expires, identifier: user.email, token } });
 
-		const baseUrl = env.NEXT_PUBLIC_SITE_URL;
+		const baseUrl = env.BETTER_AUTH_URL;
 		const url = `${baseUrl}/api/verify-email/confirm?token=${encodeURIComponent(token)}`;
 		try {
 			await sendVerificationRequest({
