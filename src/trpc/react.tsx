@@ -51,6 +51,12 @@ export function TRPCReactProvider(props: { children: React.ReactNode }) {
 						(op.direction === 'down' && op.result instanceof Error)
 				}),
 				httpBatchStreamLink({
+					fetch(url, options) {
+						return fetch(url, {
+							...options,
+							credentials: 'include'
+						});
+					},
 					headers: () => {
 						const headers = new Headers();
 						headers.set('x-trpc-source', 'nextjs-react');
@@ -78,5 +84,6 @@ export function TRPCReactProvider(props: { children: React.ReactNode }) {
 function getBaseUrl() {
 	if (typeof window !== 'undefined') return window.location.origin;
 	if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+	if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
 	return `http://localhost:${process.env.PORT ?? 3000}`;
 }
