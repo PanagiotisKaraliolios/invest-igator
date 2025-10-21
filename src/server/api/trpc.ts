@@ -8,11 +8,9 @@
  */
 
 import { initTRPC, TRPCError } from '@trpc/server';
-import { headers } from 'next/headers';
 import superjson from 'superjson';
 import { ZodError } from 'zod';
 import { auth } from '@/lib/auth';
-import { authClient } from '@/lib/auth-client';
 import { db } from '@/server/db';
 
 /**
@@ -28,17 +26,25 @@ import { db } from '@/server/db';
  * @see https://trpc.io/docs/server/context
  */
 export const createTRPCContext = async (opts: { headers: Headers }) => {
-	const session = await authClient.getSession({
-		fetchOptions: {
-			headers: await headers()
-		}
-	});
+	try {
+		const session = await auth.api.getSession({
+			headers: opts.headers
+		});
 
-	return {
-		db,
-		session,
-		...opts
-	};
+		return {
+			db,
+			session,
+			...opts
+		};
+	} catch (error) {
+		console.error('[TRPC Context] Failed to get session:', error);
+		// Return context without session instead of crashing
+		return {
+			db,
+			session: null,
+			...opts
+		};
+	}
 };
 
 /**

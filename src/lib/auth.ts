@@ -21,7 +21,8 @@ export const auth = betterAuth({
 				const { createId } = require('@paralleldrive/cuid2');
 				return createId();
 			}
-		}
+		},
+		useSecureCookies: env.NODE_ENV === 'production'
 	},
 	baseURL: env.NEXT_PUBLIC_SITE_URL,
 	database: prismaAdapter(db, {
@@ -92,6 +93,10 @@ export const auth = betterAuth({
 		})
 	],
 	session: {
+		cookie: {
+			sameSite: 'lax', // Changed from 'strict' to work better with nginx proxy
+			secure: env.NODE_ENV === 'production'
+		},
 		cookieCache: {
 			enabled: false // Disabled to ensure fresh session checks
 		},
