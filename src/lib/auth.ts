@@ -106,8 +106,8 @@ export const auth = betterAuth({
 		}
 	},
 	trustedOrigins: [
-		env.BETTER_AUTH_URL,
-		...(env.NODE_ENV === 'development' ? ['http://localhost:3000'] : [])
+		env.NEXT_PUBLIC_SITE_URL,
+		env.BETTER_AUTH_URL
 	]
 });
 
