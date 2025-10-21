@@ -5,6 +5,22 @@
 import "./src/env.js";
 
 /** @type {import("next").NextConfig} */
-const config = {};
+const config = {
+	images: {
+		remotePatterns: [
+			{
+				// Cloudflare R2 storage
+				hostname: '**.r2.cloudflarestorage.com',
+				protocol: 'https'
+			},
+			{
+				// Custom R2 public domain (if configured)
+				hostname: 'storage.invest-igator.karaliolios.dev',
+				
+				protocol: 'https'
+			}
+		]
+	}
+};
 
 export default config;
