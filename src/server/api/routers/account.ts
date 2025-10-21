@@ -129,7 +129,37 @@ export const accountRouter = createTRPCRouter({
 			return { ok: true } as const;
 		}),
 
+	getMe: protectedProcedure.query(async ({ ctx }) => {
+		const user = await ctx.db.user.findUnique({
+			select: {
+				email: true,
+				emailVerified: true,
+				id: true,
+				image: true,
+				name: true
+			},
+			where: { id: ctx.session.user.id }
+		});
+
+		if (!user) throw new TRPCError({ code: 'NOT_FOUND' });
+
+		const credentialAccount = await ctx.db.account.findFirst({
+			select: { password: true },
+			where: { providerId: 'credential', userId: ctx.session.user.id }
+		});
+
+		return {
+			avatar: user.image,
+			email: user.email ?? '',
+			emailVerified: Boolean(user.emailVerified),
+			hasPassword: Boolean(credentialAccount?.password),
+			id: user.id,
+			name: user.name ?? user.email ?? 'User'
+		} as const;
+	}),
+
 	getProfile: protectedProcedure.query(async ({ ctx }) => {
+		const userId = ctx.session.user.id;
 		const user = await ctx.db.user.findUnique({
 			select: {
 				email: true,
@@ -139,13 +169,13 @@ export const accountRouter = createTRPCRouter({
 				name: true,
 				theme: true
 			},
-			where: { id: ctx.session.user.id }
+			where: { id: userId }
 		});
 		if (!user) throw new TRPCError({ code: 'NOT_FOUND' });
 		// Check if user has a credential account (Better Auth)
 		const credentialAccount = await ctx.db.account.findFirst({
 			select: { password: true },
-			where: { providerId: 'credential', userId: ctx.session.user.id }
+			where: { providerId: 'credential', userId }
 		});
 		return { ...user, hasPassword: Boolean(credentialAccount?.password) } as const;
 	}),

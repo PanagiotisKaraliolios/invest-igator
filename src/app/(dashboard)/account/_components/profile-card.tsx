@@ -1,6 +1,5 @@
 'use client';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -22,49 +21,75 @@ const profileSchema = z.object({
 
 type ProfileFormInput = z.infer<typeof profileSchema>;
 
-export default function ProfileCard({ initial }: { initial: RouterOutputs['account']['getProfile'] }) {
-	const router = useRouter();
+export default function ProfileCard() {
 	const utils = api.useUtils();
 	const [editPictureOpen, setEditPictureOpen] = useState(false);
+
+	const { data: profileData, isLoading } = api.account.getMe.useQuery();
 
 	const update = api.account.updateProfile.useMutation({
 		onError: (e) => toast.error(e.message || 'Failed to update profile'),
 		onSuccess: async () => {
-			await utils.account.getProfile.invalidate();
+			await utils.account.getMe.invalidate();
 			toast.success('Profile updated');
 			// Ensure session-backed UI (e.g., header avatar) refreshes
-			router.refresh();
 		}
 	});
 
 	const form = useForm<ProfileFormInput>({
 		defaultValues: {
-			name: initial?.name ?? ''
+			name: profileData?.name ?? ''
 		},
 		resolver: zodResolver(profileSchema)
 	});
 
-	// Keep form in sync if the server-provided initial values change
+	// Keep form in sync if the server-provided profileData values change
 	useEffect(() => {
-		form.reset({ name: initial?.name ?? '' });
+		form.reset({ name: profileData?.name ?? '' });
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [initial?.name]);
+	}, [profileData?.name]);
 
 	const onSubmit = (values: ProfileFormInput) => {
 		const trimmedName = (values.name ?? '').trim();
-		update.mutate({ image: initial?.image ?? '', name: trimmedName });
+		update.mutate({ name: trimmedName });
 	};
 
 	const isDirty = form.formState.isDirty;
 
 	// Get initials for avatar fallback
 	const initials =
-		initial?.name
+		profileData?.name
 			?.split(' ')
 			.map((n) => n[0])
 			.join('')
 			.toUpperCase()
 			.slice(0, 2) ?? '??';
+
+	if (isLoading) {
+		return (
+			<Card>
+				<CardHeader>
+					<CardTitle>Profile</CardTitle>
+				</CardHeader>
+				<CardContent className='flex items-center justify-center py-8'>
+					<Spinner className='h-8 w-8' />
+				</CardContent>
+			</Card>
+		);
+	}
+
+	if (!profileData) {
+		return (
+			<Card>
+				<CardHeader>
+					<CardTitle>Profile</CardTitle>
+				</CardHeader>
+				<CardContent>
+					<p className='text-sm text-muted-foreground'>Failed to load profile</p>
+				</CardContent>
+			</Card>
+		);
+	}
 
 	return (
 		<>
@@ -80,7 +105,10 @@ export default function ProfileCard({ initial }: { initial: RouterOutputs['accou
 								<FormLabel>Profile Picture</FormLabel>
 								<div className='flex items-center gap-4'>
 									<Avatar className='h-20 w-20'>
-										<AvatarImage alt={initial?.name ?? 'User'} src={initial?.image ?? undefined} />
+										<AvatarImage
+											alt={profileData?.name ?? 'User'}
+											src={profileData?.avatar ?? undefined}
+										/>
 										<AvatarFallback>{initials}</AvatarFallback>
 									</Avatar>
 									<Button onClick={() => setEditPictureOpen(true)} type='button' variant='outline'>
@@ -110,8 +138,10 @@ export default function ProfileCard({ initial }: { initial: RouterOutputs['accou
 
 							<div className='flex items-center justify-between'>
 								<div className='flex items-center gap-2'>
-									<p className='text-xs text-muted-foreground'>Email: {initial?.email}</p>
-									{!initial?.emailVerified && initial?.email ? <RequestVerifyButton /> : null}
+									<p className='text-xs text-muted-foreground'>Email: {profileData?.email}</p>
+									{!profileData?.emailVerified && profileData?.email ? (
+										<RequestVerifyButton email={profileData.email} />
+									) : null}
 								</div>
 								<EmailChangeDialog />
 							</div>
@@ -119,7 +149,7 @@ export default function ProfileCard({ initial }: { initial: RouterOutputs['accou
 						<CardFooter className='flex items-center gap-2'>
 							<Button
 								disabled={!isDirty || update.isPending}
-								onClick={() => form.reset({ name: initial?.name ?? '' })}
+								onClick={() => form.reset({ name: profileData?.name ?? '' })}
 								type='button'
 								variant='outline'
 							>
@@ -135,8 +165,8 @@ export default function ProfileCard({ initial }: { initial: RouterOutputs['accou
 			</Card>
 
 			<EditProfilePictureDialog
-				currentImage={initial?.image}
-				currentName={initial?.name}
+				currentImage={profileData?.avatar}
+				currentName={profileData?.name}
 				onOpenChange={setEditPictureOpen}
 				open={editPictureOpen}
 			/>

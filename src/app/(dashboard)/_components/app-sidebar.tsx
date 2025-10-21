@@ -1,19 +1,10 @@
 'use client';
 
-import {
-	AudioWaveform,
-	BookOpen,
-	Command,
-	Frame,
-	GalleryVerticalEnd,
-	Map as MapIcon,
-	PieChart,
-	Settings2
-} from 'lucide-react';
+import { AudioWaveform, BookOpen, Command, PieChart } from 'lucide-react';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarRail } from '@/components/ui/sidebar';
+import { api } from '@/trpc/react';
 import { ApplicationNameLogo } from './application-name-logo';
 import { NavMain } from './nav-main';
-import { NavProjects } from './nav-projects';
 import { NavUser } from './nav-user';
 
 // This is sample data.
@@ -60,13 +51,16 @@ const data = {
 	]
 };
 
-type User = { name: string; email: string; avatar?: string | null };
-
 export function AppSidebar({
-	user,
 	applicationName,
 	...props
-}: React.ComponentProps<typeof Sidebar> & { user: User; applicationName: string }) {
+}: Omit<React.ComponentProps<typeof Sidebar>, 'children'> & { applicationName: string }) {
+	const { data: user } = api.account.getMe.useQuery();
+
+	if (!user) {
+		return null;
+	}
+
 	return (
 		<Sidebar collapsible='icon' {...props}>
 			<SidebarHeader>

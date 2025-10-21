@@ -13,7 +13,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { api } from '@/trpc/react';
 
 export default function PasswordCard() {
-	const profile = api.account.getProfile.useQuery();
+	const profile = api.account.getMe.useQuery();
 
 	const schema = useMemo(
 		() =>

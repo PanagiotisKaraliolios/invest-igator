@@ -13,15 +13,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
 	const session = await auth.api.getSession({ headers: await headers() });
 	if (!session?.user) redirect('/login');
 
-	const me = {
-		avatar: session.user.image ?? null,
-		email: session.user.email ?? '',
-		name: session.user.name ?? session.user.email ?? 'User'
-	};
-
 	return (
 		<SidebarProvider>
-			<AppSidebar applicationName={env.APP_NAME} user={me} />
+			<AppSidebar applicationName={env.APP_NAME} />
 			<SidebarInset>
 				<header className='flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12'>
 					<div className='flex items-center gap-2 px-4'>

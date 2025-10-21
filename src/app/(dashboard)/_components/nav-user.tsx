@@ -21,6 +21,7 @@ export function NavUser({
 		name: string;
 		email: string;
 		avatar?: string | null;
+		id: string;
 	};
 }) {
 	const { isMobile } = useSidebar();
@@ -35,7 +36,7 @@ export function NavUser({
 							size='lg'
 						>
 							<Avatar className='h-8 w-8 rounded-lg'>
-								<AvatarImage alt={user.name} src={user.avatar ?? undefined} />
+								<AvatarImage alt={`Profile picture of ${user.name}`} src={user.avatar ?? undefined} />
 								<AvatarFallback className='rounded-lg'>
 									{user.name?.[0]?.toUpperCase() ?? user.email?.[0]?.toUpperCase() ?? '?'}
 								</AvatarFallback>

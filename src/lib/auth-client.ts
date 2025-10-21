@@ -4,7 +4,7 @@ import { createAuthClient } from 'better-auth/react';
 import { env } from '@/env';
 
 export const authClient = createAuthClient({
-	baseURL: "https://invest-igator.karaliolios.dev",
+	baseURL: env.NEXT_PUBLIC_SITE_URL,
 	plugins: [twoFactorClient(), nextCookies()]
 });
 

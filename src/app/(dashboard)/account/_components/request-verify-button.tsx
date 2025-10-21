@@ -3,14 +3,13 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
-import { sendVerificationEmail, useSession } from '@/lib/auth-client';
+import { sendVerificationEmail } from '@/lib/auth-client';
 
-export function RequestVerifyButton() {
+export function RequestVerifyButton({ email }: { email: string }) {
 	const [isPending, setIsPending] = useState(false);
-	const { data: session } = useSession();
 
 	const handleClick = async () => {
-		if (!session?.user?.email) {
+		if (!email) {
 			toast.error('No email address found');
 			return;
 		}
@@ -19,7 +18,7 @@ export function RequestVerifyButton() {
 		try {
 			await sendVerificationEmail({
 				callbackURL: '/',
-				email: session.user.email
+				email
 			});
 			toast.success('Verification email sent');
 		} catch (error) {

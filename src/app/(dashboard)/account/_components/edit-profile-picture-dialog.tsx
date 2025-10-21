@@ -32,7 +32,6 @@ export function EditProfilePictureDialog({
 	currentImage,
 	currentName
 }: EditProfilePictureDialogProps) {
-	const router = useRouter();
 	const utils = api.useUtils();
 
 	const [activeTab, setActiveTab] = useState<'upload' | 'url'>('upload');
@@ -46,11 +45,9 @@ export function EditProfilePictureDialog({
 
 	const uploadMutation = api.account.uploadProfilePicture.useMutation({
 		onError: (e) => toast.error(e.message || 'Failed to upload profile picture'),
-		onSuccess: async (res) => {
-			console.log('🚀 ~ edit-profile-picture-dialog.tsx:42 ~ res:', res);
-			await utils.account.getProfile.invalidate();
+		onSuccess: async () => {
 			toast.success('Profile picture updated');
-			router.refresh();
+			await utils.account.getMe.invalidate();
 			handleClose();
 		}
 	});
@@ -58,9 +55,8 @@ export function EditProfilePictureDialog({
 	const updateProfileMutation = api.account.updateProfile.useMutation({
 		onError: (e) => toast.error(e.message || 'Failed to update profile'),
 		onSuccess: async () => {
-			await utils.account.getProfile.invalidate();
 			toast.success('Profile picture updated');
-			router.refresh();
+			await utils.account.getMe.invalidate();
 			handleClose();
 		}
 	});
@@ -77,7 +73,6 @@ export function EditProfilePictureDialog({
 	};
 
 	const handleFileChange = (files: File[]) => {
-		console.log('🚀 ~ handleFileChange ~ files:', files);
 		const file = files[0];
 		if (!file) {
 			setSelectedFiles([]);
@@ -93,7 +88,6 @@ export function EditProfilePictureDialog({
 		const reader = new FileReader();
 		reader.onloadend = () => {
 			const dataUrl = reader.result as string;
-			console.log('🚀 ~ reader.onloadend ~ dataUrl length:', dataUrl.length);
 			setPreviewUrl(dataUrl);
 			setShowCropper(true);
 			setCroppedImageUrl(null); // Reset cropped image

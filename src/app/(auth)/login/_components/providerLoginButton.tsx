@@ -20,7 +20,7 @@ export default function ProviderLoginButton({ provider }: { provider: string }) 
 				onClick={() =>
 					signIn.social({
 						callbackURL: callbackUrl,
-						provider: provider as 'discord'
+						provider: provider
 					})
 				}
 				variant='outline'
