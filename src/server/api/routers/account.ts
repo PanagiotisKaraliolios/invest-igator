@@ -413,21 +413,36 @@ export const accountRouter = createTRPCRouter({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
+				const sharp = (await import('sharp')).default;
 				const { dataUrlToBuffer, generateProfilePictureKey, uploadToR2 } = await import('@/server/r2');
 
 				// Parse the data URL
-				const { buffer, contentType } = dataUrlToBuffer(input.dataUrl);
+				const { buffer } = dataUrlToBuffer(input.dataUrl);
 
-				// Extract file extension from content type
-				const extension = contentType.split('/')[1] ?? 'jpg';
+				console.log(`[Upload] Original size: ${(buffer.length / 1024).toFixed(2)}KB`);
 
-				// Generate unique key
-				const key = generateProfilePictureKey(ctx.session.user.id, extension);
+				// Compress and optimize the image using Sharp
+				const compressedBuffer = await sharp(buffer)
+					.resize(512, 512, {
+						fit: 'cover',
+						position: 'center'
+					})
+					.jpeg({
+						mozjpeg: true,
+						progressive: true,
+						quality: 85
+					})
+					.toBuffer();
+
+				console.log(
+					`[Upload] Compressed size: ${(compressedBuffer.length / 1024).toFixed(2)}KB (${((1 - compressedBuffer.length / buffer.length) * 100).toFixed(1)}% reduction)`
+				);
+
+				// Generate unique key with .jpg extension (since we're converting to JPEG)
+				const key = generateProfilePictureKey(ctx.session.user.id, 'jpg');
 
 				// Upload to R2
-				const { url } = await uploadToR2(buffer, key, contentType);
-
-				console.log('🚀 ~ account.ts:422 ~ url:', url);
+				const { url } = await uploadToR2(compressedBuffer, key, 'image/jpeg');
 
 				// Update user's profile image
 				await ctx.db.user.update({

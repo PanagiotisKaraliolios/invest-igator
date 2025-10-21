@@ -159,6 +159,7 @@ export function EditProfilePictureDialog({
 			return;
 		}
 
+		// Note: Compression happens server-side with Sharp for better quality and performance
 		uploadMutation.mutate({ dataUrl: croppedImageUrl });
 	};
 

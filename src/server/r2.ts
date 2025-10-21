@@ -40,6 +40,8 @@ export async function uploadToR2(file: Buffer, key: string, contentType: string)
 		const command = new PutObjectCommand({
 			Body: file,
 			Bucket: env.CLOUDFLARE_BUCKET_NAME,
+			// Cache images for 1 year (immutable since we use timestamp-based keys)
+			CacheControl: 'public, max-age=31536000, immutable',
 			ContentType: contentType,
 			Key: key
 		});
