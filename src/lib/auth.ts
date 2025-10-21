@@ -90,7 +90,6 @@ export const auth = betterAuth({
 			// Recovery codes are generated automatically
 		})
 	],
-	secret: env.BETTER_AUTH_SECRET,
 	session: {
 		cookieCache: {
 			enabled: true,
@@ -105,10 +104,7 @@ export const auth = betterAuth({
 			clientSecret: env.AUTH_DISCORD_SECRET
 		}
 	},
-	trustedOrigins: [
-		env.NEXT_PUBLIC_SITE_URL,
-		env.BETTER_AUTH_URL
-	]
+	trustedOrigins: [env.NEXT_PUBLIC_SITE_URL]
 });
 
 export type Session = typeof auth.$Infer.Session.session;
