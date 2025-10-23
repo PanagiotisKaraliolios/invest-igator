@@ -44,8 +44,12 @@ export function EditProfilePictureDialog({
 	const imgRef = React.useRef<HTMLImageElement | null>(null);
 
 	const uploadMutation = api.account.uploadProfilePicture.useMutation({
-		onError: (e) => toast.error(e.message || 'Failed to upload profile picture'),
+		onError: (e) => {
+			toast.dismiss('profile-picture-loading');
+			toast.error(e.message || 'Failed to upload profile picture');
+		},
 		onSuccess: async () => {
+			toast.dismiss('profile-picture-loading');
 			toast.success('Profile picture updated');
 			await utils.account.getMe.invalidate();
 			handleClose();
@@ -53,8 +57,12 @@ export function EditProfilePictureDialog({
 	});
 
 	const updateProfileMutation = api.account.updateProfile.useMutation({
-		onError: (e) => toast.error(e.message || 'Failed to update profile'),
+		onError: (e) => {
+			toast.dismiss('profile-picture-loading');
+			toast.error(e.message || 'Failed to update profile');
+		},
 		onSuccess: async () => {
+			toast.dismiss('profile-picture-loading');
 			toast.success('Profile picture updated');
 			await utils.account.getMe.invalidate();
 			handleClose();
@@ -159,6 +167,7 @@ export function EditProfilePictureDialog({
 			return;
 		}
 
+		toast.loading('Uploading profile picture...', { id: 'profile-picture-loading' });
 		// Note: Compression happens server-side with Sharp for better quality and performance
 		uploadMutation.mutate({ dataUrl: croppedImageUrl });
 	};
@@ -172,6 +181,7 @@ export function EditProfilePictureDialog({
 			return;
 		}
 
+		toast.loading('Saving profile picture...', { id: 'profile-picture-loading' });
 		updateProfileMutation.mutate({
 			image: trimmedUrl,
 			name: currentName ?? ''
@@ -239,7 +249,7 @@ export function EditProfilePictureDialog({
 										onClick={handleUpload}
 										type='button'
 									>
-										{uploadMutation.isPending ? 'Uploading...' : 'Upload'}
+										Upload
 									</Button>
 								</DialogFooter>
 							</>
@@ -309,7 +319,7 @@ export function EditProfilePictureDialog({
 								Cancel
 							</Button>
 							<Button disabled={isPending} onClick={handleUrlUpdate} type='button'>
-								{updateProfileMutation.isPending ? 'Saving...' : 'Save'}
+								Save
 							</Button>
 						</DialogFooter>
 					</TabsContent>
