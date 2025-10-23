@@ -24,7 +24,6 @@ export const auth = betterAuth({
 		},
 		useSecureCookies: env.NODE_ENV === 'production'
 	},
-	baseURL: env.NEXT_PUBLIC_SITE_URL,
 	database: prismaAdapter(db, {
 		provider: 'postgresql'
 	}),
