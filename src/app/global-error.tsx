@@ -3,13 +3,7 @@
 import { AlertTriangle, ChartLine, RotateCw } from 'lucide-react';
 import { useEffect } from 'react';
 
-export default function GlobalError({
-	error,
-	reset
-}: {
-	error: Error & { digest?: string };
-	reset: () => void;
-}) {
+export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
 	useEffect(() => {
 		// Log the error to an error reporting service
 		console.error('Global error boundary caught:', error);
@@ -41,12 +35,10 @@ export default function GlobalError({
 						</div>
 
 						{/* Message */}
-						<h2 className='mb-3 text-2xl font-semibold tracking-tight text-foreground'>
-							Critical Error
-						</h2>
+						<h2 className='mb-3 text-2xl font-semibold tracking-tight text-foreground'>Critical Error</h2>
 						<p className='mb-8 text-gray-600 dark:text-gray-400'>
-							A critical error occurred that prevented the application from loading. Please try
-							refreshing the page.
+							A critical error occurred that prevented the application from loading. Please try refreshing
+							the page.
 						</p>
 
 						{/* Error details (dev only) */}

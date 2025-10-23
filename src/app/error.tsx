@@ -25,7 +25,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
 						<ChartLine className='size-6' />
 					</span>
 					<span className='text-xl font-semibold'>Invest-igator</span>
-					
+
 					{/* Error Icon */}
 					<div className='inline-flex items-center justify-center'>
 						<div className='rounded-full bg-destructive/10 p-4'>
@@ -34,14 +34,11 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
 					</div>
 				</Link>
 
-
 				{/* Message */}
-				<h2 className='mb-3 text-2xl font-semibold tracking-tight text-foreground'>
-					Something went wrong
-				</h2>
+				<h2 className='mb-3 text-2xl font-semibold tracking-tight text-foreground'>Something went wrong</h2>
 				<p className='mb-8 text-muted-foreground'>
-					We encountered an unexpected error. This has been logged and we'll look into it.
-					You can try again or return to the home page.
+					We encountered an unexpected error. This has been logged and we'll look into it. You can try again
+					or return to the home page.
 				</p>
 
 				{/* Error details (dev only) */}

@@ -28,12 +28,10 @@ export default function NotFound() {
 				</div>
 
 				{/* Message */}
-				<h2 className='mb-3 text-2xl font-semibold tracking-tight text-foreground'>
-					Page Not Found
-				</h2>
+				<h2 className='mb-3 text-2xl font-semibold tracking-tight text-foreground'>Page Not Found</h2>
 				<p className='mb-8 text-muted-foreground'>
-					The page you're looking for doesn't exist. It might have been moved or deleted, or you
-					may have mistyped the URL.
+					The page you're looking for doesn't exist. It might have been moved or deleted, or you may have
+					mistyped the URL.
 				</p>
 
 				{/* Actions */}

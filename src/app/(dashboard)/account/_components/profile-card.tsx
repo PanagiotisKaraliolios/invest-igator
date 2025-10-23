@@ -28,7 +28,11 @@ export default function ProfileCard() {
 	const utils = api.useUtils();
 	const [editPictureOpen, setEditPictureOpen] = useState(false);
 
-	const { data: profileData, isLoading, error } = api.account.getMe.useQuery(undefined, {
+	const {
+		data: profileData,
+		isLoading,
+		error
+	} = api.account.getMe.useQuery(undefined, {
 		gcTime: 10 * 60 * 1000, // 10 minutes
 		staleTime: 5 * 60 * 1000 // 5 minutes
 	});

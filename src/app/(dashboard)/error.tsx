@@ -5,13 +5,7 @@ import Link from 'next/link';
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 
-export default function DashboardError({
-	error,
-	reset
-}: {
-	error: Error & { digest?: string };
-	reset: () => void;
-}) {
+export default function DashboardError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
 	useEffect(() => {
 		// Log the error to an error reporting service
 		console.error('Dashboard error boundary caught:', error);
@@ -27,12 +21,10 @@ export default function DashboardError({
 			</div>
 
 			{/* Message */}
-			<h2 className='mb-3 text-2xl font-semibold tracking-tight text-foreground'>
-				Dashboard Error
-			</h2>
+			<h2 className='mb-3 text-2xl font-semibold tracking-tight text-foreground'>Dashboard Error</h2>
 			<p className='mb-6 max-w-md text-center text-muted-foreground'>
-				We encountered an error while loading this dashboard page. This has been logged and we'll
-				investigate. You can try again or navigate to another section.
+				We encountered an error while loading this dashboard page. This has been logged and we'll investigate.
+				You can try again or navigate to another section.
 			</p>
 
 			{/* Error details (dev only) */}
