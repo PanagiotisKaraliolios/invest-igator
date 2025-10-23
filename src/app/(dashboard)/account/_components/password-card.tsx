@@ -1,19 +1,24 @@
 'use client';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 import { api } from '@/trpc/react';
 
 export default function PasswordCard() {
-	const profile = api.account.getMe.useQuery();
+	const profile = api.account.getMe.useQuery(undefined, {
+		gcTime: 10 * 60 * 1000, // 10 minutes
+		staleTime: 5 * 60 * 1000 // 5 minutes
+	});
 
 	const schema = useMemo(
 		() =>
@@ -97,30 +102,87 @@ export default function PasswordCard() {
 				</CardDescription>
 			</CardHeader>
 			<CardContent>
-				<Form key={profile.data?.hasPassword ? 'with-pass' : 'no-pass'} {...form}>
-					<form className='space-y-3' data-testid='password-form' onSubmit={form.handleSubmit(onSubmit)}>
-						{profile.data?.hasPassword ? (
+				{profile.isLoading ? (
+					<div className='space-y-4'>
+						<div className='space-y-3'>
+							<div className='space-y-2'>
+								<Skeleton className='h-4 w-24' />
+								<Skeleton className='h-10 w-full' />
+							</div>
+							<div className='space-y-2'>
+								<Skeleton className='h-4 w-24' />
+								<Skeleton className='h-10 w-full' />
+							</div>
+							<Skeleton className='h-10 w-32' />
+						</div>
+					</div>
+				) : profile.error ? (
+					<Alert variant='destructive'>
+						<AlertCircle className='h-4 w-4' />
+						<AlertTitle>Error loading password settings</AlertTitle>
+						<AlertDescription>
+							Unable to load your password settings. Please refresh the page and try again.
+						</AlertDescription>
+					</Alert>
+				) : (
+					<Form key={profile.data?.hasPassword ? 'with-pass' : 'no-pass'} {...form}>
+						<form className='space-y-3' data-testid='password-form' onSubmit={form.handleSubmit(onSubmit)}>
+							{profile.data?.hasPassword ? (
+								<FormField
+									control={form.control}
+									name='currentPassword'
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Current password</FormLabel>
+											<FormControl>
+												<InputGroup>
+													<InputGroupInput
+														data-testid='current-password-input'
+														disabled={change.isPending}
+														placeholder='••••••••'
+														type={showCurrent ? 'text' : 'password'}
+														{...field}
+													/>
+													<InputGroupAddon align='inline-end'>
+														<InputGroupButton
+															aria-label={showCurrent ? 'Hide password' : 'Show password'}
+															onClick={() => setShowCurrent((s) => !s)}
+														>
+															{showCurrent ? (
+																<EyeOff className='h-4 w-4' />
+															) : (
+																<Eye className='h-4 w-4' />
+															)}
+														</InputGroupButton>
+													</InputGroupAddon>
+												</InputGroup>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+							) : null}
 							<FormField
 								control={form.control}
-								name='currentPassword'
+								name='newPassword'
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Current password</FormLabel>
+										<FormLabel>{profile.data?.hasPassword ? 'New password' : 'Password'}</FormLabel>
 										<FormControl>
 											<InputGroup>
 												<InputGroupInput
-													data-testid='current-password-input'
-													disabled={change.isPending}
+													data-testid='new-password-input'
+													disabled={change.isPending || setPw.isPending}
 													placeholder='••••••••'
-													type={showCurrent ? 'text' : 'password'}
+													type={showNew ? 'text' : 'password'}
 													{...field}
 												/>
 												<InputGroupAddon align='inline-end'>
 													<InputGroupButton
-														aria-label={showCurrent ? 'Hide password' : 'Show password'}
-														onClick={() => setShowCurrent((s) => !s)}
+														aria-label={showNew ? 'Hide password' : 'Show password'}
+														onClick={() => setShowNew((s) => !s)}
 													>
-														{showCurrent ? (
+														{showNew ? (
 															<EyeOff className='h-4 w-4' />
 														) : (
 															<Eye className='h-4 w-4' />
@@ -133,85 +195,52 @@ export default function PasswordCard() {
 									</FormItem>
 								)}
 							/>
-						) : null}
-						<FormField
-							control={form.control}
-							name='newPassword'
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>{profile.data?.hasPassword ? 'New password' : 'Password'}</FormLabel>
-									<FormControl>
-										<InputGroup>
-											<InputGroupInput
-												data-testid='new-password-input'
-												disabled={change.isPending || setPw.isPending}
-												placeholder='••••••••'
-												type={showNew ? 'text' : 'password'}
-												{...field}
-											/>
-											<InputGroupAddon align='inline-end'>
-												<InputGroupButton
-													aria-label={showNew ? 'Hide password' : 'Show password'}
-													onClick={() => setShowNew((s) => !s)}
-												>
-													{showNew ? (
-														<EyeOff className='h-4 w-4' />
-													) : (
-														<Eye className='h-4 w-4' />
-													)}
-												</InputGroupButton>
-											</InputGroupAddon>
-										</InputGroup>
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-						<FormField
-							control={form.control}
-							name='confirmPassword'
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>
-										Confirm {profile.data?.hasPassword ? 'new password' : 'password'}
-									</FormLabel>
-									<FormControl>
-										<InputGroup>
-											<InputGroupInput
-												data-testid='confirm-password-input'
-												disabled={change.isPending || setPw.isPending}
-												placeholder='••••••••'
-												type={showConfirm ? 'text' : 'password'}
-												{...field}
-											/>
-											<InputGroupAddon align='inline-end'>
-												<InputGroupButton
-													aria-label={showConfirm ? 'Hide password' : 'Show password'}
-													onClick={() => setShowConfirm((s) => !s)}
-												>
-													{showConfirm ? (
-														<EyeOff className='h-4 w-4' />
-													) : (
-														<Eye className='h-4 w-4' />
-													)}
-												</InputGroupButton>
-											</InputGroupAddon>
-										</InputGroup>
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-						<Button
-							data-testid='password-submit-button'
-							disabled={change.isPending || setPw.isPending}
-							type='submit'
-						>
-							{(change.isPending || setPw.isPending) && <Spinner className='mr-2' />}
-							{profile.data?.hasPassword ? 'Change password' : 'Set password'}
-						</Button>
-					</form>
-				</Form>
+							<FormField
+								control={form.control}
+								name='confirmPassword'
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>
+											Confirm {profile.data?.hasPassword ? 'new password' : 'password'}
+										</FormLabel>
+										<FormControl>
+											<InputGroup>
+												<InputGroupInput
+													data-testid='confirm-password-input'
+													disabled={change.isPending || setPw.isPending}
+													placeholder='••••••••'
+													type={showConfirm ? 'text' : 'password'}
+													{...field}
+												/>
+												<InputGroupAddon align='inline-end'>
+													<InputGroupButton
+														aria-label={showConfirm ? 'Hide password' : 'Show password'}
+														onClick={() => setShowConfirm((s) => !s)}
+													>
+														{showConfirm ? (
+															<EyeOff className='h-4 w-4' />
+														) : (
+															<Eye className='h-4 w-4' />
+														)}
+													</InputGroupButton>
+												</InputGroupAddon>
+											</InputGroup>
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+							<Button
+								data-testid='password-submit-button'
+								disabled={change.isPending || setPw.isPending}
+								type='submit'
+							>
+								{(change.isPending || setPw.isPending) && <Spinner className='mr-2' />}
+								{profile.data?.hasPassword ? 'Change password' : 'Set password'}
+							</Button>
+						</form>
+					</Form>
+				)}
 			</CardContent>
 		</Card>
 	);

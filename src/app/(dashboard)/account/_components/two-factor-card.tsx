@@ -1,7 +1,10 @@
 'use client';
 
+import { AlertCircle, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/trpc/react';
 import { DisabledTwoFactorSection } from './disabled-two-factor-section';
 import { EnabledTwoFactorSection } from './enabled-two-factor-section';
@@ -27,9 +30,24 @@ export default function TwoFactorCard() {
 
 	let body;
 	if (twoFactor.isLoading) {
-		body = <p className='text-muted-foreground text-sm'>Loading two-factor status…</p>;
-	} else if (!twoFactor.data) {
-		body = <p className='text-muted-foreground text-sm'>Unable to load two-factor information.</p>;
+		body = (
+			<div className='space-y-3'>
+				<div className='space-y-2'>
+					<Skeleton className='h-4 w-3/4' />
+					<Skeleton className='h-4 w-1/2' />
+				</div>
+			</div>
+		);
+	} else if (twoFactor.isError || !twoFactor.data) {
+		body = (
+			<Alert variant='destructive'>
+				<AlertCircle className='h-4 w-4' />
+				<AlertTitle>Error loading two-factor information</AlertTitle>
+				<AlertDescription>
+					Unable to load your two-factor authentication status. Please refresh the page and try again.
+				</AlertDescription>
+			</Alert>
+		);
 	} else if (twoFactor.data.pending) {
 		body = (
 			<PendingTwoFactorSection

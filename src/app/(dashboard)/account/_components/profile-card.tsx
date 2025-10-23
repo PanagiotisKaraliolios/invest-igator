@@ -1,14 +1,17 @@
 'use client';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { AlertCircle, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 import { api, type RouterOutputs } from '@/trpc/react';
 import { EditProfilePictureDialog } from './edit-profile-picture-dialog';
@@ -25,7 +28,10 @@ export default function ProfileCard() {
 	const utils = api.useUtils();
 	const [editPictureOpen, setEditPictureOpen] = useState(false);
 
-	const { data: profileData, isLoading } = api.account.getMe.useQuery();
+	const { data: profileData, isLoading, error } = api.account.getMe.useQuery(undefined, {
+		gcTime: 10 * 60 * 1000, // 10 minutes
+		staleTime: 5 * 60 * 1000 // 5 minutes
+	});
 
 	const update = api.account.updateProfile.useMutation({
 		onError: (e) => toast.error(e.message || 'Failed to update profile'),
@@ -71,21 +77,40 @@ export default function ProfileCard() {
 				<CardHeader>
 					<CardTitle>Profile</CardTitle>
 				</CardHeader>
-				<CardContent className='flex items-center justify-center py-8'>
-					<Spinner className='h-8 w-8' />
+				<CardContent className='space-y-4'>
+					<div className='space-y-3'>
+						<div className='space-y-2'>
+							<Skeleton className='h-4 w-24' />
+							<div className='flex items-center gap-4'>
+								<Skeleton className='h-20 w-20 rounded-full' />
+								<Skeleton className='h-10 w-20' />
+							</div>
+						</div>
+						<div className='space-y-2'>
+							<Skeleton className='h-4 w-16' />
+							<Skeleton className='h-10 w-full' />
+						</div>
+						<Skeleton className='h-4 w-48' />
+					</div>
 				</CardContent>
 			</Card>
 		);
 	}
 
-	if (!profileData) {
+	if (error || !profileData) {
 		return (
 			<Card>
 				<CardHeader>
 					<CardTitle>Profile</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<p className='text-sm text-muted-foreground'>Failed to load profile</p>
+					<Alert variant='destructive'>
+						<AlertCircle className='h-4 w-4' />
+						<AlertTitle>Error loading profile</AlertTitle>
+						<AlertDescription>
+							Unable to load your profile information. Please refresh the page and try again.
+						</AlertDescription>
+					</Alert>
 				</CardContent>
 			</Card>
 		);

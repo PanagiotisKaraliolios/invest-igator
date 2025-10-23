@@ -1,9 +1,10 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import { AlertCircle } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -69,7 +70,11 @@ export default function ConnectedAccountsCard() {
 						<Skeleton className='h-10 w-full' />
 					) : isError ? (
 						<Alert variant='destructive'>
-							<AlertDescription>Failed to load connected accounts.</AlertDescription>
+							<AlertCircle className='h-4 w-4' />
+							<AlertTitle>Error loading connected accounts</AlertTitle>
+							<AlertDescription>
+								Unable to load your connected accounts. Please refresh the page and try again.
+							</AlertDescription>
 						</Alert>
 					) : (
 						<div className='space-y-3'>
@@ -105,7 +110,13 @@ export default function ConnectedAccountsCard() {
 								{providersQuery.isLoading ? (
 									<p className='text-sm text-muted-foreground'>Loading providers…</p>
 								) : providersQuery.isError ? (
-									<p className='text-sm text-destructive'>Failed to load providers.</p>
+									<Alert variant='destructive'>
+										<AlertCircle className='h-4 w-4' />
+										<AlertTitle>Error loading providers</AlertTitle>
+										<AlertDescription>
+											Unable to load available authentication providers.
+										</AlertDescription>
+									</Alert>
 								) : connectableProviders.length === 0 ? (
 									<p className='text-sm text-muted-foreground'>No additional providers available.</p>
 								) : (

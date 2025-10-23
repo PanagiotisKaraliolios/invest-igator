@@ -18,7 +18,14 @@ import { api } from '@/trpc/react';
 
 export function NavUser() {
 	const { isMobile } = useSidebar();
-	const { data: user, isLoading, error } = api.account.getMe.useQuery();
+	const {
+		data: user,
+		isLoading,
+		error
+	} = api.account.getMe.useQuery(undefined, {
+		gcTime: 10 * 60 * 1000, // 10 minutes
+		staleTime: 5 * 60 * 1000 // 5 minutes
+	});
 
 	// Loading state
 	if (isLoading) {
