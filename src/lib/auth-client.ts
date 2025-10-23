@@ -1,10 +1,10 @@
 import { twoFactorClient } from 'better-auth/client/plugins';
 import { nextCookies } from 'better-auth/next-js';
 import { createAuthClient } from 'better-auth/react';
-import { env } from '@/env';
 
 export const authClient = createAuthClient({
-	baseURL: env.NEXT_PUBLIC_SITE_URL,
+	// Better Auth client automatically uses window.location.origin in the browser
+	// This ensures it uses the correct URL in both dev and production
 	plugins: [twoFactorClient(), nextCookies()]
 });
 
