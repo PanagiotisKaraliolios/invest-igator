@@ -25,7 +25,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 					</div>
 					<div className='mr-4 ml-auto flex items-center gap-3'>
 						<CurrencySwitch isAuthenticated={Boolean(session?.user)} />
-						<ThemeSwitch isAuthenticated={Boolean(session?.user)} />
+						<ThemeSwitch />
 					</div>
 				</header>
 				<div className='flex flex-1 flex-col gap-4 p-4 pt-0'>{children}</div>

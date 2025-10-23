@@ -58,7 +58,7 @@ export default async function Home() {
 						</>
 					)} */}
 					<div className='mr-4 ml-auto'>
-						<ThemeSwitch isAuthenticated={Boolean(session?.user)} />
+						<ThemeSwitch />
 					</div>
 				</nav>
 			</header>

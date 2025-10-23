@@ -1,7 +1,7 @@
 import * as bcrypt from 'bcryptjs';
 import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
-import { twoFactor } from 'better-auth/plugins';
+import { magicLink, twoFactor } from 'better-auth/plugins';
 import { createTransport } from 'nodemailer';
 import { env } from '@/env';
 import { db } from '@/server/db';
@@ -86,6 +86,29 @@ export const auth = betterAuth({
 		}
 	},
 	plugins: [
+		magicLink({
+			disableSignUp: true, // Only allow existing users to login via magic link
+			expiresIn: 60 * 5, // 5 minutes
+			sendMagicLink: async ({ email, token, url }, request) => {
+				// Send magic link email
+				const transport = createTransport(env.EMAIL_SERVER);
+				const host = new URL(url).host;
+
+				await transport.sendMail({
+					from: env.EMAIL_FROM,
+					html: createEmailHtml({
+						cta: 'Sign in',
+						footer: 'If you did not request this email you can safely ignore it.',
+						heading: `Sign in to <strong>${host.replace(/\./g, '&#8203;.')}</strong>`,
+						host,
+						url
+					}),
+					subject: `Sign in to ${host}`,
+					text: `Sign in to ${host}\n${url}\n\n`,
+					to: email
+				});
+			}
+		}),
 		twoFactor({
 			issuer: env.APP_NAME
 			// Recovery codes are generated automatically
