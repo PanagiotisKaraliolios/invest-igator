@@ -1,63 +1,286 @@
-# Invest-igator
+<div align="center">
 
-Next.js App Router app (T3 stack) with tRPC v11, Prisma/PostgreSQL, NextAuth, shadcn/ui, and InfluxDB for timeseries storage.
+# 🔍 Invest-igator
 
-## Dev quickstart
+**An opinionated personal investing tracker**
 
-- Install deps: `bun install`
-- Start DB (Postgres): `./start-database.sh`
-- Apply Prisma schema: `bun run db:generate`
-- Dev server: `bun run dev`
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![tRPC](https://img.shields.io/badge/tRPC-11-2596be?logo=trpc)](https://trpc.io/)
+[![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748?logo=prisma)](https://www.prisma.io/)
+[![Bun](https://img.shields.io/badge/Bun-Runtime-f9f1e1?logo=bun)](https://bun.sh/)
 
-## Ingestion: Yahoo Finance → InfluxDB
+Built with Next.js App Router, tRPC v11, Prisma/PostgreSQL, shadcn/ui, and InfluxDB for fast timeseries. Auth is powered by Better Auth (Prisma adapter) with email/password, magic links, 2FA, and Discord OAuth.
 
-This repo includes a job to ingest historical daily OHLCV bars from Yahoo Finance for symbols in your watchlist and write them into InfluxDB.
+[Getting Started](#-getting-started-local-dev) • [Features](#-features) • [Documentation](#-project-structure) • [Contributing](#-contributing)
 
-Prerequisites (env):
+</div>
 
-- `INFLUXDB_URL` (default `http://localhost:8086`)
-- `INFLUXDB_TOKEN`
+---
+
+## ✨ Features
+
+- 📊 **Watchlist** with historical OHLCV from InfluxDB (AAPL, MSFT, etc.)
+- 💰 **Corporate events**: dividends, splits, capital gains
+- 📈 **Transactions** with CSV import/export, duplicate detection, and FX-aware currencies
+- 🎯 **Portfolio analytics**: structure and performance calculations (TWR/MWR via tRPC)
+- 🎪 **Goals tracking**: simple personal financial goals model
+- 🎨 **Modern UI**: theming, toasts, and shadcn/ui + Recharts
+- 🔄 **Auto-sync**: Yahoo Finance ingestion job for OHLCV and events; FX rates via Alpha Vantage
+
+## 🛠️ Tech stack
+
+| Layer | Technology |
+|-------|-----------|
+| **Frontend** | Next.js 15 (App Router) • React 19 |
+| **API** | tRPC v11 + React Query (RSC + CSR hydration) |
+| **Database** | Prisma + PostgreSQL |
+| **Auth** | Better Auth (email/password, magic link, 2FA, Discord) |
+| **UI** | shadcn/ui + TailwindCSS 4 |
+| **Charts** | Recharts |
+| **Timeseries** | InfluxDB 2.x (`daily_bars` + event measurements) |
+
+## 🏗️ Architecture (high level)
+
+```mermaid
+graph TB
+    A[Client: React 19 + Next.js 15] --> B[tRPC v11]
+    B --> C[API Routers]
+    C --> D[Prisma ORM]
+    C --> E[InfluxDB Client]
+    D --> F[(PostgreSQL)]
+    E --> G[(InfluxDB 2.x)]
+    C --> H[Better Auth]
+    H --> F
+```
+
+**Key components:**
+
+- 📁 App Router under `src/app/*`; dashboard shell in `src/app/(dashboard)/layout.tsx`
+- 🔌 tRPC routers in `src/server/api/routers/*`, composed in `src/server/api/root.ts`
+- 🔐 Context includes `db` (Prisma) and `session` from Better Auth in `src/server/api/trpc.ts`
+- ⚡ Influx helpers in `src/server/influx.ts`
+- 📥 Yahoo ingestion in `src/server/jobs/ingest-yahoo.ts` with helpers in `yahoo-lib.ts`
+- 🪝 Client hooks in `src/trpc/react.tsx`; RSC callers via `src/trpc/server.ts`
+
+**Example API usage:**
+
+```ts
+// Server (RSC)
+import { api } from "@/trpc/server";
+const me = await api.account.getMe.query();
+
+// Client (CSR)
+import { api } from "@/trpc/react";
+const { data } = api.watchlist.list.useQuery();
+```
+
+---
+
+## 🚀 Getting started (local dev)
+
+### Prerequisites
+
+- ✅ Bun 1.0+
+- ✅ Node 20+ (optional, Bun runs everything)
+- ✅ A PostgreSQL 16 database (use `./start-database.sh`)
+- ✅ An InfluxDB 2.x instance (local or remote)
+
+### Setup steps
+
+**1️⃣ Install dependencies**
+
+```sh
+bun install
+```
+
+**2️⃣ Create and fill `.env`**
+
+See the [Environment variables](#-environment-variables) section below. For a smoke test you can set placeholders and use `SKIP_ENV_VALIDATION=1` while you iterate.
+
+**3️⃣ Start Postgres (dev helper)**
+
+```sh
+./start-database.sh
+```
+
+**4️⃣ Generate and apply Prisma schema**
+
+```sh
+bun run db:generate
+```
+
+**5️⃣ Start the dev server**
+
+```sh
+bun run dev
+```
+
+🎉 **Open <http://localhost:3000>**
+
+---
+
+## 🔐 Environment variables
+
+Validated in `src/env.js` via `@t3-oss/env-nextjs`. Server-side vars are required unless noted.
+
+<details>
+<summary><b>📋 Core application</b></summary>
+
+- `DATABASE_URL`: Postgres connection URL (required)
+- `BETTER_AUTH_SECRET`: Secret for Better Auth JWT/cookies (required in production)
+- `BETTER_AUTH_URL`: Public base URL of the app (default: <http://localhost:3000>)
+- `PASSWORD_PEPPER`: Extra pepper for hashing local passwords (required)
+- `EMAIL_SERVER`: Nodemailer connection string (e.g. SMTP URI) (required)
+- `EMAIL_FROM`: From address for transactional emails (required)
+- `NEXT_PUBLIC_SITE_URL`: Public site URL exposed to client (default: <http://localhost:3000>)
+
+</details>
+
+<details>
+<summary><b>🔑 Auth providers</b></summary>
+
+- `AUTH_DISCORD_ID`, `AUTH_DISCORD_SECRET`: Discord OAuth credentials (required if enabling Discord)
+
+</details>
+
+<details>
+<summary><b>💾 Data backends</b></summary>
+
+- `INFLUXDB_URL` (default <http://localhost:8086>)
 - `INFLUXDB_ORG`
 - `INFLUXDB_BUCKET`
-- `YAHOO_CHART_API_URL` (default `https://query2.finance.yahoo.com/v8/finance/chart`)
+- `INFLUXDB_TOKEN`
+- `DATABASE_URL` (Postgres, repeated for clarity)
 
-Run the job:
+</details>
+
+<details>
+<summary><b>🌐 External APIs</b></summary>
+
+- `FINNHUB_API_URL` (default <https://finnhub.io/api/v1>)
+- `FINNHUB_API_KEY` (required for search and symbol validation)
+- `ALPHAVANTAGE_API_URL` (default <https://www.alphavantage.co/query>)
+- `ALPHAVANTAGE_API_KEY` (required for FX ingestion)
+- `YAHOO_CHART_API_URL` (default <https://query2.finance.yahoo.com/v8/finance/chart>)
+- `POLYGON_API_URL`, `POLYGON_API_KEY` (present in schema; not currently required by code paths)
+
+</details>
+
+<details>
+<summary><b>⚙️ Optional/infra</b></summary>
+
+- `CLOUDFLARE_*` (R2 image storage wiring present; optional)
+- `NEXT_PUBLIC_*` for Ads/Analytics (Umami/GA/AdSense) are optional and stubbed in E2E tests
+
+</details>
+
+> 💡 **Tip**: during early setup, export `SKIP_ENV_VALIDATION=1` to bypass strict checks until you've filled everything in.
+
+---
+
+## 🗄️ Database (Prisma)
+
+| Command | Description |
+|---------|-------------|
+| `bun run db:generate` | Generate/apply in dev (migrate dev) |
+| `bun run db:migrate` | Deploy migrations |
+| `bun run db:push` | Push schema (no migrations) |
+| `bun run db:studio` | Prisma Studio (defaults to port 5000) |
+
+**Schema**: `prisma/schema.prisma`
+
+**Relevant models**: `User`, `Account`, `Session`, `WatchlistItem`, `Transaction`, `FxRate`, `Goal` and Better Auth support tables `TwoFactor`, `Verification`, `VerificationToken`.
+
+---
+
+## 📊 Timeseries (InfluxDB)
+
+| Measurement | Fields | Tags | Purpose |
+|-------------|--------|------|---------|
+| `daily_bars` | open, high, low, close, volume | symbol | OHLCV data |
+| `dividends` | amount | symbol | Dividend events |
+| `splits` | numerator, denominator, ratio | symbol | Stock split events |
+| `capital_gains` | amount | symbol | Capital gain distributions |
+
+**Helper code**: `src/server/influx.ts`
+
+---
+
+## 🔄 Ingestion jobs
+
+### Yahoo Finance → InfluxDB
 
 ```sh
 bun run ingest:yahoo
 ```
 
-Notes:
+**What it does:**
 
-- The job writes bars, dividends, splits, and capital gains to InfluxDB.
-- Gentle pacing is applied (~2s/request) to play nicely with Yahoo's protections.
-- By default, it requests the full available range (1d interval).
+- ✅ Reads distinct symbols from your `WatchlistItem`s
+- ✅ Fetches full-range daily bars plus dividends, splits, capital gains
+- ✅ Writes to Influx in batches with retries and gentle pacing (~2s/request)
+- ✅ Also updates watchlist currency when available
+- ✅ Adding a symbol to your watchlist triggers a background ingest for that symbol
 
-## Tech stack
+### FX rates (Alpha Vantage)
 
-- Next.js 15 (App Router), React 19
-- tRPC v11 + React Query
-- Prisma + PostgreSQL + NextAuth
-- shadcn/ui + TailwindCSS
-- Recharts for charts
-- InfluxDB for timeseries
+```sh
+bun run ingest:fx
+```
 
-## Docker
+**What it does:**
 
-Build locally:
+- ✅ Fetches pivoted rates through USD and upserts cross rates into `FxRate`
+
+---
+
+## 🧪 Running tests
+
+E2E tests with Playwright:
+
+```sh
+# Install browsers once
+bun run test:e2e:install
+
+# Run headless
+bun run test:e2e
+
+# Run headed or with the UI
+bun run test:e2e:headed
+bun run test:e2e:ui
+```
+
+**Config**: `playwright.config.ts` (uses a built-in dev server unless `PW_SKIP_WEBSERVER=1`).
+
+---
+
+## ✅ Linting and typecheck
+
+```sh
+bun run check       # Biome
+bun run typecheck   # TypeScript
+```
+
+---
+
+## 🐳 Docker
+
+### Build locally
 
 ```sh
 docker build -t invest-igator:local .
 ```
 
-Run (set env vars appropriately):
+### Run (minimum env)
 
 ```sh
 docker run --rm -p 3000:3000 \
   -e DATABASE_URL=postgresql://user:pass@host:5432/db \
   -e BETTER_AUTH_SECRET=change-me \
-  -e AUTH_TRUST_HOST=true \
   -e PASSWORD_PEPPER=change-me \
+  -e EMAIL_SERVER=smtp://user:pass@mail:587 \
+  -e EMAIL_FROM=no-reply@example.com \
   -e FINNHUB_API_KEY=... \
   -e ALPHAVANTAGE_API_KEY=... \
   -e INFLUXDB_URL=http://influx:8086 \
@@ -67,44 +290,116 @@ docker run --rm -p 3000:3000 \
   invest-igator:local
 ```
 
-CI/CD (Docker Hub):
+### Docker Compose (App + Postgres + Scheduler)
 
-- Add repository secrets: `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`.
-- Push to `main` to build and push `${DOCKERHUB_USERNAME}/invest-igator:latest` and a `sha` tag.
+This repo includes a Compose file that runs:
 
-### Compose (App + Postgres + InfluxDB)
+- `invest-igator`: the app container (published on port 3311)
+- `db`: internal Postgres 16
+- `scheduler`: Ofelia to run ingestion jobs inside the app container on a cron
 
-Quick start:
+**Quick start:**
 
 ```sh
-cp .env.example .env
-# Fill in AUTH_SECRET, PASSWORD_PEPPER, INFLUXDB_* values in .env
-docker compose up -d --build
+cp .env.example .env  # if you have one; otherwise create .env from the vars above
+# Fill DATABASE_URL, BETTER_AUTH_SECRET, PASSWORD_PEPPER, INFLUXDB_*, FINNHUB/ALPHAVANTAGE, EMAIL_*
+docker compose up -d
 ```
 
-This starts:
+**Notes:**
 
-- `db`: Postgres 16 on an internal network
-- `influx`: InfluxDB 2.x with provided org/bucket/token
-- `app`: Next.js app at <http://localhost:3000>, running migrations before start
+- ⚠️ Compose expects you to point `INFLUXDB_URL` to an existing Influx instance (not included in the stack)
+- ⏰ Cron labels run `ingest-yahoo` daily at 02:15 UTC and `ingest-fx` at 06:00/18:00 UTC
+- 🔄 Migrations run automatically on container start
 
-Stop and remove:
+**Stop and remove:**
 
 ```sh
 docker compose down -v
 ```
 
-Run the Yahoo ingest job (one-off):
+---
 
-```sh
-# Using compose service
-docker compose run --rm ingest-yahoo
+## 📂 Project structure
 
-# Or directly with the built image
-docker run --rm --network=host \
-  --env-file .env \
-  -e DATABASE_URL=postgresql://postgres:postgres@localhost:5432/investigator \
-  -e INFLUXDB_URL=http://localhost:8086 \
-  invest-igator:local \
-  bun run src/server/jobs/ingest-yahoo.ts
+```plaintext
+.
+├── prisma/
+│   ├── schema.prisma          # 🗄️  Relational models (User, WatchlistItem, Transaction, etc.)
+│   └── migrations/            # 📦 Schema migrations
+├── src/
+│   ├── server/
+│   │   ├── api/
+│   │   │   ├── root.ts        # 🔗 tRPC router composition
+│   │   │   ├── trpc.ts        # ⚙️  Context, middleware, procedures
+│   │   │   └── routers/       # 🧩 Feature routers (watchlist, transactions, etc.)
+│   │   ├── jobs/
+│   │   │   ├── ingest-yahoo.ts  # 📈 Yahoo Finance ingestion job
+│   │   │   ├── ingest-fx.ts     # 💱 FX rates ingestion job
+│   │   │   └── yahoo-lib.ts     # 🛠️  Yahoo data helpers
+│   │   ├── auth/
+│   │   │   └── config.ts      # 🔐 Better Auth configuration
+│   │   ├── db.ts              # 🗃️  Prisma client singleton
+│   │   ├── influx.ts          # 📊 InfluxDB client & helpers
+│   │   ├── fx.ts              # 💰 FX rate conversion utilities
+│   │   └── r2.ts              # ☁️  Cloudflare R2 storage client
+│   ├── app/
+│   │   ├── (dashboard)/       # 🏠 Protected dashboard routes (watchlist, portfolio, etc.)
+│   │   ├── (auth)/            # 🔑 Auth routes (login, signup, verify-request)
+│   │   ├── api/               # 🌐 API endpoints (tRPC, auth, email verification)
+│   │   └── layout.tsx         # 🎨 Root layout with providers
+│   ├── components/
+│   │   ├── ui/                # 🧱 shadcn/ui primitives
+│   │   ├── ads/               # 📢 AdSense integration
+│   │   ├── consent/           # ✅ Cookie consent provider
+│   │   └── theme/             # 🌓 Theme provider
+│   ├── trpc/
+│   │   ├── react.tsx          # ⚛️  Client-side tRPC hooks
+│   │   ├── server.ts          # 🖥️  Server-side tRPC helpers
+│   │   └── query-client.ts    # 📡 React Query configuration
+│   ├── lib/
+│   │   ├── auth.ts            # 🔒 Better Auth instance
+│   │   └── utils.ts           # 🔧 Utility functions (cn, etc.)
+│   └── env.js                 # ✔️  Environment validation (@t3-oss/env-nextjs)
+├── tests/
+│   └── e2e/                   # 🧪 Playwright E2E tests
+├── docker/
+│   └── entrypoint.sh          # 🐳 Container startup script (migrations, server)
+├── Dockerfile                 # 📦 Multi-stage build (deps, builder, runner)
+├── docker-compose.yml         # 🐙 Compose stack (app, db, scheduler)
+└── start-database.sh          # 🗄️  Dev Postgres script
 ```
+
+**Quick pointers:**
+
+- Dashboard shell: `src/app/(dashboard)/layout.tsx`
+- tRPC glue: `src/server/api/trpc.ts`, `src/trpc/react.tsx`, `src/trpc/server.ts`
+- Influx helpers: `src/server/influx.ts`
+- Ingestion: `src/server/jobs/ingest-yahoo.ts`
+- Example router: `src/server/api/routers/watchlist.ts`
+
+---
+
+## 🐛 Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| ❌ **Env validation failing at boot** | Set `SKIP_ENV_VALIDATION=1` temporarily and fill missing vars (see `src/env.js`) |
+| ❌ **Prisma migrate errors** | Ensure Postgres is reachable; try `prisma migrate reset` in dev |
+| ❌ **Influx writes fail** | Verify `INFLUXDB_URL/ORG/BUCKET/TOKEN` and token has write permissions |
+| ❌ **Emails not sending** | Verify `EMAIL_SERVER` URI and that your provider allows SMTP from containers |
+| ❌ **401s in tRPC** | Confirm cookies are set and `BETTER_AUTH_URL` matches your external origin |
+
+---
+
+## 🤝 Contributing
+
+PRs are welcome! Before submitting:
+
+✅ Run `bun run check` (Biome linting)  
+✅ Run `bun run typecheck` (TypeScript)  
+✅ Include/update E2E tests where relevant
+
+**Quick demo dataset:**
+
+Add a few symbols to your watchlist and run the Yahoo ingest job; the watchlist add flow also triggers a background ingest for that symbol.
