@@ -38,18 +38,6 @@ model Transaction {
   @@index([userId, symbol])
 }
 
-model Post {
-  id        Int      @id @default(autoincrement())
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  createdBy   User   @relation(fields: [createdById], references: [id])
-  createdById String
-
-  @@index([name])
-}
-
 // Better Auth Account schema
 model Account {
   id                    String    @id @default(cuid())
@@ -99,7 +87,6 @@ model User {
   updatedAt              DateTime           @updatedAt
   accounts               Account[]
   sessions               Session[]
-  posts                  Post[]
   transactions           Transaction[]
   watchlist              WatchlistItem[]
   emailChangeTokens      EmailChangeToken[]
