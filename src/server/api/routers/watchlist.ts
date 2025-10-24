@@ -5,7 +5,47 @@ import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
 import { influxQueryApi, measurement, symbolHasAnyData } from '@/server/influx';
 import { ingestYahooSymbol } from '@/server/jobs/yahoo-lib';
 
+/**
+ * Watchlist router - manages user watchlists and market data.
+ * All procedures require authentication (protectedProcedure).
+ *
+ * Features:
+ * - Add/remove symbols from watchlist
+ * - Retrieve historical price data from InfluxDB
+ * - Corporate events (dividends, splits, capital gains)
+ * - Symbol search via Finnhub API
+ * - Star/favorite symbols (max 5)
+ *
+ * @example
+ * // Add a symbol to watchlist
+ * await api.watchlist.add.mutate({ symbol: 'AAPL' });
+ *
+ * @example
+ * // Get price history
+ * const data = await api.watchlist.history.query({
+ *   symbols: ['AAPL', 'MSFT'],
+ *   days: 90
+ * });
+ */
 export const watchlistRouter = createTRPCRouter({
+	/**
+	 * Adds a symbol to the user's watchlist.
+	 * Creates or updates the watchlist item. Triggers background ingestion if no data exists.
+	 *
+	 * @input symbol - Stock symbol (required)
+	 * @input displaySymbol - Optional display name
+	 * @input description - Optional description
+	 * @input type - Optional security type
+	 *
+	 * @returns Created watchlist item or {alreadyExists: true}
+	 *
+	 * @example
+	 * await api.watchlist.add.mutate({
+	 *   symbol: 'AAPL',
+	 *   displaySymbol: 'Apple Inc.',
+	 *   description: 'Technology company'
+	 * });
+	 */
 	add: protectedProcedure
 		.input(
 			z.object({
@@ -47,6 +87,22 @@ export const watchlistRouter = createTRPCRouter({
 			return result ?? { alreadyExists: !created };
 		}),
 
+	/**
+	 * Retrieves corporate events for specified symbols or user's watchlist.
+	 * Returns dividends, stock splits, and capital gains distributions.
+	 *
+	 * @input symbols - Optional array of symbols (default: user's top 5 starred/recent)
+	 * @input days - Lookback period in days (default: 365, min: 1)
+	 *
+	 * @returns Events object keyed by symbol with dividends, splits, capitalGains arrays
+	 *
+	 * @example
+	 * const result = await api.watchlist.events.query({
+	 *   symbols: ['AAPL', 'MSFT'],
+	 *   days: 180
+	 * });
+	 * result.events['AAPL'].dividends.forEach(d => console.log(d.date, d.amount));
+	 */
 	// Corporate events per symbol (dividends, splits, capital gains)
 	events: protectedProcedure
 		.input(
@@ -167,6 +223,24 @@ export const watchlistRouter = createTRPCRouter({
 			return { events } as const;
 		}),
 
+	/**
+	 * Retrieves historical daily price series from InfluxDB.
+	 * Supports adaptive aggregation for large date ranges.
+	 *
+	 * @input symbols - Optional array of symbols (default: user's top 5 starred/recent)
+	 * @input days - Lookback period in days (default: 90, min: 1)
+	 * @input field - Price field to retrieve (default: 'close', options: open/high/low/close)
+	 *
+	 * @returns Series object keyed by symbol with array of {date, value} points
+	 *
+	 * @example
+	 * const result = await api.watchlist.history.query({
+	 *   symbols: ['AAPL'],
+	 *   days: 365,
+	 *   field: 'close'
+	 * });
+	 * result.series['AAPL'].forEach(p => console.log(p.date, p.value));
+	 */
 	// Historical daily series from InfluxDB (default: close). If no symbols provided, use user's watchlist.
 	history: protectedProcedure
 		.input(
@@ -239,6 +313,16 @@ export const watchlistRouter = createTRPCRouter({
 			}
 			return { series } as const;
 		}),
+	/**
+	 * Lists all symbols in the user's watchlist.
+	 * Ordered by starred status (starred first), then creation date (newest first).
+	 *
+	 * @returns Array of watchlist items
+	 *
+	 * @example
+	 * const items = await api.watchlist.list.query();
+	 * items.forEach(item => console.log(item.symbol, item.starred));
+	 */
 	list: protectedProcedure.query(async ({ ctx }) => {
 		const userId = ctx.session.user.id;
 		return ctx.db.watchlistItem.findMany({
@@ -247,6 +331,18 @@ export const watchlistRouter = createTRPCRouter({
 		});
 	}),
 
+	/**
+	 * Removes a symbol from the user's watchlist.
+	 * Prevents removal if the symbol has associated transactions.
+	 *
+	 * @input symbol - Symbol to remove (min 1 character)
+	 *
+	 * @throws {TRPCError} BAD_REQUEST - If symbol has transactions
+	 * @returns {success: true}
+	 *
+	 * @example
+	 * await api.watchlist.remove.mutate({ symbol: 'AAPL' });
+	 */
 	remove: protectedProcedure.input(z.object({ symbol: z.string().min(1) })).mutation(async ({ ctx, input }) => {
 		const userId = ctx.session.user.id;
 		const hasTx = await ctx.db.transaction.findFirst({
@@ -262,6 +358,19 @@ export const watchlistRouter = createTRPCRouter({
 		return { success: true } as const;
 	}),
 
+	/**
+	 * Searches for symbols using Finnhub API.
+	 *
+	 * @input q - Search query (min 1 character)
+	 *
+	 * @returns Search results with count and result array containing symbol, displaySymbol, description, type
+	 *
+	 * @throws {Error} If Finnhub API fails
+	 *
+	 * @example
+	 * const results = await api.watchlist.search.query({ q: 'apple' });
+	 * results.result.forEach(r => console.log(r.symbol, r.description));
+	 */
 	search: protectedProcedure.input(z.object({ q: z.string().min(1) })).query(async ({ input }) => {
 		const url = new URL(`${env.FINNHUB_API_URL}/search`);
 		url.searchParams.set('q', input.q);
@@ -287,6 +396,19 @@ export const watchlistRouter = createTRPCRouter({
 
 		return data;
 	}),
+	/**
+	 * Toggles the starred status of a watchlist item.
+	 * Enforces a maximum of 5 starred items per user.
+	 *
+	 * @input symbol - Symbol to toggle (min 1 character)
+	 * @input starred - Optional explicit star value (if omitted, toggles current)
+	 *
+	 * @throws {TRPCError} BAD_REQUEST - If trying to star more than 5 items
+	 * @returns {starred: boolean, symbol: string}
+	 *
+	 * @example
+	 * await api.watchlist.toggleStar.mutate({ symbol: 'AAPL', starred: true });
+	 */
 	toggleStar: protectedProcedure
 		.input(z.object({ starred: z.boolean().optional(), symbol: z.string().min(1) }))
 		.mutation(async ({ ctx, input }) => {

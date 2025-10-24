@@ -10,6 +10,10 @@ type Holding = {
 	quantity: number;
 };
 
+/**
+ * Fetches the latest closing prices for an array of symbols from InfluxDB.
+ * @internal
+ */
 async function getLatestCloses(symbols: string[]): Promise<Record<string, number | null>> {
 	if (symbols.length === 0) return {};
 	// Build a single Flux query to fetch the latest close per symbol
@@ -32,7 +36,47 @@ async function getLatestCloses(symbols: string[]): Promise<Record<string, number
 	return out;
 }
 
+/**
+ * Portfolio router - provides portfolio analytics and performance metrics.
+ * All procedures require authentication (protectedProcedure).
+ *
+ * @example
+ * // Get portfolio structure
+ * const structure = await api.portfolio.structure.query({ currency: 'USD' });
+ *
+ * @example
+ * // Get performance metrics
+ * const perf = await api.portfolio.performance.query({
+ *   from: '2024-01-01',
+ *   to: '2024-12-31',
+ *   currency: 'USD'
+ * });
+ */
 export const portfolioRouter = createTRPCRouter({
+	/**
+	 * Calculates portfolio performance metrics over a date range.
+	 * Computes time-weighted return (TWR), money-weighted return (MWR), and daily NAV.
+	 * Uses historical prices from InfluxDB and transaction data.
+	 *
+	 * @input from - Start date (ISO yyyy-mm-dd)
+	 * @input to - End date (ISO yyyy-mm-dd)
+	 * @input currency - Target currency for valuations (default: USD)
+	 *
+	 * @returns Performance object with:
+	 *   - points: Array of daily {date, netAssets, yieldTwr, yieldMwr}
+	 *   - totalReturnTwr: Total TWR (%)
+	 *   - totalReturnMwr: Total MWR (%)
+	 *   - prevDayReturnTwr: Previous day TWR change (%)
+	 *   - prevDayReturnMwr: Previous day MWR change (%)
+	 *
+	 * @example
+	 * const perf = await api.portfolio.performance.query({
+	 *   from: '2024-01-01',
+	 *   to: '2024-12-31',
+	 *   currency: 'USD'
+	 * });
+	 * console.log('Total return:', perf.totalReturnTwr);
+	 */
 	performance: protectedProcedure
 		.input(
 			z.object({
@@ -286,6 +330,23 @@ export const portfolioRouter = createTRPCRouter({
 			const res = { points, prevDayReturnMwr, prevDayReturnTwr, totalReturnMwr, totalReturnTwr } as const;
 			return res;
 		}),
+	/**
+	 * Retrieves the current portfolio structure with holdings breakdown.
+	 * Shows quantity, current value, average cost, and portfolio weight for each position.
+	 * Converts all values to the target currency using current FX rates.
+	 *
+	 * @input currency - Target currency for valuations (default: USD)
+	 *
+	 * @returns Structure object with:
+	 *   - items: Array of holdings with {symbol, quantity, price, value, avgCost, totalCost, weight}
+	 *   - totalValue: Total portfolio value in target currency
+	 *
+	 * @example
+	 * const structure = await api.portfolio.structure.query({ currency: 'EUR' });
+	 * structure.items.forEach(item => {
+	 *   console.log(`${item.symbol}: ${item.quantity} shares, ${item.weight*100}% of portfolio`);
+	 * });
+	 */
 	structure: protectedProcedure
 		.input(
 			z.object({

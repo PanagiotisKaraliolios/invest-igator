@@ -7,7 +7,32 @@ import { auth } from '@/lib/auth';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
 import { sendVerificationRequest } from '@/server/auth/send-verification-request';
 
+/**
+ * Account router - handles user account management operations.
+ * All procedures require authentication (protectedProcedure).
+ *
+ * @example
+ * // Get current user profile
+ * const user = await api.account.getMe.query();
+ *
+ * @example
+ * // Change password
+ * await api.account.changePassword.mutate({
+ *   currentPassword: 'oldpass',
+ *   newPassword: 'newpass'
+ * });
+ */
 export const accountRouter = createTRPCRouter({
+	/**
+	 * Cancels an in-progress two-factor authentication setup.
+	 * Deletes pending TwoFactor records when 2FA is not yet enabled.
+	 *
+	 * @throws {TRPCError} BAD_REQUEST - If 2FA is already enabled
+	 * @returns {ok: true} Success indicator
+	 *
+	 * @example
+	 * await api.account.cancelTwoFactorSetup.mutate();
+	 */
 	cancelTwoFactorSetup: protectedProcedure.mutation(async ({ ctx }) => {
 		const userId = ctx.session.user.id;
 		const user = await ctx.db.user.findUnique({
@@ -30,6 +55,23 @@ export const accountRouter = createTRPCRouter({
 
 		return { ok: true } as const;
 	}),
+	/**
+	 * Changes the user's password after verifying the current password.
+	 * Only available for credential accounts (not OAuth).
+	 *
+	 * @input currentPassword - The user's current password
+	 * @input newPassword - The new password (min 8, max 200 characters)
+	 *
+	 * @throws {TRPCError} BAD_REQUEST - If password change not available or new password same as current
+	 * @throws {TRPCError} UNAUTHORIZED - If current password is incorrect
+	 * @returns {ok: true} Success indicator
+	 *
+	 * @example
+	 * await api.account.changePassword.mutate({
+	 *   currentPassword: 'oldpass123',
+	 *   newPassword: 'newpass456'
+	 * });
+	 */
 	changePassword: protectedProcedure
 		.input(
 			z.object({
@@ -66,6 +108,20 @@ export const accountRouter = createTRPCRouter({
 			return { ok: true } as const;
 		}),
 
+	/**
+	 * Confirms an email change using a verification token.
+	 * Updates the user's email and marks it as verified.
+	 *
+	 * @input token - The email change verification token
+	 *
+	 * @throws {TRPCError} NOT_FOUND - If token is invalid
+	 * @throws {TRPCError} BAD_REQUEST - If token is expired
+	 * @throws {TRPCError} CONFLICT - If new email is already in use
+	 * @returns {ok: true} Success indicator
+	 *
+	 * @example
+	 * await api.account.confirmEmailChange.mutate({ token: 'abc123...' });
+	 */
 	confirmEmailChange: protectedProcedure
 		.input(z.object({ token: z.string().min(10) }))
 		.mutation(async ({ ctx, input }) => {
@@ -93,12 +149,36 @@ export const accountRouter = createTRPCRouter({
 			return { ok: true } as const;
 		}),
 
+	/**
+	 * Permanently deletes the user's account and all associated data.
+	 * Cascade relations are handled by the Prisma schema.
+	 *
+	 * @input confirm - Must be true to proceed with deletion
+	 *
+	 * @returns {ok: true} Success indicator
+	 *
+	 * @example
+	 * await api.account.deleteAccount.mutate({ confirm: true });
+	 */
 	deleteAccount: protectedProcedure.input(z.object({ confirm: z.literal(true) })).mutation(async ({ ctx }) => {
 		// Cascade relations are set in Prisma schema
 		await ctx.db.user.delete({ where: { id: ctx.session.user.id } });
 		return { ok: true } as const;
 	}),
 
+	/**
+	 * Disconnects an OAuth provider account from the user.
+	 * Prevents removing the last authentication method.
+	 *
+	 * @input accountId - The ID of the OAuth account to disconnect
+	 *
+	 * @throws {TRPCError} NOT_FOUND - If account not found
+	 * @throws {TRPCError} BAD_REQUEST - If trying to remove the only sign-in method
+	 * @returns {ok: true} Success indicator
+	 *
+	 * @example
+	 * await api.account.disconnectOAuthAccount.mutate({ accountId: 'account_123' });
+	 */
 	disconnectOAuthAccount: protectedProcedure
 		.input(z.object({ accountId: z.string().min(1) }))
 		.mutation(async ({ ctx, input }) => {
@@ -129,6 +209,17 @@ export const accountRouter = createTRPCRouter({
 			return { ok: true } as const;
 		}),
 
+	/**
+	 * Retrieves the current user's profile information.
+	 * Includes email, verification status, avatar, and password status.
+	 *
+	 * @throws {TRPCError} NOT_FOUND - If user not found
+	 * @returns User profile object with id, email, name, avatar, emailVerified, hasPassword
+	 *
+	 * @example
+	 * const user = await api.account.getMe.query();
+	 * console.log(user.email, user.hasPassword);
+	 */
 	getMe: protectedProcedure.query(async ({ ctx }) => {
 		const user = await ctx.db.user.findUnique({
 			select: {
@@ -158,6 +249,19 @@ export const accountRouter = createTRPCRouter({
 		} as const;
 	}),
 
+	/**
+	 * Retrieves the user's two-factor authentication state.
+	 * Includes enabled status, pending setup, secret existence, and recovery codes count.
+	 *
+	 * @throws {TRPCError} NOT_FOUND - If user not found
+	 * @returns TwoFactor state with enabled, pending, hasSecret, hasPassword, recoveryCodesRemaining, confirmedAt
+	 *
+	 * @example
+	 * const twoFactorState = await api.account.getTwoFactorState.query();
+	 * if (twoFactorState.enabled) {
+	 *   console.log('2FA is active');
+	 * }
+	 */
 	getTwoFactorState: protectedProcedure.query(async ({ ctx }) => {
 		const user = await ctx.db.user.findUnique({
 			select: {
@@ -214,6 +318,16 @@ export const accountRouter = createTRPCRouter({
 		} as const;
 	}),
 
+	/**
+	 * Lists all OAuth provider accounts connected to the user.
+	 * Excludes credential-based accounts.
+	 *
+	 * @returns Array of OAuth accounts with id, providerId, accountId
+	 *
+	 * @example
+	 * const oauthAccounts = await api.account.listOAuthAccounts.query();
+	 * oauthAccounts.forEach(acc => console.log(acc.providerId));
+	 */
 	listOAuthAccounts: protectedProcedure.query(async ({ ctx }) => {
 		const accounts = await ctx.db.account.findMany({
 			select: { accountId: true, id: true, providerId: true },
@@ -222,6 +336,25 @@ export const accountRouter = createTRPCRouter({
 		return accounts;
 	}),
 
+	/**
+	 * Initiates an email change request by sending a verification email.
+	 * Requires current password if user has one set.
+	 *
+	 * @input newEmail - The new email address
+	 * @input currentPassword - Current password (required if password is set)
+	 *
+	 * @throws {TRPCError} NOT_FOUND - If user not found
+	 * @throws {TRPCError} BAD_REQUEST - If current password required but not provided
+	 * @throws {TRPCError} UNAUTHORIZED - If current password is incorrect
+	 * @throws {TRPCError} CONFLICT - If new email is already in use
+	 * @returns {ok: true} Success indicator
+	 *
+	 * @example
+	 * await api.account.requestEmailChange.mutate({
+	 *   newEmail: 'newemail@example.com',
+	 *   currentPassword: 'mypassword'
+	 * });
+	 */
 	requestEmailChange: protectedProcedure
 		.input(z.object({ currentPassword: z.string().optional(), newEmail: z.string().email() }))
 		.mutation(async ({ ctx, input }) => {
@@ -295,6 +428,12 @@ export const accountRouter = createTRPCRouter({
 	 * Better Auth handles the verification at /api/auth/verify-email
 	 *
 	 * This can be removed once all clients are migrated to Better Auth.
+	 *
+	 * Sends an email verification link to the user's email address.
+	 * Only needed if email is not yet verified.
+	 *
+	 * @throws {TRPCError} BAD_REQUEST - If no email on file
+	 * @returns {ok: true} Success indicator
 	 */
 	requestEmailVerification: protectedProcedure.mutation(async ({ ctx }) => {
 		const userId = ctx.session.user.id;
@@ -334,6 +473,19 @@ export const accountRouter = createTRPCRouter({
 		return { ok: true } as const;
 	}),
 
+	/**
+	 * Sets a password for a user account that doesn't have one (OAuth users).
+	 * Creates or updates a credential account with the hashed password.
+	 *
+	 * @input newPassword - The password to set (min 8, max 200 characters)
+	 *
+	 * @throws {TRPCError} NOT_FOUND - If user not found
+	 * @throws {TRPCError} BAD_REQUEST - If password already set or email missing
+	 * @returns {ok: true} Success indicator
+	 *
+	 * @example
+	 * await api.account.setPassword.mutate({ newPassword: 'securepass123' });
+	 */
 	setPassword: protectedProcedure
 		.input(
 			z.object({
@@ -389,6 +541,21 @@ export const accountRouter = createTRPCRouter({
 			return { ok: true } as const;
 		}),
 
+	/**
+	 * Updates the user's profile information (name and avatar).
+	 * Empty string for image removes the avatar.
+	 *
+	 * @input name - Display name (1-100 characters, required)
+	 * @input image - Avatar URL or empty string to remove
+	 *
+	 * @returns {ok: true} Success indicator
+	 *
+	 * @example
+	 * await api.account.updateProfile.mutate({
+	 *   name: 'John Doe',
+	 *   image: 'https://example.com/avatar.jpg'
+	 * });
+	 */
 	updateProfile: protectedProcedure
 		.input(
 			z.object({
@@ -405,6 +572,21 @@ export const accountRouter = createTRPCRouter({
 			return { ok: true } as const;
 		}),
 
+	/**
+	 * Uploads a profile picture from a data URL.
+	 * Compresses and resizes to 512x512 JPEG, then uploads to R2 storage.
+	 *
+	 * @input dataUrl - Base64-encoded image data URL (png, jpeg, jpg, gif, webp)
+	 *
+	 * @throws {TRPCError} INTERNAL_SERVER_ERROR - If upload fails
+	 * @returns {url: string} URL of the uploaded profile picture
+	 *
+	 * @example
+	 * const result = await api.account.uploadProfilePicture.mutate({
+	 *   dataUrl: 'data:image/jpeg;base64,...'
+	 * });
+	 * console.log('Uploaded to:', result.url);
+	 */
 	uploadProfilePicture: protectedProcedure
 		.input(
 			z.object({

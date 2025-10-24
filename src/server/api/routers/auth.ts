@@ -6,11 +6,52 @@ import { env } from '@/env';
 import { createTRPCRouter, protectedProcedure, publicProcedure } from '@/server/api/trpc';
 import { sendVerificationRequest } from '@/server/auth/send-verification-request';
 
+/**
+ * Auth router - handles authentication operations.
+ * All procedures are public (no authentication required).
+ *
+ * @example
+ * // Check if email exists
+ * const result = await api.auth.checkEmail.mutate('user@example.com');
+ *
+ * @example
+ * // Sign up a new user
+ * await api.auth.signup.mutate({
+ *   email: 'user@example.com',
+ *   password: 'securepass',
+ *   name: 'John Doe'
+ * });
+ */
 export const authRouter = createTRPCRouter({
+	/**
+	 * Checks if an email address is already registered.
+	 * Used for account enumeration prevention and form validation.
+	 *
+	 * @input Email address to check
+	 *
+	 * @returns {exists: boolean} Whether the email is registered
+	 *
+	 * @example
+	 * const result = await api.auth.checkEmail.mutate('user@example.com');
+	 * if (result.exists) {
+	 *   console.log('Email already in use');
+	 * }
+	 */
 	checkEmail: publicProcedure.input(z.email()).mutation(async ({ ctx, input }) => {
 		const user = await ctx.db.user.findUnique({ where: { email: input } });
 		return { exists: Boolean(user) } as const;
 	}),
+	/**
+	 * Initiates a password reset request.
+	 * Sends a reset link to the user's email. Always returns success to prevent account enumeration.
+	 *
+	 * @input email - Email address for password reset
+	 *
+	 * @returns {ok: true} Always returns success (even if email not found)
+	 *
+	 * @example
+	 * await api.auth.requestPasswordReset.mutate({ email: 'user@example.com' });
+	 */
 	requestPasswordReset: publicProcedure.input(z.object({ email: z.email() })).mutation(async ({ ctx, input }) => {
 		const email = input.email.trim().toLowerCase();
 		const user = await ctx.db.user.findUnique({ select: { id: true }, where: { email } });
@@ -44,6 +85,23 @@ export const authRouter = createTRPCRouter({
 		return { ok: true } as const;
 	}),
 
+	/**
+	 * Resets a user's password using a valid token.
+	 * Validates the token, checks expiration, and updates the password hash.
+	 *
+	 * @input token - Password reset token from email
+	 * @input password - New password (min 8, max 200 characters)
+	 *
+	 * @throws {TRPCError} NOT_FOUND - If token is invalid or user not found
+	 * @throws {TRPCError} BAD_REQUEST - If token is expired or wrong type
+	 * @returns {ok: true} Success indicator
+	 *
+	 * @example
+	 * await api.auth.resetPassword.mutate({
+	 *   token: 'reset_token_from_email',
+	 *   password: 'newpassword123'
+	 * });
+	 */
 	resetPassword: publicProcedure
 		.input(
 			z.object({
@@ -77,6 +135,25 @@ export const authRouter = createTRPCRouter({
 			return { ok: true } as const;
 		}),
 
+	/**
+	 * Creates a new user account with email and password.
+	 * Hashes the password with pepper and stores user credentials.
+	 *
+	 * @input email - User's email address (validated)
+	 * @input password - User's password (min 1 character)
+	 * @input name - User's display name (min 1 character)
+	 * @input confirmPassword - Optional confirmation field (accepted but ignored)
+	 *
+	 * @throws {TRPCError} CONFLICT - If email already exists
+	 * @returns {ok: true} Success indicator
+	 *
+	 * @example
+	 * await api.auth.signup.mutate({
+	 *   email: 'newuser@example.com',
+	 *   password: 'securepassword',
+	 *   name: 'John Doe'
+	 * });
+	 */
 	signup: publicProcedure
 		.input(
 			z.object({
