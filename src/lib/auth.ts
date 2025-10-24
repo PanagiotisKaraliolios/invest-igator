@@ -1,7 +1,7 @@
 import * as bcrypt from 'bcryptjs';
 import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
-import { magicLink, twoFactor } from 'better-auth/plugins';
+import { magicLink, openAPI, twoFactor } from 'better-auth/plugins';
 import { createTransport } from 'nodemailer';
 import { env } from '@/env';
 import { db } from '@/server/db';
@@ -86,6 +86,9 @@ export const auth = betterAuth({
 		}
 	},
 	plugins: [
+		openAPI({
+			path: '/reference' // Will be served at /api/auth/reference
+		}),
 		magicLink({
 			disableSignUp: true, // Only allow existing users to login via magic link
 			expiresIn: 60 * 5, // 5 minutes
