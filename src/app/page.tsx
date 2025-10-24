@@ -205,6 +205,11 @@ export default async function Home() {
 										Portfolio
 									</Link>
 								</li>
+								<li>
+									<Link className='hover:text-foreground' href='/docs' target='_blank'>
+										API Documentation
+									</Link>
+								</li>
 							</ul>
 						</div>
 
