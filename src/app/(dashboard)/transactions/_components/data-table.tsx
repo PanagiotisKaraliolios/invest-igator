@@ -2,7 +2,16 @@
 
 import type { ColumnDef, SortingState, VisibilityState } from '@tanstack/react-table';
 import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
-import { ChevronDownIcon, DownloadIcon, Loader2, Search, Upload as UploadIcon } from 'lucide-react';
+import {
+	ArrowDown,
+	ArrowUp,
+	ArrowUpDown,
+	ChevronDownIcon,
+	DownloadIcon,
+	Loader2,
+	Search,
+	Upload as UploadIcon
+} from 'lucide-react';
 import * as React from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import type { DateRange } from 'react-day-picker';
@@ -401,9 +410,34 @@ export function DataTable<TData extends { id?: string }, TValue>({ columns }: Da
 									const isNumeric = numericColumns.has(header.column.id);
 									return (
 										<TableHead className={isNumeric ? 'text-right' : undefined} key={header.id}>
-											{header.isPlaceholder
-												? null
-												: flexRender(header.column.columnDef.header, header.getContext())}
+											{header.isPlaceholder ? null : header.column.getCanSort() ? (
+												<div
+													className='flex cursor-pointer select-none items-center gap-1 hover:text-foreground'
+													onClick={header.column.getToggleSortingHandler()}
+													style={isNumeric ? { justifyContent: 'flex-end' } : undefined}
+												>
+													{flexRender(header.column.columnDef.header, header.getContext())}
+													{!header.column.getIsSorted() && (
+														<ArrowUpDown className='h-4 w-4' />
+													)}
+													{{
+														asc: (
+															<ArrowUp
+																aria-label='Sorted ascending'
+																className='h-4 w-4'
+															/>
+														),
+														desc: (
+															<ArrowDown
+																aria-label='Sorted descending'
+																className='h-4 w-4'
+															/>
+														)
+													}[header.column.getIsSorted() as string] ?? null}
+												</div>
+											) : (
+												flexRender(header.column.columnDef.header, header.getContext())
+											)}
 										</TableHead>
 									);
 								})}

@@ -9,7 +9,7 @@ import {
 	type VisibilityState
 } from '@tanstack/react-table';
 import { format, formatDistanceToNow } from 'date-fns';
-import { ChevronDown, Search } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, Search } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { DateRange } from 'react-day-picker';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +25,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useDebounce } from '@/hooks/use-debounce';
 import { api } from '@/trpc/react';
 
 const ACTIONS_CONFIG = {
@@ -59,10 +60,23 @@ export function AuditLogsTable() {
 	const [targetEmail, setTargetEmail] = useState('');
 	const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
+	// Debounce email searches
+	const debouncedAdminEmail = useDebounce(adminEmail, 300);
+	const debouncedTargetEmail = useDebounce(targetEmail, 300);
+
 	// Reset to first page when filters change
 	useEffect(() => {
 		setPageIndex(0);
-	}, [actionFilter, adminEmail, targetEmail, dateRange]);
+	}, [actionFilter, debouncedAdminEmail, debouncedTargetEmail, dateRange, sorting]);
+
+	const sortBy = useMemo(() => {
+		const s = sorting[0];
+		// Only createdAt and action are supported by the backend
+		const allowed = new Set(['createdAt', 'action']);
+		return allowed.has(String(s?.id)) ? (s!.id as 'createdAt' | 'action') : 'createdAt';
+	}, [sorting]);
+
+	const sortDir = sorting[0]?.desc ? 'desc' : 'asc';
 
 	const { data, isLoading, isFetching } = api.admin.getAuditLogs.useQuery({
 		action: actionFilter === 'ALL' ? undefined : actionFilter,
@@ -70,6 +84,8 @@ export function AuditLogsTable() {
 		endDate: dateRange?.to,
 		limit: pageSize,
 		offset: pageIndex * pageSize,
+		sortBy,
+		sortDir,
 		startDate: dateRange?.from,
 		targetId: undefined
 	});
@@ -100,16 +116,16 @@ export function AuditLogsTable() {
 	// Filter rows by email search (client-side for simplicity)
 	const filteredRows = useMemo(() => {
 		let result = rows;
-		if (adminEmail) {
-			const lower = adminEmail.toLowerCase();
+		if (debouncedAdminEmail) {
+			const lower = debouncedAdminEmail.toLowerCase();
 			result = result.filter((row) => row.adminEmail.toLowerCase().includes(lower));
 		}
-		if (targetEmail) {
-			const lower = targetEmail.toLowerCase();
+		if (debouncedTargetEmail) {
+			const lower = debouncedTargetEmail.toLowerCase();
 			result = result.filter((row) => row.targetEmail?.toLowerCase().includes(lower));
 		}
 		return result;
-	}, [rows, adminEmail, targetEmail]);
+	}, [rows, debouncedAdminEmail, debouncedTargetEmail]);
 
 	const columns: ColumnDef<AuditLog>[] = useMemo(
 		() => [
@@ -123,11 +139,13 @@ export function AuditLogsTable() {
 					};
 					return <Badge variant={actionConfig.variant}>{actionConfig.label}</Badge>;
 				},
+				enableSorting: true,
 				header: 'Action'
 			},
 			{
 				accessorKey: 'adminEmail',
 				cell: ({ row }) => <span className='font-medium'>{row.getValue('adminEmail')}</span>,
+				enableSorting: false,
 				header: 'Admin'
 			},
 			{
@@ -140,6 +158,7 @@ export function AuditLogsTable() {
 						<span className='text-sm text-muted-foreground'>—</span>
 					);
 				},
+				enableSorting: false,
 				header: 'Target User'
 			},
 			{
@@ -152,6 +171,7 @@ export function AuditLogsTable() {
 						<span className='text-sm text-muted-foreground'>—</span>
 					);
 				},
+				enableSorting: false,
 				header: 'Details'
 			},
 			{
@@ -167,6 +187,7 @@ export function AuditLogsTable() {
 						</div>
 					);
 				},
+				enableSorting: true,
 				header: 'Time'
 			}
 		],
@@ -277,9 +298,23 @@ export function AuditLogsTable() {
 							<TableRow key={headerGroup.id}>
 								{headerGroup.headers.map((header) => (
 									<TableHead key={header.id}>
-										{header.isPlaceholder
-											? null
-											: flexRender(header.column.columnDef.header, header.getContext())}
+										{header.isPlaceholder ? null : header.column.getCanSort() ? (
+											<div
+												className='flex cursor-pointer select-none items-center gap-1 hover:text-foreground'
+												onClick={header.column.getToggleSortingHandler()}
+											>
+												{flexRender(header.column.columnDef.header, header.getContext())}
+												{!header.column.getIsSorted() && <ArrowUpDown className='h-4 w-4' />}
+												{{
+													asc: <ArrowUp aria-label='Sorted ascending' className='h-4 w-4' />,
+													desc: (
+														<ArrowDown aria-label='Sorted descending' className='h-4 w-4' />
+													)
+												}[header.column.getIsSorted() as string] ?? null}
+											</div>
+										) : (
+											flexRender(header.column.columnDef.header, header.getContext())
+										)}
 									</TableHead>
 								))}
 							</TableRow>

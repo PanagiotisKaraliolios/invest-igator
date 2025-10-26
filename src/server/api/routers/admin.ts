@@ -160,12 +160,14 @@ export const adminRouter = createTRPCRouter({
 				endDate: z.date().optional(),
 				limit: z.number().min(1).max(100).default(50),
 				offset: z.number().min(0).default(0),
+				sortBy: z.enum(['createdAt', 'action']).default('createdAt'),
+				sortDir: z.enum(['asc', 'desc']).default('desc'),
 				startDate: z.date().optional(),
 				targetId: z.string().optional()
 			})
 		)
 		.query(async ({ input, ctx }) => {
-			const { limit, offset, adminId, targetId, action, startDate, endDate } = input;
+			const { limit, offset, adminId, targetId, action, startDate, endDate, sortBy, sortDir } = input;
 
 			const where = {
 				...(action && { action }),
@@ -183,7 +185,7 @@ export const adminRouter = createTRPCRouter({
 
 			const [logs, total] = await Promise.all([
 				ctx.db.auditLog.findMany({
-					orderBy: { createdAt: 'desc' },
+					orderBy: { [sortBy]: sortDir },
 					skip: offset,
 					take: limit,
 					where
@@ -257,7 +259,9 @@ export const adminRouter = createTRPCRouter({
 				offset: z.number().min(0).default(0),
 				searchField: z.enum(['email', 'name']).optional(),
 				searchOperator: z.enum(['contains', 'starts_with', 'ends_with']).optional(),
-				searchValue: z.string().optional()
+				searchValue: z.string().optional(),
+				sortBy: z.enum(['email', 'name', 'role', 'createdAt']).default('createdAt'),
+				sortDir: z.enum(['asc', 'desc']).default('desc')
 			})
 		)
 		.query(async ({ input, ctx }) => {
@@ -268,7 +272,9 @@ export const adminRouter = createTRPCRouter({
 					offset: input.offset,
 					searchField: input.searchField,
 					searchOperator: input.searchOperator,
-					searchValue: input.searchValue
+					searchValue: input.searchValue,
+					sortBy: input.sortBy,
+					sortDirection: input.sortDir
 				}
 			});
 

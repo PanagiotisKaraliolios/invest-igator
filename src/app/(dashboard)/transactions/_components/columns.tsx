@@ -1,9 +1,7 @@
 'use client';
 
 import type { ColumnDef } from '@tanstack/react-table';
-import { ArrowUpDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import type { Currency } from '@/lib/currency';
 import { formatCurrency as fx } from '@/lib/currency';
@@ -55,22 +53,14 @@ export const columns: ColumnDef<TransactionRow>[] = [
 	{
 		accessorKey: 'date',
 		cell: ({ row }) => formatDate(row.original.date),
-		header: ({ column }) => (
-			<Button onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')} variant='ghost'>
-				Date
-				<ArrowUpDown className='ml-2 size-4' />
-			</Button>
-		),
+		enableSorting: true,
+		header: 'Date',
 		sortingFn: 'datetime'
 	},
 	{
 		accessorKey: 'symbol',
-		header: ({ column }) => (
-			<Button onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')} variant='ghost'>
-				Symbol
-				<ArrowUpDown className='ml-2 size-4' />
-			</Button>
-		)
+		enableSorting: true,
+		header: 'Symbol'
 	},
 	{
 		accessorKey: 'side',
@@ -85,22 +75,14 @@ export const columns: ColumnDef<TransactionRow>[] = [
 	},
 	{
 		accessorKey: 'quantity',
-		header: ({ column }) => (
-			<Button onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')} variant='ghost'>
-				Qty
-				<ArrowUpDown className='ml-2 size-4' />
-			</Button>
-		)
+		enableSorting: true,
+		header: 'Qty'
 	},
 	{
 		accessorKey: 'price',
 		cell: ({ row }) => <CurrencyCell currency={row.original.priceCurrency} value={Number(row.original.price)} />,
-		header: ({ column }) => (
-			<Button onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')} variant='ghost'>
-				Price
-				<ArrowUpDown className='ml-2 size-4' />
-			</Button>
-		)
+		enableSorting: true,
+		header: 'Price'
 	},
 	{
 		cell: ({ row }) => {

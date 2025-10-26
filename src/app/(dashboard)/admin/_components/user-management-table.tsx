@@ -1,8 +1,28 @@
 'use client';
 
-import { Ban, Crown, MoreHorizontal, Search, Shield, Trash2, UserCog, UserRoundCog } from 'lucide-react';
+import {
+	type ColumnDef,
+	flexRender,
+	getCoreRowModel,
+	type SortingState,
+	useReactTable,
+	type VisibilityState
+} from '@tanstack/react-table';
+import {
+	ArrowDown,
+	ArrowUp,
+	ArrowUpDown,
+	Ban,
+	Crown,
+	MoreHorizontal,
+	Search,
+	Shield,
+	Trash2,
+	UserCog,
+	UserRoundCog
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
 	AlertDialog,
@@ -25,17 +45,49 @@ import {
 	DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useDebounce } from '@/hooks/use-debounce';
 import { authClient, useSession } from '@/lib/auth-client';
 import { api } from '@/trpc/react';
+
+type User = {
+	id: string;
+	email: string;
+	name: string | null;
+	role: string;
+	banned: boolean;
+	emailVerified: boolean;
+	createdAt: string;
+};
 
 export function UserManagementTable() {
 	const router = useRouter();
 	const session = useSession();
 	const [searchQuery, setSearchQuery] = useState('');
-	const [currentPage, setCurrentPage] = useState(1);
 	const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
-	const pageSize = 10;
+	const [sorting, setSorting] = useState<SortingState>([{ desc: false, id: 'createdAt' }]);
+	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+	const [pageIndex, setPageIndex] = useState(0);
+	const [pageSize, setPageSize] = useState(10);
+
+	// Debounce search query
+	const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
+	// Reset to first page when filters or sorting change
+	useEffect(() => {
+		setPageIndex(0);
+	}, [debouncedSearchQuery, sorting]);
+
+	const sortBy = useMemo(() => {
+		const s = sorting[0];
+		// Only email, name, role, and createdAt are supported by the backend
+		const allowed = new Set(['email', 'name', 'role', 'createdAt']);
+		return allowed.has(String(s?.id)) ? (s!.id as 'email' | 'name' | 'role' | 'createdAt') : 'createdAt';
+	}, [sorting]);
+
+	const sortDir = sorting[0]?.desc ? 'desc' : 'asc';
 
 	const utils = api.useUtils();
 
@@ -44,17 +96,20 @@ export function UserManagementTable() {
 	const isSuperadmin = currentUser?.role === 'superadmin';
 
 	// Query for users list
-	const { data, isLoading } = api.admin.listUsers.useQuery({
+	const { data, isLoading, isFetching } = api.admin.listUsers.useQuery({
 		limit: pageSize,
-		offset: (currentPage - 1) * pageSize,
+		offset: pageIndex * pageSize,
 		searchField: 'email',
 		searchOperator: 'contains',
-		searchValue: searchQuery || undefined
+		searchValue: debouncedSearchQuery || undefined,
+		sortBy,
+		sortDir
 	});
 
-	const users = data?.users ?? [];
+	const users: User[] = useMemo(() => data?.users ?? [], [data]);
 	const total = data?.total ?? 0;
-	const totalPages = Math.ceil(total / pageSize);
+
+	const showSkeletons = isLoading || (isFetching && users.length === 0);
 
 	// Mutations
 	const setRoleMutation = api.admin.setRole.useMutation({
@@ -106,10 +161,6 @@ export function UserManagementTable() {
 		}
 	});
 
-	const handleSearch = () => {
-		setCurrentPage(1);
-	};
-
 	const handleSetRole = (userId: string, newRole: 'superadmin' | 'admin' | 'user') => {
 		setRoleMutation.mutate({ role: newRole, userId });
 	};
@@ -144,222 +195,304 @@ export function UserManagementTable() {
 			console.error('Impersonation error:', error);
 		}
 	};
+
+	const columns: ColumnDef<User>[] = useMemo(
+		() => [
+			{
+				accessorKey: 'email',
+				cell: ({ row }) => <span className='font-medium'>{row.getValue('email')}</span>,
+				enableSorting: true,
+				header: 'Email'
+			},
+			{
+				accessorKey: 'name',
+				cell: ({ row }) => {
+					const name = row.getValue('name') as string | null;
+					return name || '-';
+				},
+				enableSorting: true,
+				header: 'Name'
+			},
+			{
+				accessorKey: 'role',
+				cell: ({ row }) => {
+					const role = row.getValue('role') as string;
+					return (
+						<Badge variant={role === 'superadmin' || role === 'admin' ? 'default' : 'outline'}>
+							{role === 'superadmin' && <Crown className='mr-1 size-3' />}
+							{role}
+						</Badge>
+					);
+				},
+				enableSorting: true,
+				header: 'Role'
+			},
+			{
+				accessorKey: 'banned',
+				cell: ({ row }) => {
+					const banned = row.getValue('banned') as boolean;
+					return banned ? (
+						<Badge variant='destructive'>Banned</Badge>
+					) : (
+						<Badge variant='outline'>Active</Badge>
+					);
+				},
+				enableSorting: false,
+				header: 'Status'
+			},
+			{
+				accessorKey: 'emailVerified',
+				cell: ({ row }) => {
+					const verified = row.getValue('emailVerified') as boolean;
+					return verified ? <Badge variant='outline'>✓</Badge> : <Badge variant='secondary'>Pending</Badge>;
+				},
+				enableSorting: false,
+				header: 'Verified'
+			},
+			{
+				accessorKey: 'createdAt',
+				cell: ({ row }) => {
+					const date = row.getValue('createdAt') as string;
+					return new Date(date).toLocaleDateString();
+				},
+				enableSorting: true,
+				header: 'Joined'
+			},
+			{
+				cell: ({ row }) => {
+					const user = row.original;
+					// Admins cannot perform any actions on superadmin accounts
+					if (user.role === 'superadmin' && !isSuperadmin) {
+						return (
+							<Button disabled size='icon' variant='ghost'>
+								<MoreHorizontal className='size-4' />
+								<span className='sr-only'>No actions available</span>
+							</Button>
+						);
+					}
+
+					return (
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button size='icon' variant='ghost'>
+									<MoreHorizontal className='size-4' />
+									<span className='sr-only'>Actions</span>
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align='end'>
+								<DropdownMenuLabel>Actions</DropdownMenuLabel>
+
+								{/* Only superadmins can promote to superadmin */}
+								{isSuperadmin && user.role !== 'superadmin' && user.id !== currentUser?.id && (
+									<>
+										<DropdownMenuSeparator />
+										<DropdownMenuItem onClick={() => handleSetRole(user.id, 'superadmin')}>
+											<Crown className='mr-2 size-4' />
+											Make Superadmin
+										</DropdownMenuItem>
+									</>
+								)}
+
+								{/* Only superadmins can change admin roles */}
+								{isSuperadmin && user.role !== 'admin' && user.id !== currentUser?.id && (
+									<DropdownMenuItem onClick={() => handleSetRole(user.id, 'admin')}>
+										<Shield className='mr-2 size-4' />
+										Make Admin
+									</DropdownMenuItem>
+								)}
+
+								{/* Demote to user - cannot demote yourself */}
+								{user.role !== 'user' && user.id !== currentUser?.id && (
+									<DropdownMenuItem onClick={() => handleSetRole(user.id, 'user')}>
+										<UserCog className='mr-2 size-4' />
+										Make User
+									</DropdownMenuItem>
+								)}
+
+								{/* Ban/Unban - cannot ban yourself */}
+								{user.id !== currentUser?.id &&
+									(user.banned ? (
+										<DropdownMenuItem onClick={() => handleUnbanUser(user.id)}>
+											<UserCog className='mr-2 size-4' />
+											Unban User
+										</DropdownMenuItem>
+									) : (
+										<>
+											<DropdownMenuSeparator />
+											<DropdownMenuItem onClick={() => handleBanUser(user.id)}>
+												<Ban className='mr-2 size-4' />
+												Ban User
+											</DropdownMenuItem>
+										</>
+									))}
+
+								{/* Impersonate user - cannot impersonate yourself or superadmins */}
+								{user.id !== currentUser?.id && user.role !== 'superadmin' && (
+									<>
+										<DropdownMenuSeparator />
+										<DropdownMenuItem onClick={() => handleImpersonateUser(user.id)}>
+											<UserRoundCog className='mr-2 size-4' />
+											Impersonate User
+										</DropdownMenuItem>
+									</>
+								)}
+
+								{/* Delete user - cannot delete yourself */}
+								{user.id !== currentUser?.id && (
+									<>
+										<DropdownMenuSeparator />
+										<DropdownMenuItem
+											className='text-destructive'
+											onClick={() => setDeleteUserId(user.id)}
+										>
+											<Trash2 className='mr-2 size-4' />
+											Delete User
+										</DropdownMenuItem>
+									</>
+								)}
+							</DropdownMenuContent>
+						</DropdownMenu>
+					);
+				},
+				enableSorting: false,
+				header: () => <div className='text-right'>Actions</div>,
+				id: 'actions'
+			}
+		],
+		[currentUser?.id, isSuperadmin]
+	);
+
+	const table = useReactTable({
+		columns,
+		data: users,
+		getCoreRowModel: getCoreRowModel(),
+		manualPagination: true,
+		manualSorting: true,
+		onColumnVisibilityChange: setColumnVisibility,
+		onPaginationChange: (updater) => {
+			const next = typeof updater === 'function' ? updater({ pageIndex, pageSize }) : updater;
+			setPageIndex(next.pageIndex);
+			setPageSize(next.pageSize);
+		},
+		onSortingChange: setSorting,
+		pageCount: data ? Math.ceil(total / pageSize) : -1,
+		state: {
+			columnVisibility,
+			pagination: { pageIndex, pageSize },
+			sorting
+		}
+	});
+
 	return (
 		<div className='space-y-4'>
 			<div className='flex items-center gap-2'>
-				<div className='relative flex-1'>
+				<div className='relative w-full sm:w-[300px]'>
 					<Search className='absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground' />
 					<Input
 						className='pl-9'
 						data-testid='admin-user-search'
 						onChange={(e) => setSearchQuery(e.target.value)}
-						onKeyDown={(e) => {
-							if (e.key === 'Enter') handleSearch();
-						}}
 						placeholder='Search users by email...'
 						value={searchQuery}
 					/>
 				</div>
-				<Button data-testid='admin-search-button' onClick={handleSearch}>
-					Search
-				</Button>
 			</div>
 
 			<div className='rounded-md border'>
 				<Table>
 					<TableHeader>
-						<TableRow>
-							<TableHead>Email</TableHead>
-							<TableHead>Name</TableHead>
-							<TableHead>Role</TableHead>
-							<TableHead>Status</TableHead>
-							<TableHead>Verified</TableHead>
-							<TableHead>Joined</TableHead>
-							<TableHead className='text-right'>Actions</TableHead>
-						</TableRow>
+						{table.getHeaderGroups().map((headerGroup) => (
+							<TableRow key={headerGroup.id}>
+								{headerGroup.headers.map((header) => {
+									const isActions = header.id === 'actions';
+									return (
+										<TableHead className={isActions ? 'text-right' : undefined} key={header.id}>
+											{header.isPlaceholder ? null : header.column.getCanSort() ? (
+												<div
+													className='flex cursor-pointer select-none items-center gap-1 hover:text-foreground'
+													onClick={header.column.getToggleSortingHandler()}
+												>
+													{flexRender(header.column.columnDef.header, header.getContext())}
+													{!header.column.getIsSorted() && (
+														<ArrowUpDown className='h-4 w-4' />
+													)}
+													{{
+														asc: (
+															<ArrowUp
+																aria-label='Sorted ascending'
+																className='h-4 w-4'
+															/>
+														),
+														desc: (
+															<ArrowDown
+																aria-label='Sorted descending'
+																className='h-4 w-4'
+															/>
+														)
+													}[header.column.getIsSorted() as string] ?? null}
+												</div>
+											) : (
+												flexRender(header.column.columnDef.header, header.getContext())
+											)}
+										</TableHead>
+									);
+								})}
+							</TableRow>
+						))}
 					</TableHeader>
 					<TableBody>
-						{isLoading ? (
+						{showSkeletons ? (
+							Array.from({ length: pageSize }).map((_, i) => (
+								<TableRow key={i}>
+									{table.getAllColumns().map((col, j) => (
+										<TableCell key={j}>
+											<Skeleton className='h-6 w-full' />
+										</TableCell>
+									))}
+								</TableRow>
+							))
+						) : table.getRowModel().rows?.length ? (
+							table.getRowModel().rows.map((row) => (
+								<TableRow key={row.id}>
+									{row.getVisibleCells().map((cell) => (
+										<TableCell
+											className={cell.column.id === 'actions' ? 'text-right' : undefined}
+											key={cell.id}
+										>
+											{flexRender(cell.column.columnDef.cell, cell.getContext())}
+										</TableCell>
+									))}
+								</TableRow>
+							))
+						) : (
 							<TableRow>
-								<TableCell className='text-center' colSpan={7}>
-									Loading...
-								</TableCell>
-							</TableRow>
-						) : users.length === 0 ? (
-							<TableRow>
-								<TableCell className='text-center' colSpan={7}>
+								<TableCell className='h-24 text-center' colSpan={columns.length}>
 									No users found
 								</TableCell>
 							</TableRow>
-						) : (
-							users.map((user) => (
-								<TableRow key={user.id}>
-									<TableCell className='font-medium'>{user.email}</TableCell>
-									<TableCell>{user.name || '-'}</TableCell>
-									<TableCell>
-										<Badge
-											variant={
-												user.role === 'superadmin' || user.role === 'admin'
-													? 'default'
-													: 'outline'
-											}
-										>
-											{user.role === 'superadmin' && <Crown className='mr-1 size-3' />}
-											{user.role}
-										</Badge>
-									</TableCell>
-									<TableCell>
-										{user.banned ? (
-											<Badge variant='destructive'>Banned</Badge>
-										) : (
-											<Badge variant='outline'>Active</Badge>
-										)}
-									</TableCell>
-									<TableCell>
-										{user.emailVerified ? (
-											<Badge variant='outline'>✓</Badge>
-										) : (
-											<Badge variant='secondary'>Pending</Badge>
-										)}
-									</TableCell>
-									<TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
-									<TableCell className='text-right'>
-										{/* Admins cannot perform any actions on superadmin accounts */}
-										{user.role === 'superadmin' && !isSuperadmin ? (
-											<Button disabled size='icon' variant='ghost'>
-												<MoreHorizontal className='size-4' />
-												<span className='sr-only'>No actions available</span>
-											</Button>
-										) : (
-											<DropdownMenu>
-												<DropdownMenuTrigger asChild>
-													<Button size='icon' variant='ghost'>
-														<MoreHorizontal className='size-4' />
-														<span className='sr-only'>Actions</span>
-													</Button>
-												</DropdownMenuTrigger>
-												<DropdownMenuContent align='end'>
-													<DropdownMenuLabel>Actions</DropdownMenuLabel>
-
-													{/* Only superadmins can promote to superadmin */}
-													{isSuperadmin &&
-														user.role !== 'superadmin' &&
-														user.id !== currentUser?.id && (
-															<>
-																<DropdownMenuSeparator />
-																<DropdownMenuItem
-																	onClick={() => handleSetRole(user.id, 'superadmin')}
-																>
-																	<Crown className='mr-2 size-4' />
-																	Make Superadmin
-																</DropdownMenuItem>
-															</>
-														)}
-
-													{/* Only superadmins can change admin roles */}
-													{isSuperadmin &&
-														user.role !== 'admin' &&
-														user.id !== currentUser?.id && (
-															<DropdownMenuItem
-																onClick={() => handleSetRole(user.id, 'admin')}
-															>
-																<Shield className='mr-2 size-4' />
-																Make Admin
-															</DropdownMenuItem>
-														)}
-
-													{/* Demote to user - cannot demote yourself */}
-													{user.role !== 'user' && user.id !== currentUser?.id && (
-														<DropdownMenuItem
-															onClick={() => handleSetRole(user.id, 'user')}
-														>
-															<UserCog className='mr-2 size-4' />
-															Make User
-														</DropdownMenuItem>
-													)}
-
-													{/* Ban/Unban - cannot ban yourself */}
-													{user.id !== currentUser?.id &&
-														(user.banned ? (
-															<DropdownMenuItem onClick={() => handleUnbanUser(user.id)}>
-																<UserCog className='mr-2 size-4' />
-																Unban User
-															</DropdownMenuItem>
-														) : (
-															<>
-																<DropdownMenuSeparator />
-																<DropdownMenuItem
-																	onClick={() => handleBanUser(user.id)}
-																>
-																	<Ban className='mr-2 size-4' />
-																	Ban User
-																</DropdownMenuItem>
-															</>
-														))}
-
-													{/* Impersonate user - cannot impersonate yourself or superadmins */}
-													{user.id !== currentUser?.id && user.role !== 'superadmin' && (
-														<>
-															<DropdownMenuSeparator />
-															<DropdownMenuItem
-																onClick={() => handleImpersonateUser(user.id)}
-															>
-																<UserRoundCog className='mr-2 size-4' />
-																Impersonate User
-															</DropdownMenuItem>
-														</>
-													)}
-
-													{/* Delete user - cannot delete yourself */}
-													{user.id !== currentUser?.id && (
-														<>
-															<DropdownMenuSeparator />
-															<DropdownMenuItem
-																className='text-destructive'
-																onClick={() => setDeleteUserId(user.id)}
-															>
-																<Trash2 className='mr-2 size-4' />
-																Delete User
-															</DropdownMenuItem>
-														</>
-													)}
-												</DropdownMenuContent>
-											</DropdownMenu>
-										)}
-									</TableCell>
-								</TableRow>
-							))
 						)}
 					</TableBody>
 				</Table>
 			</div>
 
-			{totalPages > 1 && (
-				<div className='flex items-center justify-between'>
-					<p className='text-sm text-muted-foreground'>
-						Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, total)} of{' '}
-						{total} users
-					</p>
-					<div className='flex gap-2'>
-						<Button
-							disabled={currentPage === 1}
-							onClick={() => setCurrentPage(currentPage - 1)}
-							size='sm'
-							variant='outline'
-						>
-							Previous
-						</Button>
-						<Button
-							disabled={currentPage === totalPages}
-							onClick={() => setCurrentPage(currentPage + 1)}
-							size='sm'
-							variant='outline'
-						>
-							Next
-						</Button>
-					</div>
+			<div className='flex flex-wrap items-center justify-end gap-2 py-4'>
+				<div className='flex-1 text-sm text-muted-foreground'>
+					{total} total user{total !== 1 ? 's' : ''}
 				</div>
-			)}
+				<div className='flex items-center gap-2'>
+					<Button disabled={pageIndex === 0} onClick={() => table.previousPage()} size='sm' variant='outline'>
+						Previous
+					</Button>
+					<Button
+						disabled={data ? (pageIndex + 1) * pageSize >= total : true}
+						onClick={() => table.nextPage()}
+						size='sm'
+						variant='outline'
+					>
+						Next
+					</Button>
+				</div>
+			</div>
 
 			<AlertDialog onOpenChange={(open) => !open && setDeleteUserId(null)} open={!!deleteUserId}>
 				<AlertDialogContent>
