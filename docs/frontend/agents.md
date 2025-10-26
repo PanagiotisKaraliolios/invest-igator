@@ -9,6 +9,12 @@
 - Always prefer shadcn/ui primitives from `src/components/ui` (e.g., `Button`, `Card`, `Dialog`). Keep variants consistent and compose via `asChild` rather than nesting raw `<a>` tags.
 - Extract shared widgets into `src/components/*` and colocate smaller helpers inside feature folders (e.g., `watchlist/_components`).
 - When touching theming, route through `ThemeSwitch` and honor the cookie set by the server (`ui-theme`).
+- Tables: Use TanStack Table v8 (`@tanstack/react-table`) for complex data tables. Define columns with `ColumnDef<T>[]`, use `useReactTable` hook with manual pagination/sorting, and render with `flexRender`. See `admin/_components/user-management-table.tsx` and `audit-logs-table.tsx` for reference.
+- Date pickers: Use `DateRangePicker` from `src/components/ui/date-range-picker.tsx` with `strictMaxDate` prop to prevent future date selection. Component supports custom presets and disabled dates.
+- Search inputs: Apply debouncing with `useDebounce` hook (300ms) from `src/hooks/use-debounce.ts` to reduce API calls and improve UX. Remove search buttons when using debounced auto-search.
+- Loading states: Use `Skeleton` component from `src/components/ui/skeleton.tsx` for professional loading UX. Render multiple skeletons matching your data structure during loading.
+- Sorting indicators: Use lucide-react icons (`ArrowUpDown` for unsorted, `ArrowUp`/`ArrowDown` for sorted). Conditionally hide `ArrowUpDown` when column is sorted: `{!header.column.getIsSorted() && <ArrowUpDown />}`.
+- Active navigation: Menu items detect active state using `pathname.startsWith(item.url)`. Apply `isActive` prop to `SidebarMenuSubButton` for visual highlighting.
 
 ## Data Fetching
 - Server components should call `auth()` or `api.*` helpers from `@/trpc/server`. Client components use hooks from `@/trpc/react`.

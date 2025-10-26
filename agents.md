@@ -52,9 +52,12 @@ Consult them before modifying those areas.
 This project also maintains `.github/copilot-instructions.md` for GitHub Copilot. Autonomous agents should mirror those conventions. Key alignments:
 - API patterns: define procedures in `src/server/api/routers/*`, register in `src/server/api/root.ts`, use `publicProcedure` vs `protectedProcedure` appropriately, and rely on `ctx.db` for Prisma access. Expect timing middleware logs in `src/server/api/trpc.ts`.
 - Server vs client usage: on the server, import from `@/trpc/server` (e.g., `HydrateClient`, `api` helpers). On the client, use hooks from `@/trpc/react` and invalidate via `api.useUtils()` after mutations.
-- Charts: wrap Recharts with `ChartContainer` and provide a config whose keys match `dataKey`s; it exposes `--color-<key>` CSS vars. If a series key includes special characters (e.g., `VUSA.L`), sanitize IDs for gradients or pass explicit colors instead of relying on CSS vars.
+- Charts: wrap Recharts with `ChartContainer` and provide a config whose keys match `dataKey`s; it exposes `--color-<key>` CSS vars. If a series key includes special characters (e.g., `VUSA.L`), sanitize IDs for gradients or pass explicit colors instead of relying on CSS vars. Use `DateRangePicker` with `strictMaxDate={true}` for date constraints.
+- Tables: use TanStack Table v8 for complex data tables with sorting, filtering, pagination. Apply debouncing (300ms) to search inputs. Use `Skeleton` component for loading states. Server-side sorting via sortBy/sortDir parameters.
+- Navigation: sidebar menu items use `pathname.startsWith()` for active state detection. Active items show visual indicators.
 - External calls: keep third‑party fetches inside tRPC procedures; read all configuration from the `env` helper and never expose secrets to clients.
 - Prisma specifics: `WatchlistItem` has a composite unique `(userId, symbol)`; use `upsert`/`update` patterns rather than catching unique violations.
 - Testing: Playwright e2e lives in `tests/e2e`; add `data-testid` to interactive elements and prefer accessible roles for queries. Use the shared fixtures and keep selectors stable.
+- Admin features: routes split into `/admin/users` and `/admin/audit-logs`. Both use TanStack Table with manual pagination, server-side sorting, debounced search, and skeleton loading.
 
 If any discrepancy exists between this guide and `.github/copilot-instructions.md`, prefer the stricter rule or ask for clarification in a PR description.

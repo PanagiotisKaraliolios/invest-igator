@@ -21,13 +21,25 @@ Built with Next.js App Router, tRPC v11, Prisma/PostgreSQL, shadcn/ui, and Influ
 ## ✨ Features
 
 - 📊 **Watchlist** with historical OHLCV from InfluxDB (AAPL, MSFT, etc.)
+  - 📅 Date range filtering with customizable presets and max date constraints
+  - 📈 Interactive charts with Recharts integration
 - 💰 **Corporate events**: dividends, splits, capital gains
 - 📈 **Transactions** with CSV import/export, duplicate detection, and FX-aware currencies
+  - 🔄 Sortable columns with visual indicators
+  - 🔍 Advanced filtering and search
 - 🎯 **Portfolio analytics**: structure and performance calculations (TWR/MWR via tRPC)
 - 🎪 **Goals tracking**: simple personal financial goals model
 - 🎨 **Modern UI**: theming, toasts, and shadcn/ui + Recharts
+  - ⚡ TanStack Table v8 for complex data tables
+  - 🔎 Debounced search inputs (300ms) for better UX
+  - 💀 Skeleton loading states for professional loading experience
+  - 🎯 Active navigation indicators in sidebar
 - 🔄 **Auto-sync**: Yahoo Finance ingestion job for OHLCV and events; FX rates via Alpha Vantage
-- 🔐 **Admin interface**: user management, statistics, and role-based access control
+- 🔐 **Admin interface**: comprehensive user management and audit logging
+  - 👥 User management with sorting, filtering, and role-based permissions
+  - 📋 Audit logs with date range filtering and action tracking
+  - 📊 Statistics dashboard with user metrics
+  - 🔍 Debounced search across users and logs
 
 ## 🛠️ Tech stack
 
@@ -37,7 +49,7 @@ Built with Next.js App Router, tRPC v11, Prisma/PostgreSQL, shadcn/ui, and Influ
 | **API** | tRPC v11 + React Query (RSC + CSR hydration) |
 | **Database** | Prisma + PostgreSQL |
 | **Auth** | Better Auth (email/password, magic link, 2FA, Discord) |
-| **UI** | shadcn/ui + TailwindCSS 4 |
+| **UI** | shadcn/ui + TailwindCSS 4 • TanStack Table v8 |
 | **Charts** | Recharts |
 | **Timeseries** | InfluxDB 2.x (`daily_bars` + event measurements) |
 
@@ -333,7 +345,7 @@ docker compose down -v
 │   │   ├── api/
 │   │   │   ├── root.ts        # 🔗 tRPC router composition
 │   │   │   ├── trpc.ts        # ⚙️  Context, middleware, procedures
-│   │   │   └── routers/       # 🧩 Feature routers (watchlist, transactions, etc.)
+│   │   │   └── routers/       # 🧩 Feature routers (watchlist, transactions, admin, etc.)
 │   │   ├── jobs/
 │   │   │   ├── ingest-yahoo.ts  # 📈 Yahoo Finance ingestion job
 │   │   │   ├── ingest-fx.ts     # 💱 FX rates ingestion job
@@ -345,15 +357,24 @@ docker compose down -v
 │   │   ├── fx.ts              # 💰 FX rate conversion utilities
 │   │   └── r2.ts              # ☁️  Cloudflare R2 storage client
 │   ├── app/
-│   │   ├── (dashboard)/       # 🏠 Protected dashboard routes (watchlist, portfolio, etc.)
+│   │   ├── (dashboard)/       # 🏠 Protected dashboard routes
+│   │   │   ├── watchlist/     # 📊 Watchlist with charts and date filtering
+│   │   │   ├── portfolio/     # 💼 Portfolio analytics
+│   │   │   ├── transactions/  # 📈 Transaction management with sorting
+│   │   │   └── admin/         # 🔐 Admin section
+│   │   │       ├── users/     # 👥 User management page
+│   │   │       └── audit-logs/  # 📋 Audit logs page
 │   │   ├── (auth)/            # 🔑 Auth routes (login, signup, verify-request)
 │   │   ├── api/               # 🌐 API endpoints (tRPC, auth, email verification)
 │   │   └── layout.tsx         # 🎨 Root layout with providers
 │   ├── components/
-│   │   ├── ui/                # 🧱 shadcn/ui primitives
+│   │   ├── ui/                # 🧱 shadcn/ui primitives (incl. DateRangePicker, Skeleton)
 │   │   ├── ads/               # 📢 AdSense integration
 │   │   ├── consent/           # ✅ Cookie consent provider
 │   │   └── theme/             # 🌓 Theme provider
+│   ├── hooks/
+│   │   ├── use-debounce.ts    # ⏱️  Debounce hook (300ms)
+│   │   └── use-currency.ts    # 💱 Currency utilities
 │   ├── trpc/
 │   │   ├── react.tsx          # ⚛️  Client-side tRPC hooks
 │   │   ├── server.ts          # 🖥️  Server-side tRPC helpers
@@ -374,10 +395,15 @@ docker compose down -v
 **Quick pointers:**
 
 - Dashboard shell: `src/app/(dashboard)/layout.tsx`
+- Sidebar with active navigation: `src/app/(dashboard)/_components/app-sidebar.tsx`
 - tRPC glue: `src/server/api/trpc.ts`, `src/trpc/react.tsx`, `src/trpc/server.ts`
+- Admin routers with sorting: `src/server/api/routers/admin.ts`
+- Table components (reference): `src/app/(dashboard)/admin/_components/user-management-table.tsx`, `audit-logs-table.tsx`
 - Influx helpers: `src/server/influx.ts`
 - Ingestion: `src/server/jobs/ingest-yahoo.ts`
 - Example router: `src/server/api/routers/watchlist.ts`
+- Reusable components: `src/components/ui/date-range-picker.tsx`, `src/components/ui/skeleton.tsx`
+- Debounce hook: `src/hooks/use-debounce.ts`
 
 ---
 

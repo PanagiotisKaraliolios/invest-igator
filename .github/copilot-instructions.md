@@ -28,18 +28,39 @@ Next.js App Router (T3-ish) with tRPC v11, Prisma/PostgreSQL, NextAuth, shadcn/u
 - `WatchlistItem` has composite unique `(userId, symbol)`; use upsert patterns accordingly.
 - After editing `schema.prisma`, run `bun run db:generate`; if dev drift blocks, use `prisma migrate reset` (dev only).
 
+## UI Components & Patterns
+- shadcn/ui in `src/components/ui/*`; toasts via `sonner`; theme cookie-based.
+- Tables: Use TanStack Table v8 for complex data tables with sorting, filtering, and pagination. See `src/app/(dashboard)/admin/_components/user-management-table.tsx` and `audit-logs-table.tsx` for full implementation patterns.
+- Date pickers: Use reusable `DateRangePicker` from `src/components/ui/date-range-picker.tsx` with `strictMaxDate` prop to enforce date constraints.
+- Search inputs: Apply debouncing with `useDebounce` hook (300ms) from `src/hooks/use-debounce.ts` for better UX and reduced API calls.
+- Sorting indicators: Use lucide-react icons (`ArrowUpDown` for unsorted, `ArrowUp`/`ArrowDown` for sorted columns). Hide `ArrowUpDown` when column is sorted.
+- Loading states: Use `Skeleton` component from `src/components/ui/skeleton.tsx` for professional loading UX.
+- Active navigation: Sidebar menu items show active state using `isActive` prop with `pathname.startsWith()` checks.
+
+## Admin Features
+- Admin routes split into `/admin/users` and `/admin/audit-logs` for better organization.
+- Root `/admin` redirects to `/admin/users` as default landing page.
+- User management: Full CRUD with role-based permissions, email search, sortable columns (email, name, role, createdAt).
+- Audit logs: Filterable by date range, action type, admin/target email with debounced search.
+- Both tables use TanStack Table with manual pagination, server-side sorting, and skeleton loading states.
+
 ## Charts (shadcn + Recharts)
 - Wrap charts with `ChartContainer` and a config whose keys match `dataKey`s; container exposes `--color-<key>` CSS vars.
 - If series keys contain special chars (e.g., `VUSA.L`), sanitize IDs for gradients or pass explicit colors to `stroke`/`stopColor` instead of CSS vars.
+- Date filtering: Use `DateRangePicker` with `strictMaxDate={true}` to prevent future date selection. Watchlist charts use yesterday as max date with custom presets.
 
 ## External Calls
 - Keep fetches server-side inside tRPC procedures; read base URLs/keys from `env` (e.g., `FINNHUB_*`, `ALPHAVANTAGE_*`, `POLYGON_*`). Never expose secrets client-side.
 
 ## Pointers
 - Layout/shell: `src/app/(dashboard)/layout.tsx`; global providers: `src/app/layout.tsx`.
+- Sidebar: `src/app/(dashboard)/_components/app-sidebar.tsx` with role-based navigation and active indicators.
+- Navigation: `nav-main.tsx` uses `pathname.startsWith()` for active state detection on sub-items.
 - tRPC glue: `src/server/api/trpc.ts`, `src/trpc/react.tsx`, `src/trpc/server.ts`.
 - DB models: `prisma/schema.prisma`; Auth: `src/server/auth/config.ts`.
 - Influx helpers: `src/server/influx.ts`; Ingest job: `src/server/jobs/ingest-alpha.ts`.
+- Admin routers: `src/server/api/routers/admin.ts` with sorting params (sortBy/sortDir) for both users and audit logs.
+- Table components: `src/app/(dashboard)/admin/_components/user-management-table.tsx` and `audit-logs-table.tsx` for reference implementations.
 - Feature example: `src/server/api/routers/watchlist.ts` + `src/app/(dashboard)/watchlist/*`.
 
 
