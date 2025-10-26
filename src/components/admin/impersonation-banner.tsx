@@ -30,7 +30,7 @@ export function ImpersonationBanner({ impersonatedBy, currentUserEmail }: Impers
 			}
 
 			toast.success('Stopped impersonating user');
-			
+
 			// Hard navigation to ensure server components refetch with updated session
 			window.location.href = '/admin';
 		} catch (error) {

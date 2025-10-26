@@ -17,6 +17,20 @@ import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
  */
 
 /**
+ * Admin action types for audit logging
+ */
+const AUDIT_ACTIONS = {
+	BAN_USER: 'BAN_USER',
+	DELETE_USER: 'DELETE_USER',
+	IMPERSONATE_USER: 'IMPERSONATE_USER',
+	SET_ROLE: 'SET_ROLE',
+	STOP_IMPERSONATION: 'STOP_IMPERSONATION',
+	UNBAN_USER: 'UNBAN_USER',
+	VIEW_STATS: 'VIEW_STATS',
+	VIEW_USERS: 'VIEW_USERS'
+} as const;
+
+/**
  * Middleware to check if user is an admin (admin or superadmin)
  */
 const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
@@ -74,7 +88,7 @@ export const adminRouter = createTRPCRouter({
 
 			// Get the target user to check their role
 			const targetUser = await ctx.db.user.findUnique({
-				select: { role: true },
+				select: { email: true, role: true },
 				where: { id: input.userId }
 			});
 
@@ -116,7 +130,78 @@ export const adminRouter = createTRPCRouter({
 				});
 			}
 
+			// Log audit action
+			try {
+				await ctx.db.auditLog.create({
+					data: {
+						action: AUDIT_ACTIONS.BAN_USER,
+						adminEmail: ctx.session.user.email,
+						adminId: ctx.session.user.id,
+						details: JSON.stringify({ banReason: input.banReason, role: targetUser.role }),
+						targetEmail: targetUser.email ?? undefined,
+						targetId: input.userId
+					}
+				});
+			} catch (error) {
+				console.error('Failed to create audit log entry:', error);
+			}
+
 			return { success: true };
+		}),
+
+	/**
+	 * Get audit logs with pagination and filters
+	 * - Superadmins can view all audit logs
+	 * - Admins can view all audit logs
+	 */
+	getAuditLogs: adminProcedure
+		.input(
+			z.object({
+				action: z.string().optional(),
+				adminId: z.string().optional(),
+				endDate: z.date().optional(),
+				limit: z.number().min(1).max(100).default(50),
+				offset: z.number().min(0).default(0),
+				startDate: z.date().optional(),
+				targetId: z.string().optional()
+			})
+		)
+		.query(async ({ input, ctx }) => {
+			const { limit, offset, adminId, targetId, action, startDate, endDate } = input;
+
+			const where = {
+				...(action && { action }),
+				...(adminId && { adminId }),
+				...(targetId && { targetId }),
+				...(startDate || endDate
+					? {
+							createdAt: {
+								...(startDate && { gte: startDate }),
+								...(endDate && { lte: endDate })
+							}
+						}
+					: {})
+			};
+
+			const [logs, total] = await Promise.all([
+				ctx.db.auditLog.findMany({
+					orderBy: { createdAt: 'desc' },
+					skip: offset,
+					take: limit,
+					where
+				}),
+				ctx.db.auditLog.count({ where })
+			]);
+
+			return {
+				limit,
+				logs: logs.map((log) => ({
+					...log,
+					details: log.details ? JSON.parse(log.details) : null
+				})),
+				offset,
+				total
+			};
 		}),
 
 	/**
@@ -231,7 +316,7 @@ export const adminRouter = createTRPCRouter({
 
 			// Get the target user to check their role
 			const targetUser = await ctx.db.user.findUnique({
-				select: { id: true, role: true },
+				select: { email: true, id: true, role: true },
 				where: { id: input.userId }
 			});
 
@@ -280,6 +365,22 @@ export const adminRouter = createTRPCRouter({
 				});
 			}
 
+			// Log admin action
+			try {
+				await ctx.db.auditLog.create({
+					data: {
+						action: AUDIT_ACTIONS.DELETE_USER,
+						adminEmail: ctx.session.user.email,
+						adminId: ctx.session.user.id,
+						details: JSON.stringify({ role: targetUser.role }),
+						targetEmail: targetUser.email ?? undefined,
+						targetId: input.userId
+					}
+				});
+			} catch (error) {
+				console.error('Failed to create audit log entry:', error);
+			}
+
 			return { success: true };
 		}),
 
@@ -310,7 +411,7 @@ export const adminRouter = createTRPCRouter({
 
 			// Get the target user to check their current role
 			const targetUser = await ctx.db.user.findUnique({
-				select: { id: true, role: true },
+				select: { email: true, id: true, role: true },
 				where: { id: input.userId }
 			});
 
@@ -376,6 +477,22 @@ export const adminRouter = createTRPCRouter({
 				});
 			}
 
+			// Log admin action
+			try {
+				await ctx.db.auditLog.create({
+					data: {
+						action: AUDIT_ACTIONS.SET_ROLE,
+						adminEmail: ctx.session.user.email,
+						adminId: ctx.session.user.id,
+						details: JSON.stringify({ newRole: input.role, oldRole: targetUser.role }),
+						targetEmail: targetUser.email ?? undefined,
+						targetId: input.userId
+					}
+				});
+			} catch (error) {
+				console.error('Failed to create audit log entry:', error);
+			}
+
 			return { success: true };
 		}),
 
@@ -404,7 +521,7 @@ export const adminRouter = createTRPCRouter({
 
 			// Get the target user to check their role
 			const targetUser = await ctx.db.user.findUnique({
-				select: { role: true },
+				select: { email: true, id: true, role: true },
 				where: { id: input.userId }
 			});
 
@@ -435,6 +552,22 @@ export const adminRouter = createTRPCRouter({
 					code: 'INTERNAL_SERVER_ERROR',
 					message: 'Failed to unban user'
 				});
+			}
+
+			// Log admin action
+			try {
+				await ctx.db.auditLog.create({
+					data: {
+						action: AUDIT_ACTIONS.UNBAN_USER,
+						adminEmail: ctx.session.user.email,
+						adminId: ctx.session.user.id,
+						details: JSON.stringify({ role: targetUser.role }),
+						targetEmail: targetUser.email ?? undefined,
+						targetId: input.userId
+					}
+				});
+			} catch (error) {
+				console.error('Failed to create audit log entry:', error);
 			}
 
 			return { success: true };

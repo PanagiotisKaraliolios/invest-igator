@@ -26,11 +26,7 @@ export function AppSidebar({
 	const baseNavItems = [
 		{
 			icon: PieChart,
-			isActive: isNavItemActive([
-				{ url: '/portfolio' },
-				{ url: '/transactions' },
-				{ url: '/watchlist' }
-			]),
+			isActive: isNavItemActive([{ url: '/portfolio' }, { url: '/transactions' }, { url: '/watchlist' }]),
 			items: [
 				{ title: 'Portfolio', url: '/portfolio' },
 				{ title: 'Transactions', url: '/transactions' },

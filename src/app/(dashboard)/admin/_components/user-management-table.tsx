@@ -64,6 +64,7 @@ export function UserManagementTable() {
 		onSuccess: () => {
 			toast.success('User role updated successfully');
 			void utils.admin.listUsers.invalidate();
+			void utils.admin.getAuditLogs.invalidate();
 			router.refresh();
 		}
 	});
@@ -75,6 +76,7 @@ export function UserManagementTable() {
 		onSuccess: () => {
 			toast.success('User banned successfully');
 			void utils.admin.listUsers.invalidate();
+			void utils.admin.getAuditLogs.invalidate();
 			router.refresh();
 		}
 	});
@@ -86,6 +88,7 @@ export function UserManagementTable() {
 		onSuccess: () => {
 			toast.success('User unbanned successfully');
 			void utils.admin.listUsers.invalidate();
+			void utils.admin.getAuditLogs.invalidate();
 			router.refresh();
 		}
 	});
@@ -98,6 +101,7 @@ export function UserManagementTable() {
 			toast.success('User deleted successfully');
 			setDeleteUserId(null);
 			void utils.admin.listUsers.invalidate();
+			void utils.admin.getAuditLogs.invalidate();
 			router.refresh();
 		}
 	});
@@ -132,14 +136,15 @@ export function UserManagementTable() {
 			}
 
 			toast.success('Now impersonating user');
-			
+
 			// Hard navigation to ensure server components refetch with updated session
 			window.location.href = '/portfolio';
 		} catch (error) {
 			toast.error('Failed to impersonate user');
 			console.error('Impersonation error:', error);
 		}
-	};	return (
+	};
+	return (
 		<div className='space-y-4'>
 			<div className='flex items-center gap-2'>
 				<div className='relative flex-1'>

@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { auth } from '@/lib/auth';
 import { api } from '@/trpc/server';
+import { AuditLogsTable } from './_components/audit-logs-table';
 import { UserManagementTable } from './_components/user-management-table';
 
 export default async function AdminDashboardPage() {
@@ -78,6 +79,17 @@ export default async function AdminDashboardPage() {
 				</CardHeader>
 				<CardContent>
 					<UserManagementTable />
+				</CardContent>
+			</Card>
+
+			{/* Audit Logs */}
+			<Card>
+				<CardHeader>
+					<CardTitle>Audit Logs</CardTitle>
+					<CardDescription>View all admin actions and activity history</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<AuditLogsTable />
 				</CardContent>
 			</Card>
 		</div>

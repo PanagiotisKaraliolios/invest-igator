@@ -19,7 +19,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
 	console.log('🚀 ~ layout.tsx:20 ~ DashboardLayout ~ isImpersonated:', session);
 
-
 	return (
 		<SidebarProvider>
 			<AppSidebar applicationName={env.APP_NAME} />

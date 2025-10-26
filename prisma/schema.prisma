@@ -205,3 +205,23 @@ model Goal {
   @@index([userId])
   @@index([targetDate])
 }
+
+// Audit log for admin actions
+model AuditLog {
+  id          String   @id @default(cuid())
+  adminId     String   // ID of the admin who performed the action
+  adminEmail  String   // Email of the admin for easier lookup
+  targetId    String?  // ID of the affected user/resource (null for actions like viewing stats)
+  targetEmail String?  // Email of the affected user (if applicable)
+  action      String   // e.g., "BAN_USER", "UNBAN_USER", "SET_ROLE", "DELETE_USER", "IMPERSONATE_USER", "STOP_IMPERSONATION"
+  details     String?  // JSON string with additional details (e.g., old role, new role, ban reason)
+  ipAddress   String?  // IP address of the admin
+  userAgent   String?  // User agent of the admin
+  createdAt   DateTime @default(now())
+
+  @@index([adminId])
+  @@index([targetId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("auditLog")
+}
