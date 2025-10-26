@@ -17,8 +17,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
 	// Check if current session is impersonated
 	const isImpersonated = session.session.impersonatedBy !== null && session.session.impersonatedBy !== undefined;
 
-	console.log('🚀 ~ layout.tsx:20 ~ DashboardLayout ~ isImpersonated:', session);
-
 	return (
 		<SidebarProvider>
 			<AppSidebar applicationName={env.APP_NAME} />

@@ -1,12 +1,13 @@
 'use client';
 
-import { format } from 'date-fns';
+import { format, startOfYear, subDays } from 'date-fns';
 import * as React from 'react';
 import type { DateRange } from 'react-day-picker';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { type ChartConfig } from '@/components/ui/chart';
+import { DateRangePicker, type DateRangePreset } from '@/components/ui/date-range-picker';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
@@ -14,7 +15,6 @@ import { api } from '@/trpc/react';
 import CombinedAreaChart from './CombinedAreaChart';
 import type { CombinedDatum, EventPoint, SeriesDatum } from './chart-utils';
 import { colorTokens, daysBackFromRange, downsample, generateSeries, toCssKey } from './chart-utils';
-import DateRangePicker, { applyPresetToRange, type Preset } from './DateRangePicker';
 import SingleSymbolChart from './SingleSymbolChart';
 
 export default function WatchlistCharts() {
@@ -25,26 +25,106 @@ export default function WatchlistCharts() {
 	// Max 50 years of daily data
 	const MAX_DAYS = 365 * 50;
 
-	// Date range state (default: last 180 days)
-	const initialTo = React.useMemo(() => new Date(), []);
-	const initialFrom = React.useMemo(() => {
+	// Yesterday is the latest selectable date for charts
+	const yesterday = React.useMemo(() => {
 		const d = new Date();
-		d.setDate(d.getDate() - 179);
+		d.setDate(d.getDate() - 1);
+		d.setHours(0, 0, 0, 0);
 		return d;
 	}, []);
-	const [dateRange, setDateRange] = React.useState<DateRange>({ from: initialFrom, to: initialTo });
-	const [preset, setPreset] = React.useState<Preset>('6M');
 
-	const applyPreset = React.useCallback((p: Exclude<Preset, null>) => {
-		const r = applyPresetToRange(p, MAX_DAYS);
-		setDateRange(r);
-		setPreset(p);
-	}, []);
+	// Date range state (default: last 180 days ending yesterday)
+	const initialTo = React.useMemo(() => yesterday, [yesterday]);
+	const initialFrom = React.useMemo(() => {
+		const d = new Date(yesterday);
+		d.setDate(d.getDate() - 179);
+		return d;
+	}, [yesterday]);
+
+	const [dateRange, setDateRange] = React.useState<DateRange>({ from: initialFrom, to: initialTo });
+
+	// Create presets that respect yesterday as the end date
+	const chartPresets = React.useMemo(
+		(): DateRangePreset[] => [
+			{
+				getValue: () => ({
+					from: subDays(yesterday, 4),
+					to: yesterday
+				}),
+				label: '5D'
+			},
+			{
+				getValue: () => ({
+					from: subDays(yesterday, 29),
+					to: yesterday
+				}),
+				label: '1M'
+			},
+			{
+				getValue: () => ({
+					from: subDays(yesterday, 179),
+					to: yesterday
+				}),
+				label: '6M'
+			},
+			{
+				getValue: () => ({
+					from: startOfYear(yesterday),
+					to: yesterday
+				}),
+				label: 'YTD'
+			},
+			{
+				getValue: () => ({
+					from: subDays(yesterday, 364),
+					to: yesterday
+				}),
+				label: '1Y'
+			},
+			{
+				getValue: () => ({
+					from: subDays(yesterday, 1824),
+					to: yesterday
+				}),
+				label: '5Y'
+			},
+			{
+				getValue: () => ({
+					from: subDays(yesterday, 3649),
+					to: yesterday
+				}),
+				label: '10Y'
+			},
+			{
+				getValue: () => ({
+					from: subDays(yesterday, 7299),
+					to: yesterday
+				}),
+				label: '20Y'
+			},
+			{
+				getValue: () => ({
+					from: subDays(yesterday, MAX_DAYS - 1),
+					to: yesterday
+				}),
+				label: 'MAX'
+			}
+		],
+		[yesterday, MAX_DAYS]
+	);
 
 	const fromDate = dateRange.from ?? initialFrom;
 	const toDate = dateRange.to ?? initialTo;
+
+	// Helper to compute days back from a date
+	const daysBackFromRange = React.useCallback((from: Date) => {
+		const now = new Date();
+		const diff = now.getTime() - from.getTime();
+		return Math.max(1, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+	}, []);
+
 	// Server expects days from now back; compute from selected start
-	const daysForServer = React.useMemo(() => daysBackFromRange(fromDate), [fromDate]);
+	const daysForServer = React.useMemo(() => daysBackFromRange(fromDate), [fromDate, daysBackFromRange]);
 
 	const {
 		data: history,
@@ -267,12 +347,13 @@ export default function WatchlistCharts() {
 				<CardTitle>Charts</CardTitle>
 				<div className='flex flex-wrap items-center gap-2'>
 					<DateRangePicker
-						buttonClassName='h-8 gap-2'
-						dateRange={dateRange}
-						maxDays={MAX_DAYS}
-						onChange={(r) => setDateRange(r ?? { from: initialFrom, to: initialTo })}
-						onPresetChange={setPreset}
-						preset={preset}
+						className='h-8'
+						maxDate={yesterday}
+						onChange={(range) => setDateRange(range ?? { from: initialFrom, to: initialTo })}
+						placeholder='Pick date range'
+						presets={chartPresets}
+						strictMaxDate={true}
+						value={dateRange}
 					/>
 					<Label htmlFor='combined-chart'>Combined</Label>
 					<Switch checked={combined} id='combined-chart' onCheckedChange={setCombined} />

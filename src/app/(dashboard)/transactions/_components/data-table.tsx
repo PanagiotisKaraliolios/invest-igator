@@ -2,13 +2,14 @@
 
 import type { ColumnDef, SortingState, VisibilityState } from '@tanstack/react-table';
 import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
-import { CalendarIcon, ChevronDownIcon, DownloadIcon, Loader2, Search, Upload as UploadIcon } from 'lucide-react';
+import { ChevronDownIcon, DownloadIcon, Loader2, Search, Upload as UploadIcon } from 'lucide-react';
 import * as React from 'react';
 import { useEffect, useMemo, useState } from 'react';
+import type { DateRange } from 'react-day-picker';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
 import { Checkbox } from '@/components/ui/checkbox';
+import { createDateRangePresets, DateRangePicker } from '@/components/ui/date-range-picker';
 import {
 	Dialog,
 	DialogContent,
@@ -26,7 +27,6 @@ import {
 import { FileUpload } from '@/components/ui/file-upload';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -55,10 +55,22 @@ export function DataTable<TData extends { id?: string }, TValue>({ columns }: Da
 	// Filters and pagination state
 	const [symbol, setSymbol] = useState('');
 	const [side, setSide] = useState<'ALL' | 'BUY' | 'SELL'>('ALL');
-	const [dateFrom, setDateFrom] = useState<string | undefined>(undefined);
-	const [dateTo, setDateTo] = useState<string | undefined>(undefined);
+	const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 	const [pageIndex, setPageIndex] = useState(0); // 0-based for TanStack
 	const [pageSize, setPageSize] = useState(10);
+
+	const transactionPresets = useMemo(
+		() => [
+			createDateRangePresets.last7Days(),
+			createDateRangePresets.last30Days(),
+			createDateRangePresets.last90Days(),
+			createDateRangePresets.thisMonth(),
+			createDateRangePresets.lastMonth(),
+			createDateRangePresets.thisYear(),
+			createDateRangePresets.lastYear()
+		],
+		[]
+	);
 
 	const utils = api.useUtils();
 	const createMutation = api.transactions.create.useMutation({
@@ -153,7 +165,7 @@ export function DataTable<TData extends { id?: string }, TValue>({ columns }: Da
 	// When filters or sorting change, reset to first page
 	useEffect(() => {
 		setPageIndex(0);
-	}, [symbol, side, dateFrom, dateTo, sorting]);
+	}, [symbol, side, dateRange, sorting]);
 
 	const sortBy = useMemo(() => {
 		const s = sorting[0];
@@ -165,8 +177,8 @@ export function DataTable<TData extends { id?: string }, TValue>({ columns }: Da
 	const sortDir = sorting[0]?.desc ? 'desc' : 'asc';
 
 	const { data, isLoading, refetch, isFetching } = api.transactions.list.useQuery({
-		dateFrom,
-		dateTo,
+		dateFrom: dateRange?.from ? dateRange.from.toISOString().slice(0, 10) : undefined,
+		dateTo: dateRange?.to ? dateRange.to.toISOString().slice(0, 10) : undefined,
 		page: pageIndex + 1,
 		pageSize,
 		side: side === 'ALL' ? undefined : side,
@@ -358,51 +370,20 @@ export function DataTable<TData extends { id?: string }, TValue>({ columns }: Da
 				</Select>
 
 				{/* Date range filter */}
-				<Popover>
-					<PopoverTrigger asChild>
-						<Button className='h-9 gap-2' variant='outline'>
-							<CalendarIcon className='size-4' />
-							{dateFrom || dateTo ? `${dateFrom ?? '…'} → ${dateTo ?? '…'}` : 'Date range'}
-						</Button>
-					</PopoverTrigger>
-					<PopoverContent align='start' className='w-auto p-0'>
-						<Calendar
-							autoFocus
-							captionLayout='dropdown'
-							disabled={(d) => d > new Date()}
-							mode='range'
-							onSelect={(range) => {
-								const fmt = (d?: Date) => (d ? d.toISOString().slice(0, 10) : undefined);
-								setDateFrom(fmt(range?.from));
-								setDateTo(fmt(range?.to));
-							}}
-							selected={{
-								from: dateFrom ? new Date(dateFrom) : undefined,
-								to: dateTo ? new Date(dateTo) : undefined
-							}}
-						/>
-						<div className='flex items-center justify-end gap-2 p-2'>
-							<Button
-								onClick={() => {
-									setDateFrom(undefined);
-									setDateTo(undefined);
-								}}
-								variant='ghost'
-							>
-								Clear
-							</Button>
-							<Button onClick={() => void refetch()} variant='secondary'>
-								Apply
-							</Button>
-						</div>
-					</PopoverContent>
-				</Popover>
+				<DateRangePicker
+					className='h-9'
+					maxDate={new Date()}
+					onChange={setDateRange}
+					placeholder='Date range'
+					presets={transactionPresets}
+					value={dateRange}
+				/>
 
 				{/* CSV export */}
 				<CsvExportButton
 					filters={{
-						dateFrom,
-						dateTo,
+						dateFrom: dateRange?.from ? dateRange.from.toISOString().slice(0, 10) : undefined,
+						dateTo: dateRange?.to ? dateRange.to.toISOString().slice(0, 10) : undefined,
 						side: side === 'ALL' ? undefined : side,
 						sortBy,
 						sortDir,
@@ -855,12 +836,12 @@ function CsvExportButton({
 	filters
 }: {
 	filters: {
+		dateFrom?: string;
+		dateTo?: string;
+		side?: 'BUY' | 'SELL';
 		sortBy: 'date' | 'symbol' | 'quantity' | 'price';
 		sortDir: 'asc' | 'desc';
 		symbol?: string;
-		side?: 'BUY' | 'SELL';
-		dateFrom?: string;
-		dateTo?: string;
 	};
 }) {
 	const { refetch, isFetching } = api.transactions.exportCsv.useQuery(filters, { enabled: false });
