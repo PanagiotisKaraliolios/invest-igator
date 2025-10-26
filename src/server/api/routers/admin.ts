@@ -36,8 +36,6 @@ const AUDIT_ACTIONS = {
 const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
 	const userRole = ctx.session.user.role;
 
-	console.log('🚀 ~ admin.ts:24 ~ userRole:', userRole);
-
 	if (userRole !== 'superadmin' && userRole !== 'admin') {
 		throw new TRPCError({
 			code: 'FORBIDDEN',

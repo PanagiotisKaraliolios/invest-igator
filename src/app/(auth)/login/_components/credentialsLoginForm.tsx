@@ -69,7 +69,6 @@ export function CredentialsLoginForm() {
 
 	async function onSubmit(values: z.infer<typeof schema>) {
 		setError(null);
-		console.log('Submitting login form:', values);
 		try {
 			const result = await authClient.signIn.email({
 				callbackURL: callbackUrl,
@@ -141,8 +140,6 @@ export function CredentialsLoginForm() {
 						code: normalized,
 						trustDevice
 					});
-
-			console.log('🚀 ~ credentialsLoginForm.tsx:138 ~ onSubmitOtp ~ result:', result);
 
 			if (result.error) {
 				const message = useRecoveryCode
