@@ -163,6 +163,80 @@ export const adminRouter = createTRPCRouter({
 			totalUsers
 		};
 	}),
+
+	/**
+	 * Impersonate a user for troubleshooting
+	 * Only admins can impersonate users
+	 * Cannot impersonate yourself
+	 * Admins cannot impersonate superadmins
+	 */
+	impersonateUser: adminProcedure
+		.input(
+			z.object({
+				userId: z.string()
+			})
+		)
+		.mutation(async ({ ctx, input }) => {
+			const currentUserRole = ctx.session.user.role as 'admin' | 'superadmin' | 'user';
+
+			// Prevent self-impersonation
+			if (input.userId === ctx.session.user.id) {
+				throw new TRPCError({
+					code: 'FORBIDDEN',
+					message: 'You cannot impersonate yourself'
+				});
+			}
+
+			// Get the target user to check their role
+			const targetUser = await ctx.db.user.findUnique({
+				select: { role: true },
+				where: { id: input.userId }
+			});
+
+			if (!targetUser) {
+				throw new TRPCError({
+					code: 'NOT_FOUND',
+					message: 'User not found'
+				});
+			}
+
+			// Only superadmins can impersonate admins
+			if (targetUser.role === 'admin' && currentUserRole !== 'superadmin') {
+				throw new TRPCError({
+					code: 'FORBIDDEN',
+					message: 'Only superadmins can impersonate admin accounts'
+				});
+			}
+
+			// Superadmins cannot be impersonated
+			if (targetUser.role === 'superadmin') {
+				throw new TRPCError({
+					code: 'FORBIDDEN',
+					message: 'Cannot impersonate superadmin accounts'
+				});
+			}
+
+			console.log('🚀 Attempting to impersonate user:', input.userId);
+
+			const response = await auth.api.impersonateUser({
+				body: {
+					userId: input.userId
+				},
+				headers: ctx.headers,
+				asResponse: true
+			});
+
+			console.log('🚀 Impersonation response:', response);
+
+			if (!response) {
+				throw new TRPCError({
+					code: 'INTERNAL_SERVER_ERROR',
+					message: 'Failed to impersonate user'
+				});
+			}
+
+			return { success: true, response };
+		}),
 	/**
 	 * List users with optional search and pagination
 	 */
@@ -377,6 +451,24 @@ export const adminRouter = createTRPCRouter({
 
 			return { success: true };
 		}),
+
+	/**
+	 * Stop impersonating and return to admin session
+	 */
+	stopImpersonation: protectedProcedure.mutation(async ({ ctx }) => {
+		const response = await auth.api.stopImpersonating({
+			headers: ctx.headers
+		});
+
+		if (!response) {
+			throw new TRPCError({
+				code: 'INTERNAL_SERVER_ERROR',
+				message: 'Failed to stop impersonation'
+			});
+		}
+
+		return { success: true };
+	}),
 
 	/**
 	 * Unban a user

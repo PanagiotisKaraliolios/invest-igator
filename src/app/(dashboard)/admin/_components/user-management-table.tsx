@@ -1,6 +1,6 @@
 'use client';
 
-import { Ban, Crown, MoreHorizontal, Search, Shield, Trash2, UserCog } from 'lucide-react';
+import { Ban, Crown, MoreHorizontal, Search, Shield, Trash2, UserCog, UserRoundCog } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -26,10 +26,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { authClient, useSession } from '@/lib/auth-client';
 import { api } from '@/trpc/react';
 
 export function UserManagementTable() {
 	const router = useRouter();
+	const session = useSession();
 	const [searchQuery, setSearchQuery] = useState('');
 	const [currentPage, setCurrentPage] = useState(1);
 	const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
@@ -120,7 +122,24 @@ export function UserManagementTable() {
 		removeUserMutation.mutate({ userId });
 	};
 
-	return (
+	const handleImpersonateUser = async (userId: string) => {
+		try {
+			const result = await authClient.admin.impersonateUser({ userId });
+
+			if (result.error) {
+				toast.error(result.error.message || 'Failed to impersonate user');
+				return;
+			}
+
+			toast.success('Now impersonating user');
+			
+			// Hard navigation to ensure server components refetch with updated session
+			window.location.href = '/portfolio';
+		} catch (error) {
+			toast.error('Failed to impersonate user');
+			console.error('Impersonation error:', error);
+		}
+	};	return (
 		<div className='space-y-4'>
 			<div className='flex items-center gap-2'>
 				<div className='relative flex-1'>
@@ -175,7 +194,9 @@ export function UserManagementTable() {
 									<TableCell>
 										<Badge
 											variant={
-												user.role === 'superadmin' || user.role === 'admin' ? 'default' : 'outline'
+												user.role === 'superadmin' || user.role === 'admin'
+													? 'default'
+													: 'outline'
 											}
 										>
 											{user.role === 'superadmin' && <Crown className='mr-1 size-3' />}
@@ -216,38 +237,45 @@ export function UserManagementTable() {
 													<DropdownMenuLabel>Actions</DropdownMenuLabel>
 
 													{/* Only superadmins can promote to superadmin */}
-													{isSuperadmin && user.role !== 'superadmin' && user.id !== currentUser?.id && (
-														<>
-													<DropdownMenuSeparator />
-														<DropdownMenuItem
-															onClick={() => handleSetRole(user.id, 'superadmin')}
-														>
-															<Crown className='mr-2 size-4' />
-															Make Superadmin
-														</DropdownMenuItem>
-														</>
-													)}
+													{isSuperadmin &&
+														user.role !== 'superadmin' &&
+														user.id !== currentUser?.id && (
+															<>
+																<DropdownMenuSeparator />
+																<DropdownMenuItem
+																	onClick={() => handleSetRole(user.id, 'superadmin')}
+																>
+																	<Crown className='mr-2 size-4' />
+																	Make Superadmin
+																</DropdownMenuItem>
+															</>
+														)}
 
 													{/* Only superadmins can change admin roles */}
-													{isSuperadmin && user.role !== 'admin' && user.id !== currentUser?.id && (
-														<DropdownMenuItem onClick={() => handleSetRole(user.id, 'admin')}>
-															<Shield className='mr-2 size-4' />
-															Make Admin
-														</DropdownMenuItem>
-													)}
+													{isSuperadmin &&
+														user.role !== 'admin' &&
+														user.id !== currentUser?.id && (
+															<DropdownMenuItem
+																onClick={() => handleSetRole(user.id, 'admin')}
+															>
+																<Shield className='mr-2 size-4' />
+																Make Admin
+															</DropdownMenuItem>
+														)}
 
 													{/* Demote to user - cannot demote yourself */}
 													{user.role !== 'user' && user.id !== currentUser?.id && (
-														<DropdownMenuItem onClick={() => handleSetRole(user.id, 'user')}>
+														<DropdownMenuItem
+															onClick={() => handleSetRole(user.id, 'user')}
+														>
 															<UserCog className='mr-2 size-4' />
 															Make User
 														</DropdownMenuItem>
 													)}
 
-
 													{/* Ban/Unban - cannot ban yourself */}
-													{user.id !== currentUser?.id && (
-														user.banned ? (
+													{user.id !== currentUser?.id &&
+														(user.banned ? (
 															<DropdownMenuItem onClick={() => handleUnbanUser(user.id)}>
 																<UserCog className='mr-2 size-4' />
 																Unban User
@@ -255,26 +283,39 @@ export function UserManagementTable() {
 														) : (
 															<>
 																<DropdownMenuSeparator />
-																<DropdownMenuItem onClick={() => handleBanUser(user.id)}>
+																<DropdownMenuItem
+																	onClick={() => handleBanUser(user.id)}
+																>
 																	<Ban className='mr-2 size-4' />
 																	Ban User
 																</DropdownMenuItem>
 															</>
-														)
-													)}
+														))}
 
+													{/* Impersonate user - cannot impersonate yourself or superadmins */}
+													{user.id !== currentUser?.id && user.role !== 'superadmin' && (
+														<>
+															<DropdownMenuSeparator />
+															<DropdownMenuItem
+																onClick={() => handleImpersonateUser(user.id)}
+															>
+																<UserRoundCog className='mr-2 size-4' />
+																Impersonate User
+															</DropdownMenuItem>
+														</>
+													)}
 
 													{/* Delete user - cannot delete yourself */}
 													{user.id !== currentUser?.id && (
 														<>
-														<DropdownMenuSeparator />
-														<DropdownMenuItem
-															className='text-destructive'
-															onClick={() => setDeleteUserId(user.id)}
-														>
-															<Trash2 className='mr-2 size-4' />
-															Delete User
-														</DropdownMenuItem>
+															<DropdownMenuSeparator />
+															<DropdownMenuItem
+																className='text-destructive'
+																onClick={() => setDeleteUserId(user.id)}
+															>
+																<Trash2 className='mr-2 size-4' />
+																Delete User
+															</DropdownMenuItem>
 														</>
 													)}
 												</DropdownMenuContent>

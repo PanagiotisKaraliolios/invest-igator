@@ -4,6 +4,7 @@ import { AppSidebar } from '@/app/(dashboard)/_components/app-sidebar';
 import DashboardBreadcrumbs from '@/app/(dashboard)/_components/breadcrumbs';
 import CurrencySwitch from '@/app/(dashboard)/_components/currency-switch';
 import ThemeSwitch from '@/app/(dashboard)/_components/theme-switch';
+import { ImpersonationBanner } from '@/components/admin/impersonation-banner';
 import { Separator } from '@/components/ui/separator';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { env } from '@/env';
@@ -12,6 +13,12 @@ import { auth } from '@/lib/auth';
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
 	const session = await auth.api.getSession({ headers: await headers() });
 	if (!session?.user) redirect('/login');
+
+	// Check if current session is impersonated
+	const isImpersonated = session.session.impersonatedBy !== null && session.session.impersonatedBy !== undefined;
+
+	console.log('🚀 ~ layout.tsx:20 ~ DashboardLayout ~ isImpersonated:', session);
+
 
 	return (
 		<SidebarProvider>
@@ -28,7 +35,15 @@ export default async function DashboardLayout({ children }: { children: React.Re
 						<ThemeSwitch />
 					</div>
 				</header>
-				<div className='flex flex-1 flex-col gap-4 p-4 pt-0'>{children}</div>
+				<div className='flex flex-1 flex-col gap-4 p-4 pt-0'>
+					{isImpersonated && session.session.impersonatedBy && (
+						<ImpersonationBanner
+							currentUserEmail={session.user.email}
+							impersonatedBy={session.session.impersonatedBy}
+						/>
+					)}
+					{children}
+				</div>
 			</SidebarInset>
 		</SidebarProvider>
 	);
