@@ -1,6 +1,7 @@
 'use client';
 
 import { ChevronRight, type LucideIcon } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
@@ -27,6 +28,7 @@ export function NavMain({
 		}[];
 	}[];
 }) {
+	const pathname = usePathname();
 	return (
 		<SidebarGroup>
 			<SidebarGroupLabel>Platform</SidebarGroupLabel>
@@ -43,15 +45,18 @@ export function NavMain({
 							</CollapsibleTrigger>
 							<CollapsibleContent>
 								<SidebarMenuSub>
-									{item.items?.map((subItem) => (
-										<SidebarMenuSubItem key={subItem.title}>
-											<SidebarMenuSubButton asChild>
-												<a href={subItem.url}>
-													<span>{subItem.title}</span>
-												</a>
-											</SidebarMenuSubButton>
-										</SidebarMenuSubItem>
-									))}
+									{item.items?.map((subItem) => {
+										const isSubItemActive = pathname.startsWith(subItem.url);
+										return (
+											<SidebarMenuSubItem key={subItem.title}>
+												<SidebarMenuSubButton asChild isActive={isSubItemActive}>
+													<a href={subItem.url}>
+														<span>{subItem.title}</span>
+													</a>
+												</SidebarMenuSubButton>
+											</SidebarMenuSubItem>
+										);
+									})}
 								</SidebarMenuSub>
 							</CollapsibleContent>
 						</SidebarMenuItem>

@@ -83,8 +83,11 @@ export function AppSidebar({
 					...baseNavItems,
 					{
 						icon: Shield,
-						isActive: isNavItemActive([{ url: '/admin' }]),
-						items: [{ title: 'Dashboard', url: '/admin' }],
+						isActive: isNavItemActive([{ url: '/admin/users' }, { url: '/admin/audit-logs' }]),
+						items: [
+							{ title: 'Users', url: '/admin/users' },
+							{ title: 'Audit Logs', url: '/admin/audit-logs' }
+						],
 						title: 'Admin'
 					}
 				]
