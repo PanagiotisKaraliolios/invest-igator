@@ -227,7 +227,8 @@ export const accountRouter = createTRPCRouter({
 				emailVerified: true,
 				id: true,
 				image: true,
-				name: true
+				name: true,
+				role: true
 			},
 			where: { id: ctx.session.user.id }
 		});
@@ -245,7 +246,8 @@ export const accountRouter = createTRPCRouter({
 			emailVerified: Boolean(user.emailVerified),
 			hasPassword: Boolean(credentialAccount?.password),
 			id: user.id,
-			name: user.name ?? user.email ?? 'User'
+			name: user.name ?? user.email ?? 'User',
+			role: user.role
 		} as const;
 	}),
 

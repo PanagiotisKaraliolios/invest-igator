@@ -59,15 +59,16 @@ model Account {
 }
 
 model Session {
-  id        String   @id @default(cuid())
-  token     String   @unique @map("sessionToken") // Map to Better Auth's expected field
-  userId    String
-  expiresAt DateTime @map("expires") // Map to Better Auth's expected field
-  ipAddress String?
-  userAgent String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String   @id @default(cuid())
+  token           String   @unique @map("sessionToken") // Map to Better Auth's expected field
+  userId          String
+  expiresAt       DateTime @map("expires") // Map to Better Auth's expected field
+  ipAddress       String?
+  userAgent       String?
+  impersonatedBy  String? // Admin plugin: ID of admin impersonating this session
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("Session")
 }
@@ -81,6 +82,10 @@ model User {
   image                  String?
   passwordHash           String?
   twoFactorEnabled       Boolean            @default(false)
+  role                   String             @default("user") // Admin plugin: user role
+  banned                 Boolean            @default(false) // Admin plugin: ban status
+  banReason              String? // Admin plugin: reason for ban
+  banExpires             DateTime? // Admin plugin: when ban expires
   theme                  Theme              @default(LIGHT)
   currency               Currency           @default(USD)
   createdAt              DateTime           @default(now())

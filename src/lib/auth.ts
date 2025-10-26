@@ -1,9 +1,10 @@
 import * as bcrypt from 'bcryptjs';
 import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
-import { magicLink, openAPI, twoFactor } from 'better-auth/plugins';
+import { admin, magicLink, openAPI, twoFactor } from 'better-auth/plugins';
 import { createTransport } from 'nodemailer';
 import { env } from '@/env';
+import { ac, admin as adminRole, superadmin as superadminRole, user as userRole } from '@/server/auth/permissions';
 import { db } from '@/server/db';
 
 export const auth = betterAuth({
@@ -89,6 +90,15 @@ export const auth = betterAuth({
 		openAPI({
 			path: '/reference' // Will be served at /api/auth/reference
 		}),
+		admin({
+			ac,
+			defaultRole: 'user',
+			roles: {
+				admin: adminRole,
+				superadmin: superadminRole,
+				user: userRole
+			} as const
+		}),
 		magicLink({
 			disableSignUp: true, // Only allow existing users to login via magic link
 			expiresIn: 60 * 5, // 5 minutes
@@ -134,7 +144,16 @@ export const auth = betterAuth({
 			clientSecret: env.AUTH_DISCORD_SECRET
 		}
 	},
-	trustedOrigins: [env.NEXT_PUBLIC_SITE_URL, 'https://invest-igator.karaliolios.dev']
+	trustedOrigins: [env.NEXT_PUBLIC_SITE_URL, 'https://invest-igator.karaliolios.dev'],
+	user: {
+		additionalFields: {
+			role: {
+				defaultValue: 'user',
+				required: false,
+				type: 'string'
+			}
+		}
+	}
 });
 
 export type Session = typeof auth.$Infer.Session.session;

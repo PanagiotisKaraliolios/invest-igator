@@ -102,6 +102,7 @@
 		"db:generate": "prisma migrate dev",
 		"db:migrate": "prisma migrate deploy",
 		"db:push": "prisma db push",
+		"db:seed": "bun prisma/seed.ts",
 		"db:studio": "prisma studio --port 5000",
 		"dev": "next dev --turbo",
 		"ingest:alpha": "bun run src/server/jobs/ingest-alpha.ts",

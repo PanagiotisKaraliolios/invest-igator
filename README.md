@@ -27,6 +27,7 @@ Built with Next.js App Router, tRPC v11, Prisma/PostgreSQL, shadcn/ui, and Influ
 - 🎪 **Goals tracking**: simple personal financial goals model
 - 🎨 **Modern UI**: theming, toasts, and shadcn/ui + Recharts
 - 🔄 **Auto-sync**: Yahoo Finance ingestion job for OHLCV and events; FX rates via Alpha Vantage
+- 🔐 **Admin interface**: user management, statistics, and role-based access control
 
 ## 🛠️ Tech stack
 

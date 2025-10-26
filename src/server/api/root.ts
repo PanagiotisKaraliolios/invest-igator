@@ -2,6 +2,7 @@ import { accountRouter } from '@/server/api/routers/account';
 import { authRouter } from '@/server/api/routers/auth';
 import { watchlistRouter } from '@/server/api/routers/watchlist';
 import { createCallerFactory, createTRPCRouter } from '@/server/api/trpc';
+import { adminRouter } from './routers/admin';
 import { currencyProcedures } from './routers/currency';
 import { fxRouter } from './routers/fx';
 import { goalsRouter } from './routers/goals';
@@ -28,6 +29,18 @@ import { transactionsRouter } from './routers/transactions';
  * - `getTwoFactorState` - Check 2FA status
  * - `requestEmailChange` - Initiate email change
  * - `deleteAccount` - Permanently delete account
+ *
+ * ### admin
+ * Admin-only procedures for user management and statistics.
+ * All procedures require authentication and admin role.
+ *
+ * Key procedures:
+ * - `listUsers` - List users with search and pagination
+ * - `setRole` - Set user role (admin/user)
+ * - `banUser` - Ban a user
+ * - `unbanUser` - Unban a user
+ * - `removeUser` - Delete a user
+ * - `getStats` - Get admin statistics
  *
  * ### auth
  * Authentication operations for signup, login, and password reset.
@@ -111,6 +124,7 @@ import { transactionsRouter } from './routers/transactions';
  */
 export const appRouter = createTRPCRouter({
 	account: accountRouter,
+	admin: adminRouter,
 	auth: authRouter,
 	currency: currencyProcedures,
 	fx: fxRouter,
