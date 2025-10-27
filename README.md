@@ -436,4 +436,4 @@ Add a few symbols to your watchlist and run the Yahoo ingest job; the watchlist 
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=PanagiotisKaraliolios/invest-igator&type=date&legend=bottom-right)](https://www.star-history.com/#PanagiotisKaraliolios/invest-igator&type=date&legend=bottom-right)
+[![Star History Chart](https://api.star-history.com/svg?repos=PanagiotisKaraliolios/invest-igator&type=date&legend=top-left)](https://www.star-history.com/#PanagiotisKaraliolios/invest-igator&type=date&legend=top-left)
