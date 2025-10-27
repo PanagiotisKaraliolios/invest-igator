@@ -298,7 +298,7 @@ export const accountRouter = createTRPCRouter({
 						userId: ctx.session.user.id
 					}
 				});
-				
+
 				if (backupCodesData && Array.isArray(backupCodesData)) {
 					recoveryCodesRemaining = backupCodesData.length;
 				}
