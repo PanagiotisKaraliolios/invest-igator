@@ -10,6 +10,9 @@
 [![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748?logo=prisma)](https://www.prisma.io/)
 [![Bun](https://img.shields.io/badge/Bun-Runtime-f9f1e1?logo=bun)](https://bun.sh/)
 
+![Docker Image Size](https://img.shields.io/docker/image-size/mrdeathrider/invest-igator)
+
+
 Built with Next.js App Router, tRPC v11, Prisma/PostgreSQL, shadcn/ui, and InfluxDB for fast timeseries. Auth is powered by Better Auth (Prisma adapter) with email/password, magic links, 2FA, and Discord OAuth.
 
 [Getting Started](#-getting-started-local-dev) • [Features](#-features) • [Documentation](#-project-structure) • [Contributing](#-contributing)
