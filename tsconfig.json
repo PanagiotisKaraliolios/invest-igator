@@ -1,36 +1,56 @@
 {
-	"compilerOptions": {
-		"allowJs": true,
-
-		/* Path Aliases */
-		"baseUrl": ".",
-		"checkJs": true,
-		/* Base Options: */
-		"esModuleInterop": true,
-		"incremental": true,
-		"isolatedModules": true,
-		"jsx": "preserve",
-
-		/* Bundled projects */
-		"lib": ["dom", "dom.iterable", "ES2022"],
-		"module": "ESNext",
-		"moduleDetection": "force",
-		"moduleResolution": "Bundler",
-		"noEmit": true,
-		"noUncheckedIndexedAccess": true,
-		"paths": {
-			"@/*": ["./src/*"]
-		},
-		"plugins": [{ "name": "next" }],
-		"resolveJsonModule": true,
-		"skipLibCheck": true,
-
-		/* Strictness */
-		"strict": true,
-		"target": "es2022",
-		"types": ["@playwright/test"],
-		"verbatimModuleSyntax": true
-	},
-	"exclude": ["node_modules"],
-	"include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "**/*.cjs", "**/*.js", ".next/types/**/*.ts", "tests/**/*.ts"]
+  "compilerOptions": {
+    "allowJs": true,
+    /* Path Aliases */
+    "baseUrl": ".",
+    "checkJs": true,
+    /* Base Options: */
+    "esModuleInterop": true,
+    "incremental": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    /* Bundled projects */
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "ES2022"
+    ],
+    "module": "ESNext",
+    "moduleDetection": "force",
+    "moduleResolution": "Bundler",
+    "noEmit": true,
+    "noUncheckedIndexedAccess": true,
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    },
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    /* Strictness */
+    "strict": true,
+    "target": "es2022",
+    "types": [
+      "@playwright/test"
+    ],
+    "verbatimModuleSyntax": true
+  },
+  "exclude": [
+    "node_modules"
+  ],
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.cjs",
+    "**/*.js",
+    ".next/types/**/*.ts",
+    "tests/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ]
 }
