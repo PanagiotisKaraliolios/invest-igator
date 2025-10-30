@@ -3,20 +3,16 @@
 import { AudioWaveform, BookOpen, Command, PieChart, Shield } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarRail } from '@/components/ui/sidebar';
-import { api } from '@/trpc/react';
 import { ApplicationNameLogo } from './application-name-logo';
 import { NavMain } from './nav-main';
 import { NavUser } from './nav-user';
 
 export function AppSidebar({
 	applicationName,
+	isAdmin = false,
 	...props
-}: Omit<React.ComponentProps<typeof Sidebar>, 'children'> & { applicationName: string }) {
+}: Omit<React.ComponentProps<typeof Sidebar>, 'children'> & { applicationName: string; isAdmin?: boolean }) {
 	const pathname = usePathname();
-	const { data: user } = api.account.getMe.useQuery(undefined, {
-		gcTime: 10 * 60 * 1000, // 10 minutes
-		staleTime: 5 * 60 * 1000 // 5 minutes
-	});
 
 	// Helper function to check if a nav item is active based on current pathname
 	const isNavItemActive = (items: Array<{ url: string }>) => {
@@ -77,21 +73,20 @@ export function AppSidebar({
 		}
 	];
 
-	const navItems =
-		user?.role === 'admin' || user?.role === 'superadmin'
-			? [
-					...baseNavItems,
-					{
-						icon: Shield,
-						isActive: isNavItemActive([{ url: '/admin/users' }, { url: '/admin/audit-logs' }]),
-						items: [
-							{ title: 'Users', url: '/admin/users' },
-							{ title: 'Audit Logs', url: '/admin/audit-logs' }
-						],
-						title: 'Admin'
-					}
-				]
-			: baseNavItems;
+	const navItems = isAdmin
+		? [
+				...baseNavItems,
+				{
+					icon: Shield,
+					isActive: isNavItemActive([{ url: '/admin/users' }, { url: '/admin/audit-logs' }]),
+					items: [
+						{ title: 'Users', url: '/admin/users' },
+						{ title: 'Audit Logs', url: '/admin/audit-logs' }
+					],
+					title: 'Admin'
+				}
+			]
+		: baseNavItems;
 
 	return (
 		<Sidebar collapsible='icon' {...props}>

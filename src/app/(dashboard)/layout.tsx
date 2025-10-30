@@ -17,9 +17,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
 	// Check if current session is impersonated
 	const isImpersonated = session.session.impersonatedBy !== null && session.session.impersonatedBy !== undefined;
 
+	// Check if user is admin or superadmin
+	const isAdmin = session.user.role === 'admin' || session.user.role === 'superadmin';
+
 	return (
 		<SidebarProvider>
-			<AppSidebar applicationName={env.APP_NAME} />
+			<AppSidebar applicationName={env.APP_NAME} isAdmin={isAdmin} />
 			<SidebarInset>
 				<header className='flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12'>
 					<div className='flex items-center gap-2 px-4'>
