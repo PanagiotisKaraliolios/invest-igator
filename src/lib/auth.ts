@@ -1,6 +1,7 @@
 import * as bcrypt from 'bcryptjs';
 import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
+import { nextCookies } from 'better-auth/next-js';
 import { admin, magicLink, openAPI, twoFactor } from 'better-auth/plugins';
 import { createTransport } from 'nodemailer';
 import { env } from '@/env';
@@ -125,7 +126,8 @@ export const auth = betterAuth({
 		twoFactor({
 			issuer: env.APP_NAME
 			// Recovery codes are generated automatically
-		})
+		}),
+		nextCookies()
 	],
 	session: {
 		cookie: {

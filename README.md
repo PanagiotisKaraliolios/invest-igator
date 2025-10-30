@@ -43,6 +43,12 @@ Built with Next.js App Router, tRPC v11, Prisma/PostgreSQL, shadcn/ui, and Influ
   - 📋 Audit logs with date range filtering and action tracking
   - 📊 Statistics dashboard with user metrics
   - 🔍 Debounced search across users and logs
+- 🔑 **API Keys**: programmatic access with granular permissions
+  - 🎯 8 permission scopes (account, admin, apiKeys, fx, goals, portfolio, transactions, watchlist)
+  - 📋 4 built-in templates (read-only, full-access, portfolio-manager, custom)
+  - 🚦 Rate limiting and expiration controls
+  - 🔒 SHA-256 hashed keys with secure generation
+  - 📊 Usage tracking and management UI
 
 ## 🛠️ Tech stack
 
@@ -206,7 +212,7 @@ Validated in `src/env.js` via `@t3-oss/env-nextjs`. Server-side vars are require
 
 **Schema**: `prisma/schema.prisma`
 
-**Relevant models**: `User`, `Account`, `Session`, `WatchlistItem`, `Transaction`, `FxRate`, `Goal` and Better Auth support tables `TwoFactor`, `Verification`, `VerificationToken`.
+**Relevant models**: `User`, `Account`, `Session`, `WatchlistItem`, `Transaction`, `FxRate`, `Goal`, `ApiKey` and Better Auth support tables `TwoFactor`, `Verification`, `VerificationToken`.
 
 ---
 
@@ -364,6 +370,7 @@ docker compose down -v
 │   │   │   ├── watchlist/     # 📊 Watchlist with charts and date filtering
 │   │   │   ├── portfolio/     # 💼 Portfolio analytics
 │   │   │   ├── transactions/  # 📈 Transaction management with sorting
+│   │   │   ├── account/       # 👤 Account settings with API Keys tab
 │   │   │   └── admin/         # 🔐 Admin section
 │   │   │       ├── users/     # 👥 User management page
 │   │   │       └── audit-logs/  # 📋 Audit logs page
@@ -384,6 +391,8 @@ docker compose down -v
 │   │   └── query-client.ts    # 📡 React Query configuration
 │   ├── lib/
 │   │   ├── auth.ts            # 🔒 Better Auth instance
+│   │   ├── api-key-permissions.ts  # 🔑 API key permission framework
+│   │   ├── api-key-utils.ts   # 🔧 API key generation & validation
 │   │   └── utils.ts           # 🔧 Utility functions (cn, etc.)
 │   └── env.js                 # ✔️  Environment validation (@t3-oss/env-nextjs)
 ├── tests/
@@ -400,6 +409,12 @@ docker compose down -v
 - Dashboard shell: `src/app/(dashboard)/layout.tsx`
 - Sidebar with active navigation: `src/app/(dashboard)/_components/app-sidebar.tsx`
 - tRPC glue: `src/server/api/trpc.ts`, `src/trpc/react.tsx`, `src/trpc/server.ts`
+- API key system:
+  - Permission framework: `src/lib/api-key-permissions.ts`
+  - Key utilities: `src/lib/api-key-utils.ts`
+  - Router: `src/server/api/routers/api-keys.ts`
+  - Middleware: `src/server/api/middleware/with-api-key.ts`
+  - UI components: `src/app/(dashboard)/account/_components/api-keys-*.tsx`
 - Admin routers with sorting: `src/server/api/routers/admin.ts`
 - Table components (reference): `src/app/(dashboard)/admin/_components/user-management-table.tsx`, `audit-logs-table.tsx`
 - Influx helpers: `src/server/influx.ts`
@@ -410,7 +425,54 @@ docker compose down -v
 
 ---
 
-## 🐛 Troubleshooting
+## � API Keys
+
+Invest-igator supports programmatic API access via API keys with granular permission control.
+
+### Features
+
+- 🎯 **8 permission scopes**: account, admin, apiKeys, fx, goals, portfolio, transactions, watchlist
+- 📋 **4 built-in templates**:
+  - `read-only`: Read access to all non-admin endpoints
+  - `full-access`: Read + write + delete for all user resources
+  - `portfolio-manager`: Portfolio, transactions, and goals management
+  - `custom`: Build your own permission set
+- 🚦 **Rate limiting**: Configure per-key request limits with automatic refills
+- ⏰ **Expiration control**: Set expiry dates or create permanent keys
+- 🔒 **Secure by design**: SHA-256 hashed keys, cryptographically secure generation
+- 📊 **Management UI**: Create, view, and revoke keys from your account page
+
+### Quick Start
+
+1. **Create an API key**: Go to Account → API Keys tab and click "Create API Key"
+2. **Select permissions**: Choose a template or create custom permissions
+3. **Copy your key**: Save it securely - it's only shown once!
+4. **Make requests**: Include `x-api-key` header in your API calls
+
+### Example Usage
+
+```bash
+# Get your user profile
+curl https://your-app.com/api/trpc/account.getMe \
+  -H "x-api-key: your_api_key_here"
+
+# Get FX rates matrix
+curl https://your-app.com/api/trpc/fx.matrix \
+  -H "x-api-key: your_api_key_here"
+
+# List watchlist items
+curl https://your-app.com/api/trpc/watchlist.list \
+  -H "x-api-key: your_api_key_here"
+```
+
+### Documentation
+
+- 📖 **[API Key Permissions](docs/api-key-permissions.md)**: Detailed permission system documentation
+- 📖 **[API Key Usage Guide](docs/api-key-usage.md)**: Examples in cURL, JavaScript/TypeScript, and Python
+
+---
+
+## �🐛 Troubleshooting
 
 | Issue | Solution |
 |-------|----------|

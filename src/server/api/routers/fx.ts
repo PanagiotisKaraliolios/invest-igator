@@ -1,10 +1,10 @@
 import { z } from 'zod';
-import { createTRPCRouter, publicProcedure } from '@/server/api/trpc';
+import { createTRPCRouter, withPermissions } from '@/server/api/trpc';
 import { getFxMatrix } from '@/server/fx';
 
 /**
  * FX router - provides foreign exchange rate information.
- * All procedures are public (no authentication required).
+ * Requires authentication and fx:read permission.
  *
  * @example
  * // Get current FX matrix
@@ -16,14 +16,18 @@ export const fxRouter = createTRPCRouter({
 	 * Retrieves the current foreign exchange rate matrix.
 	 * Returns conversion rates between all supported currency pairs.
 	 *
+	 * Requires: fx:read permission
+	 *
 	 * @returns FX matrix object with currency pair rates
 	 *
 	 * @example
 	 * const rates = await api.fx.matrix.query();
 	 * const usdToEur = rates['USD']['EUR'];
 	 */
-	matrix: publicProcedure.input(z.void()).query(async () => {
-		const m = await getFxMatrix();
-		return m;
-	})
+	matrix: withPermissions('fx', 'read')
+		.input(z.void())
+		.query(async () => {
+			const m = await getFxMatrix();
+			return m;
+		})
 });

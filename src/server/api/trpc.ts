@@ -10,6 +10,7 @@
 import { initTRPC, TRPCError } from '@trpc/server';
 import superjson from 'superjson';
 import { ZodError } from 'zod';
+import { hashApiKey, isApiKeyExpired } from '@/lib/api-keys';
 import { auth } from '@/lib/auth';
 import { db } from '@/server/db';
 
@@ -27,11 +28,71 @@ import { db } from '@/server/db';
  */
 export const createTRPCContext = async (opts: { headers: Headers }) => {
 	try {
-		const session = await auth.api.getSession({
+		// First, try to get a regular session
+		let session = await auth.api.getSession({
 			headers: opts.headers
 		});
 
+		// Track API key permissions separately from session
+		let apiKeyPermissions: Record<string, string[]> | null = null;
+
+		// If no session, check for API key in headers
+		if (!session) {
+			const apiKey = opts.headers.get('x-api-key');
+
+			if (apiKey) {
+				const hashedKey = hashApiKey(apiKey);
+
+				// Look up the API key in the database
+				const apiKeyRecord = await db.apiKey.findUnique({
+					include: { user: true },
+					where: { key: hashedKey }
+				});
+
+				// If valid, create a mock session and store permissions
+				if (apiKeyRecord && apiKeyRecord.enabled && !isApiKeyExpired(apiKeyRecord.expiresAt)) {
+					// Parse permissions from JSON string
+					if (apiKeyRecord.permissions) {
+						try {
+							apiKeyPermissions = JSON.parse(apiKeyRecord.permissions) as Record<string, string[]>;
+						} catch (error) {
+							console.error('[TRPC Context] Failed to parse API key permissions:', error);
+						}
+					}
+
+					session = {
+						session: {
+							createdAt: apiKeyRecord.createdAt,
+							expiresAt: apiKeyRecord.expiresAt ?? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+							id: `apikey-${apiKeyRecord.id}`,
+							impersonatedBy: null,
+							ipAddress: null,
+							token: `apikey-${apiKeyRecord.id}`,
+							updatedAt: apiKeyRecord.updatedAt,
+							userAgent: null,
+							userId: apiKeyRecord.user.id
+						},
+						user: {
+							banExpires: apiKeyRecord.user.banExpires,
+							banned: apiKeyRecord.user.banned,
+							banReason: apiKeyRecord.user.banReason,
+							createdAt: apiKeyRecord.user.createdAt,
+							email: apiKeyRecord.user.email ?? '',
+							emailVerified: apiKeyRecord.user.emailVerified,
+							id: apiKeyRecord.user.id,
+							image: apiKeyRecord.user.image ?? null,
+							name: apiKeyRecord.user.name ?? '',
+							role: apiKeyRecord.user.role,
+							twoFactorEnabled: apiKeyRecord.user.twoFactorEnabled,
+							updatedAt: apiKeyRecord.user.updatedAt
+						}
+					};
+				}
+			}
+		}
+
 		return {
+			apiKeyPermissions,
 			db,
 			session,
 			...opts
@@ -135,7 +196,33 @@ export const protectedProcedure = t.procedure.use(timingMiddleware).use(({ ctx, 
 	return next({
 		ctx: {
 			// infers the `session` as non-nullable
+			apiKeyPermissions: ctx.apiKeyPermissions,
 			session: { ...ctx.session, user: ctx.session.user }
 		}
 	});
 });
+
+/**
+ * Helper function to create a protected procedure that requires specific permissions
+ *
+ * @param scope - The permission scope (e.g., 'watchlist', 'portfolio')
+ * @param action - The required action (e.g., 'read', 'write', 'delete')
+ */
+export const withPermissions = (scope: string, action: string) => {
+	return protectedProcedure.use(({ ctx, next }) => {
+		// If authenticated via API key, check permissions
+		if (ctx.apiKeyPermissions) {
+			const scopeActions = ctx.apiKeyPermissions[scope];
+
+			if (!scopeActions || !scopeActions.includes(action)) {
+				throw new TRPCError({
+					code: 'FORBIDDEN',
+					message: `API key does not have permission: ${scope}:${action}`
+				});
+			}
+		}
+		// Regular sessions have full access (no API key restrictions)
+
+		return next({ ctx });
+	});
+};

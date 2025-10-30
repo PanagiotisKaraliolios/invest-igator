@@ -3,6 +3,7 @@ import { authRouter } from '@/server/api/routers/auth';
 import { watchlistRouter } from '@/server/api/routers/watchlist';
 import { createCallerFactory, createTRPCRouter } from '@/server/api/trpc';
 import { adminRouter } from './routers/admin';
+import { apiKeysRouter } from './routers/api-keys';
 import { currencyProcedures } from './routers/currency';
 import { fxRouter } from './routers/fx';
 import { goalsRouter } from './routers/goals';
@@ -41,6 +42,19 @@ import { transactionsRouter } from './routers/transactions';
  * - `unbanUser` - Unban a user
  * - `removeUser` - Delete a user
  * - `getStats` - Get admin statistics
+ *
+ * ### apiKeys
+ * API key management for programmatic access.
+ * All procedures require authentication.
+ *
+ * Key procedures:
+ * - `create` - Create new API key with optional expiration, rate limits, and permissions
+ * - `list` - List all user's API keys
+ * - `get` - Get specific API key details
+ * - `update` - Update API key settings
+ * - `delete` - Delete an API key
+ * - `verify` - Verify an API key and check permissions
+ * - `deleteExpired` - Clean up expired API keys
  *
  * ### auth
  * Authentication operations for signup, login, and password reset.
@@ -125,6 +139,7 @@ import { transactionsRouter } from './routers/transactions';
 export const appRouter = createTRPCRouter({
 	account: accountRouter,
 	admin: adminRouter,
+	apiKeys: apiKeysRouter,
 	auth: authRouter,
 	currency: currencyProcedures,
 	fx: fxRouter,

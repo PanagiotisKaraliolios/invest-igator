@@ -97,6 +97,7 @@ model User {
   emailChangeTokens      EmailChangeToken[]
   goals                  Goal[]
   twoFactor              TwoFactor[]
+  apiKeys                ApiKey[]
 }
 
 // Better Auth Two-Factor Authentication
@@ -224,4 +225,48 @@ model AuditLog {
   @@index([action])
   @@index([createdAt])
   @@map("auditLog")
+}
+
+// API keys for programmatic access
+model ApiKey {
+  id                   String    @id @default(cuid())
+  name                 String?   // User-defined name for the key
+  start                String?   // First few characters for identification (includes prefix)
+  prefix               String?   // Optional prefix for the key (e.g., "proj_")
+  key                  String    @unique // Hashed API key
+  userId               String    // Owner of the API key
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Refill system
+  refillInterval       Int?      // Interval to refill in milliseconds
+  refillAmount         Int?      // Amount to refill
+  lastRefillAt         DateTime? // Last refill timestamp
+  
+  // State
+  enabled              Boolean   @default(true)
+  remaining            Int?      // Remaining requests (null = unlimited)
+  
+  // Rate limiting
+  rateLimitEnabled     Boolean   @default(false)
+  rateLimitTimeWindow  Int?      // Time window in milliseconds
+  rateLimitMax         Int?      // Max requests in time window
+  requestCount         Int       @default(0) // Current request count
+  lastRequest          DateTime? // Last request timestamp
+  
+  // Expiration
+  expiresAt            DateTime? // When the key expires
+  
+  // Permissions
+  permissions          String?   // JSON string of permissions
+  
+  // Metadata
+  metadata             String?   // JSON string for additional data
+  
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([enabled])
+  @@map("apiKey")
 }

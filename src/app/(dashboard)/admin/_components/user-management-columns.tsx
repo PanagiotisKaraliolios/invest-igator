@@ -70,11 +70,7 @@ export function createUserColumns(): ColumnDef<User>[] {
 					);
 				}
 
-				return banned ? (
-					<Badge variant='destructive'>Banned</Badge>
-				) : (
-					<Badge variant='outline'>Active</Badge>
-				);
+				return banned ? <Badge variant='destructive'>Banned</Badge> : <Badge variant='outline'>Active</Badge>;
 			},
 			enableSorting: false,
 			header: 'Status'

@@ -97,8 +97,10 @@ export function useUserManagementActions() {
 
 			toast.success('Now impersonating user');
 
-			// Hard navigation to ensure server components refetch with updated session
-			window.location.href = '/portfolio';
+			// Revalidate TRPC queries and refresh the page
+			await utils.account.getMe.invalidate();
+
+			router.refresh();
 		} catch (error) {
 			toast.error('Failed to impersonate user');
 			console.error('Impersonation error:', error);

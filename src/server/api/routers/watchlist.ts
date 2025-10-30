@@ -1,7 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { env } from '@/env';
-import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
+import { createTRPCRouter, withPermissions } from '@/server/api/trpc';
 import { influxQueryApi, measurement, symbolHasAnyData } from '@/server/influx';
 import { ingestYahooSymbol } from '@/server/jobs/yahoo-lib';
 
@@ -46,7 +46,7 @@ export const watchlistRouter = createTRPCRouter({
 	 *   description: 'Technology company'
 	 * });
 	 */
-	add: protectedProcedure
+	add: withPermissions('watchlist', 'write')
 		.input(
 			z.object({
 				description: z.string().optional(),
@@ -104,7 +104,7 @@ export const watchlistRouter = createTRPCRouter({
 	 * result.events['AAPL'].dividends.forEach(d => console.log(d.date, d.amount));
 	 */
 	// Corporate events per symbol (dividends, splits, capital gains)
-	events: protectedProcedure
+	events: withPermissions('watchlist', 'read')
 		.input(
 			z.object({
 				days: z.number().int().min(1).default(365),
@@ -242,7 +242,7 @@ export const watchlistRouter = createTRPCRouter({
 	 * result.series['AAPL'].forEach(p => console.log(p.date, p.value));
 	 */
 	// Historical daily series from InfluxDB (default: close). If no symbols provided, use user's watchlist.
-	history: protectedProcedure
+	history: withPermissions('watchlist', 'read')
 		.input(
 			z.object({
 				days: z.number().int().min(1).default(90),
@@ -323,7 +323,7 @@ export const watchlistRouter = createTRPCRouter({
 	 * const items = await api.watchlist.list.query();
 	 * items.forEach(item => console.log(item.symbol, item.starred));
 	 */
-	list: protectedProcedure.query(async ({ ctx }) => {
+	list: withPermissions('watchlist', 'read').query(async ({ ctx }) => {
 		const userId = ctx.session.user.id;
 		return ctx.db.watchlistItem.findMany({
 			orderBy: [{ starred: 'desc' }, { createdAt: 'desc' }],
@@ -343,20 +343,22 @@ export const watchlistRouter = createTRPCRouter({
 	 * @example
 	 * await api.watchlist.remove.mutate({ symbol: 'AAPL' });
 	 */
-	remove: protectedProcedure.input(z.object({ symbol: z.string().min(1) })).mutation(async ({ ctx, input }) => {
-		const userId = ctx.session.user.id;
-		const hasTx = await ctx.db.transaction.findFirst({
-			select: { id: true },
-			where: { symbol: input.symbol.trim().toUpperCase(), userId }
-		});
-		if (hasTx) {
-			throw new TRPCError({ code: 'BAD_REQUEST', message: 'Cannot remove a symbol that has transactions.' });
-		}
-		await ctx.db.watchlistItem.delete({
-			where: { userId_symbol: { symbol: input.symbol, userId } }
-		});
-		return { success: true } as const;
-	}),
+	remove: withPermissions('watchlist', 'delete')
+		.input(z.object({ symbol: z.string().min(1) }))
+		.mutation(async ({ ctx, input }) => {
+			const userId = ctx.session.user.id;
+			const hasTx = await ctx.db.transaction.findFirst({
+				select: { id: true },
+				where: { symbol: input.symbol.trim().toUpperCase(), userId }
+			});
+			if (hasTx) {
+				throw new TRPCError({ code: 'BAD_REQUEST', message: 'Cannot remove a symbol that has transactions.' });
+			}
+			await ctx.db.watchlistItem.delete({
+				where: { userId_symbol: { symbol: input.symbol, userId } }
+			});
+			return { success: true } as const;
+		}),
 
 	/**
 	 * Searches for symbols using Finnhub API.
@@ -371,31 +373,33 @@ export const watchlistRouter = createTRPCRouter({
 	 * const results = await api.watchlist.search.query({ q: 'apple' });
 	 * results.result.forEach(r => console.log(r.symbol, r.description));
 	 */
-	search: protectedProcedure.input(z.object({ q: z.string().min(1) })).query(async ({ input }) => {
-		const url = new URL(`${env.FINNHUB_API_URL}/search`);
-		url.searchParams.set('q', input.q);
-		url.searchParams.set('token', env.FINNHUB_API_KEY);
+	search: withPermissions('watchlist', 'read')
+		.input(z.object({ q: z.string().min(1) }))
+		.query(async ({ input }) => {
+			const url = new URL(`${env.FINNHUB_API_URL}/search`);
+			url.searchParams.set('q', input.q);
+			url.searchParams.set('token', env.FINNHUB_API_KEY);
 
-		const res = await fetch(url.toString());
-		if (!res.ok) {
-			throw new Error(`Finnhub search failed: ${res.status}`);
-		}
-		const data = (await res.json()) as {
-			count: number;
-			result: Array<{
-				description: string;
-				displaySymbol: string;
-				symbol: string;
-				type: string;
-			}>;
-		};
+			const res = await fetch(url.toString());
+			if (!res.ok) {
+				throw new Error(`Finnhub search failed: ${res.status}`);
+			}
+			const data = (await res.json()) as {
+				count: number;
+				result: Array<{
+					description: string;
+					displaySymbol: string;
+					symbol: string;
+					type: string;
+				}>;
+			};
 
-		if (process.env.NODE_ENV !== 'production') {
-			console.log('[watchlist.search] Finnhub response', data);
-		}
+			if (process.env.NODE_ENV !== 'production') {
+				console.log('[watchlist.search] Finnhub response', data);
+			}
 
-		return data;
-	}),
+			return data;
+		}),
 	/**
 	 * Toggles the starred status of a watchlist item.
 	 * Enforces a maximum of 5 starred items per user.
@@ -409,7 +413,7 @@ export const watchlistRouter = createTRPCRouter({
 	 * @example
 	 * await api.watchlist.toggleStar.mutate({ symbol: 'AAPL', starred: true });
 	 */
-	toggleStar: protectedProcedure
+	toggleStar: withPermissions('watchlist', 'write')
 		.input(z.object({ starred: z.boolean().optional(), symbol: z.string().min(1) }))
 		.mutation(async ({ ctx, input }) => {
 			const userId = ctx.session.user.id;

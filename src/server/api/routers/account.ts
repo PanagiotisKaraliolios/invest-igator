@@ -4,12 +4,16 @@ import { randomBytes } from 'crypto';
 import { z } from 'zod';
 import { env } from '@/env';
 import { auth } from '@/lib/auth';
-import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
+import { createTRPCRouter, protectedProcedure, withPermissions } from '@/server/api/trpc';
 import { sendVerificationRequest } from '@/server/auth/send-verification-request';
 
 /**
  * Account router - handles user account management operations.
- * All procedures require authentication (protectedProcedure).
+ * All procedures require authentication and appropriate permissions when using API keys.
+ *
+ * Permission requirements:
+ * - Read operations (getMe, getTwoFactorState, listOAuthAccounts): account:read
+ * - Write operations (updateProfile, uploadProfilePicture, setPassword, changePassword, etc.): account:write
  *
  * @example
  * // Get current user profile
@@ -27,13 +31,15 @@ export const accountRouter = createTRPCRouter({
 	 * Cancels an in-progress two-factor authentication setup.
 	 * Deletes pending TwoFactor records when 2FA is not yet enabled.
 	 *
+	 * Requires: account:write permission
+	 *
 	 * @throws {TRPCError} BAD_REQUEST - If 2FA is already enabled
 	 * @returns {ok: true} Success indicator
 	 *
 	 * @example
 	 * await api.account.cancelTwoFactorSetup.mutate();
 	 */
-	cancelTwoFactorSetup: protectedProcedure.mutation(async ({ ctx }) => {
+	cancelTwoFactorSetup: withPermissions('account', 'write').mutation(async ({ ctx }) => {
 		const userId = ctx.session.user.id;
 		const user = await ctx.db.user.findUnique({
 			select: { twoFactorEnabled: true },
@@ -59,6 +65,8 @@ export const accountRouter = createTRPCRouter({
 	 * Changes the user's password after verifying the current password.
 	 * Only available for credential accounts (not OAuth).
 	 *
+	 * Requires: account:write permission
+	 *
 	 * @input currentPassword - The user's current password
 	 * @input newPassword - The new password (min 8, max 200 characters)
 	 *
@@ -72,7 +80,7 @@ export const accountRouter = createTRPCRouter({
 	 *   newPassword: 'newpass456'
 	 * });
 	 */
-	changePassword: protectedProcedure
+	changePassword: withPermissions('account', 'write')
 		.input(
 			z.object({
 				currentPassword: z.string().min(1),
@@ -112,6 +120,8 @@ export const accountRouter = createTRPCRouter({
 	 * Confirms an email change using a verification token.
 	 * Updates the user's email and marks it as verified.
 	 *
+	 * Requires: account:write permission
+	 *
 	 * @input token - The email change verification token
 	 *
 	 * @throws {TRPCError} NOT_FOUND - If token is invalid
@@ -122,7 +132,7 @@ export const accountRouter = createTRPCRouter({
 	 * @example
 	 * await api.account.confirmEmailChange.mutate({ token: 'abc123...' });
 	 */
-	confirmEmailChange: protectedProcedure
+	confirmEmailChange: withPermissions('account', 'write')
 		.input(z.object({ token: z.string().min(10) }))
 		.mutation(async ({ ctx, input }) => {
 			const rec = await ctx.db.emailChangeToken.findUnique({ where: { token: input.token } });
@@ -153,6 +163,8 @@ export const accountRouter = createTRPCRouter({
 	 * Permanently deletes the user's account and all associated data.
 	 * Cascade relations are handled by the Prisma schema.
 	 *
+	 * Requires: account:delete permission
+	 *
 	 * @input confirm - Must be true to proceed with deletion
 	 *
 	 * @returns {ok: true} Success indicator
@@ -160,15 +172,19 @@ export const accountRouter = createTRPCRouter({
 	 * @example
 	 * await api.account.deleteAccount.mutate({ confirm: true });
 	 */
-	deleteAccount: protectedProcedure.input(z.object({ confirm: z.literal(true) })).mutation(async ({ ctx }) => {
-		// Cascade relations are set in Prisma schema
-		await ctx.db.user.delete({ where: { id: ctx.session.user.id } });
-		return { ok: true } as const;
-	}),
+	deleteAccount: withPermissions('account', 'delete')
+		.input(z.object({ confirm: z.literal(true) }))
+		.mutation(async ({ ctx }) => {
+			// Cascade relations are set in Prisma schema
+			await ctx.db.user.delete({ where: { id: ctx.session.user.id } });
+			return { ok: true } as const;
+		}),
 
 	/**
 	 * Disconnects an OAuth provider account from the user.
 	 * Prevents removing the last authentication method.
+	 *
+	 * Requires: account:write permission
 	 *
 	 * @input accountId - The ID of the OAuth account to disconnect
 	 *
@@ -179,7 +195,7 @@ export const accountRouter = createTRPCRouter({
 	 * @example
 	 * await api.account.disconnectOAuthAccount.mutate({ accountId: 'account_123' });
 	 */
-	disconnectOAuthAccount: protectedProcedure
+	disconnectOAuthAccount: withPermissions('account', 'write')
 		.input(z.object({ accountId: z.string().min(1) }))
 		.mutation(async ({ ctx, input }) => {
 			const userId = ctx.session.user.id;
@@ -213,6 +229,8 @@ export const accountRouter = createTRPCRouter({
 	 * Retrieves the current user's profile information.
 	 * Includes email, verification status, avatar, and password status.
 	 *
+	 * Requires: account:read permission
+	 *
 	 * @throws {TRPCError} NOT_FOUND - If user not found
 	 * @returns User profile object with id, email, name, avatar, emailVerified, hasPassword
 	 *
@@ -220,7 +238,7 @@ export const accountRouter = createTRPCRouter({
 	 * const user = await api.account.getMe.query();
 	 * console.log(user.email, user.hasPassword);
 	 */
-	getMe: protectedProcedure.query(async ({ ctx }) => {
+	getMe: withPermissions('account', 'read').query(async ({ ctx }) => {
 		const user = await ctx.db.user.findUnique({
 			select: {
 				email: true,
@@ -255,6 +273,8 @@ export const accountRouter = createTRPCRouter({
 	 * Retrieves the user's two-factor authentication state.
 	 * Includes enabled status, pending setup, secret existence, and recovery codes count.
 	 *
+	 * Requires: account:read permission
+	 *
 	 * @throws {TRPCError} NOT_FOUND - If user not found
 	 * @returns TwoFactor state with enabled, pending, hasSecret, hasPassword, recoveryCodesRemaining, confirmedAt
 	 *
@@ -264,7 +284,7 @@ export const accountRouter = createTRPCRouter({
 	 *   console.log('2FA is active');
 	 * }
 	 */
-	getTwoFactorState: protectedProcedure.query(async ({ ctx }) => {
+	getTwoFactorState: withPermissions('account', 'read').query(async ({ ctx }) => {
 		const user = await ctx.db.user.findUnique({
 			select: {
 				email: true,
@@ -322,13 +342,15 @@ export const accountRouter = createTRPCRouter({
 	 * Lists all OAuth provider accounts connected to the user.
 	 * Excludes credential-based accounts.
 	 *
+	 * Requires: account:read permission
+	 *
 	 * @returns Array of OAuth accounts with id, providerId, accountId
 	 *
 	 * @example
 	 * const oauthAccounts = await api.account.listOAuthAccounts.query();
 	 * oauthAccounts.forEach(acc => console.log(acc.providerId));
 	 */
-	listOAuthAccounts: protectedProcedure.query(async ({ ctx }) => {
+	listOAuthAccounts: withPermissions('account', 'read').query(async ({ ctx }) => {
 		const accounts = await ctx.db.account.findMany({
 			select: { accountId: true, id: true, providerId: true },
 			where: { providerId: { not: 'credential' }, userId: ctx.session.user.id }
@@ -339,6 +361,8 @@ export const accountRouter = createTRPCRouter({
 	/**
 	 * Initiates an email change request by sending a verification email.
 	 * Requires current password if user has one set.
+	 *
+	 * Requires: account:write permission
 	 *
 	 * @input newEmail - The new email address
 	 * @input currentPassword - Current password (required if password is set)
@@ -355,7 +379,7 @@ export const accountRouter = createTRPCRouter({
 	 *   currentPassword: 'mypassword'
 	 * });
 	 */
-	requestEmailChange: protectedProcedure
+	requestEmailChange: withPermissions('account', 'write')
 		.input(z.object({ currentPassword: z.string().optional(), newEmail: z.string().email() }))
 		.mutation(async ({ ctx, input }) => {
 			const userId = ctx.session.user.id;
@@ -432,10 +456,12 @@ export const accountRouter = createTRPCRouter({
 	 * Sends an email verification link to the user's email address.
 	 * Only needed if email is not yet verified.
 	 *
+	 * Requires: account:write permission
+	 *
 	 * @throws {TRPCError} BAD_REQUEST - If no email on file
 	 * @returns {ok: true} Success indicator
 	 */
-	requestEmailVerification: protectedProcedure.mutation(async ({ ctx }) => {
+	requestEmailVerification: withPermissions('account', 'write').mutation(async ({ ctx }) => {
 		const userId = ctx.session.user.id;
 		const user = await ctx.db.user.findUnique({
 			select: { email: true, emailVerified: true },
@@ -477,6 +503,8 @@ export const accountRouter = createTRPCRouter({
 	 * Sets a password for a user account that doesn't have one (OAuth users).
 	 * Creates or updates a credential account with the hashed password.
 	 *
+	 * Requires: account:write permission
+	 *
 	 * @input newPassword - The password to set (min 8, max 200 characters)
 	 *
 	 * @throws {TRPCError} NOT_FOUND - If user not found
@@ -486,7 +514,7 @@ export const accountRouter = createTRPCRouter({
 	 * @example
 	 * await api.account.setPassword.mutate({ newPassword: 'securepass123' });
 	 */
-	setPassword: protectedProcedure
+	setPassword: withPermissions('account', 'write')
 		.input(
 			z.object({
 				newPassword: z.string().min(8).max(200)
@@ -545,6 +573,8 @@ export const accountRouter = createTRPCRouter({
 	 * Updates the user's profile information (name and avatar).
 	 * Empty string for image removes the avatar.
 	 *
+	 * Requires: account:write permission
+	 *
 	 * @input name - Display name (1-100 characters, required)
 	 * @input image - Avatar URL or empty string to remove
 	 *
@@ -556,7 +586,7 @@ export const accountRouter = createTRPCRouter({
 	 *   image: 'https://example.com/avatar.jpg'
 	 * });
 	 */
-	updateProfile: protectedProcedure
+	updateProfile: withPermissions('account', 'write')
 		.input(
 			z.object({
 				image: z.string().url().optional().or(z.literal('')),
@@ -576,6 +606,8 @@ export const accountRouter = createTRPCRouter({
 	 * Uploads a profile picture from a data URL.
 	 * Compresses and resizes to 512x512 JPEG, then uploads to R2 storage.
 	 *
+	 * Requires: account:write permission
+	 *
 	 * @input dataUrl - Base64-encoded image data URL (png, jpeg, jpg, gif, webp)
 	 *
 	 * @throws {TRPCError} INTERNAL_SERVER_ERROR - If upload fails
@@ -587,7 +619,7 @@ export const accountRouter = createTRPCRouter({
 	 * });
 	 * console.log('Uploaded to:', result.url);
 	 */
-	uploadProfilePicture: protectedProcedure
+	uploadProfilePicture: withPermissions('account', 'write')
 		.input(
 			z.object({
 				dataUrl: z.string().regex(/^data:image\/(png|jpeg|jpg|gif|webp);base64,/)
