@@ -558,6 +558,14 @@ export const adminRouter = createTRPCRouter({
 				});
 			}
 
+			// Clear the ban reason in the database
+			await ctx.db.user.update({
+				data: {
+					banReason: null
+				},
+				where: { id: input.userId }
+			});
+
 			// Log admin action
 			try {
 				await ctx.db.auditLog.create({
