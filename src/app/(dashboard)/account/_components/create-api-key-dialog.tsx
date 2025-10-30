@@ -22,6 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import { Spinner } from '@/components/ui/spinner';
 import {
 	PERMISSION_SCOPES,
 	PERMISSION_TEMPLATES,
@@ -444,6 +445,7 @@ export function CreateApiKeyDialog({ onSuccess }: CreateApiKeyDialogProps) {
 								Cancel
 							</Button>
 							<Button data-testid='submit-api-key' disabled={createMutation.isPending} type='submit'>
+								{createMutation.isPending && <Spinner className='mr-2' />}
 								{createMutation.isPending ? 'Creating...' : 'Create Key'}
 							</Button>
 						</DialogFooter>

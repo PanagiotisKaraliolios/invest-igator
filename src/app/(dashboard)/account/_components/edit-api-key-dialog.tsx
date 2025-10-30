@@ -21,6 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import { Spinner } from '@/components/ui/spinner';
 import {
 	PERMISSION_SCOPES,
 	PERMISSION_TEMPLATES,
@@ -406,6 +407,7 @@ export function EditApiKeyDialog({ apiKey, onClose, open }: EditApiKeyDialogProp
 								Cancel
 							</Button>
 							<Button disabled={updateMutation.isPending} type='submit'>
+								{updateMutation.isPending && <Spinner className='mr-2' />}
 								{updateMutation.isPending ? 'Updating...' : 'Update Key'}
 							</Button>
 						</DialogFooter>
