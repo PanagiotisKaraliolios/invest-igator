@@ -1,8 +1,8 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Info, Plus } from 'lucide-react';
-import { useState } from 'react';
+import { Info } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -14,8 +14,7 @@ import {
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
-	DialogTitle,
-	DialogTrigger
+	DialogTitle
 } from '@/components/ui/dialog';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -30,82 +29,108 @@ import {
 } from '@/lib/api-key-permissions';
 import { api } from '@/trpc/react';
 
-const createApiKeySchema = z.object({
-	expiresIn: z.string().optional(),
+const editApiKeySchema = z.object({
 	name: z.string().min(1, 'Name is required').max(100),
 	permissionTemplate: z.string().optional(),
-	prefix: z
-		.string()
-		.regex(/^[a-zA-Z0-9_-]*$/, 'Invalid prefix format')
-		.max(10)
-		.optional(),
 	rateLimitEnabled: z.boolean().optional(),
 	rateLimitMax: z.string().optional(),
 	rateLimitTimeWindow: z.string().optional()
 });
 
-type CreateApiKeyFormValues = z.infer<typeof createApiKeySchema>;
+type EditApiKeyFormValues = z.infer<typeof editApiKeySchema>;
 
-interface CreateApiKeyDialogProps {
-	onSuccess: (apiKey: string, name: string | null) => void;
+interface EditApiKeyDialogProps {
+	apiKey: {
+		id: string;
+		name: string | null;
+		enabled: boolean;
+		permissions: Record<string, string[]> | null;
+		rateLimitEnabled: boolean;
+		rateLimitMax: number | null;
+		rateLimitTimeWindow: number | null;
+	};
+	onClose: () => void;
+	open: boolean;
 }
 
-export function CreateApiKeyDialog({ onSuccess }: CreateApiKeyDialogProps) {
-	const [open, setOpen] = useState(false);
-	const [permissionTemplate, setPermissionTemplate] = useState<PermissionTemplate>('full-access');
-	const [customPermissions, setCustomPermissions] = useState<Record<string, string[]>>({});
+export function EditApiKeyDialog({ apiKey, onClose, open }: EditApiKeyDialogProps) {
+	const [permissionTemplate, setPermissionTemplate] = useState<PermissionTemplate>('custom');
+	const [customPermissions, setCustomPermissions] = useState<Record<string, string[]>>(apiKey.permissions ?? {});
 	const utils = api.useUtils();
 
-	const form = useForm<CreateApiKeyFormValues>({
+	// Detect which template matches the current permissions
+	useEffect(() => {
+		if (apiKey.permissions) {
+			const matchingTemplate = (Object.keys(PERMISSION_TEMPLATES) as PermissionTemplate[]).find((template) => {
+				if (template === 'custom') return false;
+				const templatePerms = PERMISSION_TEMPLATES[template].permissions;
+				const sortedTemplatePerms = JSON.stringify(
+					Object.entries(templatePerms)
+						.sort()
+						.map(([k, v]) => [k, [...v].sort()])
+				);
+				const sortedCurrentPerms = JSON.stringify(
+					Object.entries(apiKey.permissions!)
+						.sort()
+						.map(([k, v]) => [k, [...v].sort()])
+				);
+				return sortedTemplatePerms === sortedCurrentPerms;
+			});
+			setPermissionTemplate(matchingTemplate ?? 'custom');
+			setCustomPermissions(apiKey.permissions);
+		} else {
+			setPermissionTemplate('full-access');
+			setCustomPermissions({});
+		}
+	}, [apiKey.permissions]);
+
+	const form = useForm<EditApiKeyFormValues>({
 		defaultValues: {
-			expiresIn: '2592000', // 30 days
-			name: '',
-			permissionTemplate: 'full-access',
-			prefix: '',
-			rateLimitEnabled: false,
-			rateLimitMax: '100',
-			rateLimitTimeWindow: '3600000' // 1 hour
+			name: apiKey.name ?? '',
+			permissionTemplate: permissionTemplate,
+			rateLimitEnabled: apiKey.rateLimitEnabled,
+			rateLimitMax: apiKey.rateLimitMax?.toString() ?? '100',
+			rateLimitTimeWindow: apiKey.rateLimitTimeWindow?.toString() ?? '3600000'
 		},
-		resolver: zodResolver(createApiKeySchema)
+		resolver: zodResolver(editApiKeySchema)
 	});
 
-	const createMutation = api.apiKeys.create.useMutation({
+	// Update form when apiKey changes
+	useEffect(() => {
+		form.reset({
+			name: apiKey.name ?? '',
+			permissionTemplate: permissionTemplate,
+			rateLimitEnabled: apiKey.rateLimitEnabled,
+			rateLimitMax: apiKey.rateLimitMax?.toString() ?? '100',
+			rateLimitTimeWindow: apiKey.rateLimitTimeWindow?.toString() ?? '3600000'
+		});
+	}, [apiKey, permissionTemplate, form]);
+
+	const updateMutation = api.apiKeys.update.useMutation({
 		onError: (error) => {
 			toast.error(error.message);
 		},
-		onSuccess: (data) => {
-			toast.success('API key created successfully');
+		onSuccess: () => {
+			toast.success('API key updated successfully');
 			void utils.apiKeys.list.invalidate();
-			setOpen(false);
-			form.reset();
-			// Reset permission state
-			setPermissionTemplate('full-access');
-			setCustomPermissions({});
-			onSuccess(data.key, data.name);
+			onClose();
 		}
 	});
 
-	const onSubmit = (values: CreateApiKeyFormValues) => {
+	const onSubmit = (values: EditApiKeyFormValues) => {
 		const input: {
+			keyId: string;
 			name: string;
-			expiresIn?: number;
+			enabled: boolean;
 			permissions?: Record<string, string[]> | null;
-			prefix?: string;
 			rateLimitEnabled?: boolean;
 			rateLimitMax?: number;
 			rateLimitTimeWindow?: number;
 		} = {
+			enabled: apiKey.enabled,
+			keyId: apiKey.id,
 			name: values.name
 		};
-
-		// Only set expiresIn if it's not "never" and is a valid number
-		if (values.expiresIn && values.expiresIn !== 'never') {
-			input.expiresIn = Number.parseInt(values.expiresIn, 10);
-		}
-
-		if (values.prefix) {
-			input.prefix = values.prefix;
-		}
 
 		// Set permissions based on template or custom selection
 		if (permissionTemplate === 'custom') {
@@ -126,16 +151,21 @@ export function CreateApiKeyDialog({ onSuccess }: CreateApiKeyDialogProps) {
 			if (values.rateLimitMax) {
 				input.rateLimitMax = Number.parseInt(values.rateLimitMax, 10);
 			}
+		} else {
+			input.rateLimitEnabled = false;
 		}
 
-		createMutation.mutate(input);
+		updateMutation.mutate(input);
 	};
 
 	const handlePermissionTemplateChange = (template: PermissionTemplate) => {
 		setPermissionTemplate(template);
 		if (template !== 'custom') {
-			// Reset custom permissions when switching to a preset
-			setCustomPermissions({});
+			// Apply template permissions
+			const templatePermissions = PERMISSION_TEMPLATES[template].permissions;
+			setCustomPermissions(
+				Object.fromEntries(Object.entries(templatePermissions).map(([key, value]) => [key, [...value]]))
+			);
 		}
 	};
 
@@ -163,28 +193,12 @@ export function CreateApiKeyDialog({ onSuccess }: CreateApiKeyDialogProps) {
 
 	const rateLimitEnabled = form.watch('rateLimitEnabled');
 
-	const handleOpenChange = (newOpen: boolean) => {
-		setOpen(newOpen);
-		// Reset form and state when dialog closes
-		if (!newOpen) {
-			form.reset();
-			setPermissionTemplate('full-access');
-			setCustomPermissions({});
-		}
-	};
-
 	return (
-		<Dialog onOpenChange={handleOpenChange} open={open}>
-			<DialogTrigger asChild>
-				<Button data-testid='create-api-key-button'>
-					<Plus className='mr-2 h-4 w-4' />
-					Create API Key
-				</Button>
-			</DialogTrigger>
+		<Dialog onOpenChange={onClose} open={open}>
 			<DialogContent className='sm:max-w-[500px] max-h-[90vh] overflow-y-auto'>
 				<DialogHeader>
-					<DialogTitle>Create API Key</DialogTitle>
-					<DialogDescription>Create a new API key for programmatic access to your account.</DialogDescription>
+					<DialogTitle>Edit API Key</DialogTitle>
+					<DialogDescription>Update the settings for this API key.</DialogDescription>
 				</DialogHeader>
 				<Form {...form}>
 					<form className='space-y-4' onSubmit={form.handleSubmit(onSubmit)}>
@@ -195,53 +209,9 @@ export function CreateApiKeyDialog({ onSuccess }: CreateApiKeyDialogProps) {
 								<FormItem>
 									<FormLabel>Name</FormLabel>
 									<FormControl>
-										<Input placeholder='My API Key' {...field} data-testid='api-key-name-input' />
+										<Input placeholder='My API Key' {...field} />
 									</FormControl>
 									<FormDescription>A descriptive name to identify this key</FormDescription>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-
-						<FormField
-							control={form.control}
-							name='prefix'
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>Prefix (Optional)</FormLabel>
-									<FormControl>
-										<Input placeholder='proj_' {...field} data-testid='api-key-prefix-input' />
-									</FormControl>
-									<FormDescription>
-										Optional prefix for easier identification (e.g., &quot;proj_&quot;)
-									</FormDescription>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-
-						<FormField
-							control={form.control}
-							name='expiresIn'
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>Expiration</FormLabel>
-									<Select defaultValue={field.value} onValueChange={field.onChange}>
-										<FormControl>
-											<SelectTrigger data-testid='api-key-expiration-select'>
-												<SelectValue placeholder='Select expiration' />
-											</SelectTrigger>
-										</FormControl>
-										<SelectContent>
-											<SelectItem value='604800'>7 days</SelectItem>
-											<SelectItem value='2592000'>30 days</SelectItem>
-											<SelectItem value='7776000'>90 days</SelectItem>
-											<SelectItem value='15552000'>180 days</SelectItem>
-											<SelectItem value='31536000'>1 year</SelectItem>
-											<SelectItem value='never'>Never</SelectItem>
-										</SelectContent>
-									</Select>
-									<FormDescription>When this key will expire and become invalid</FormDescription>
 									<FormMessage />
 								</FormItem>
 							)}
@@ -264,14 +234,15 @@ export function CreateApiKeyDialog({ onSuccess }: CreateApiKeyDialogProps) {
 									<FormItem>
 										<FormLabel>Permission Template</FormLabel>
 										<Select
-											defaultValue={field.value}
+											defaultValue={permissionTemplate}
 											onValueChange={(value) => {
 												field.onChange(value);
 												handlePermissionTemplateChange(value as PermissionTemplate);
 											}}
+											value={permissionTemplate}
 										>
 											<FormControl>
-												<SelectTrigger data-testid='permission-template-select'>
+												<SelectTrigger>
 													<SelectValue placeholder='Select permission template' />
 												</SelectTrigger>
 											</FormControl>
@@ -370,11 +341,7 @@ export function CreateApiKeyDialog({ onSuccess }: CreateApiKeyDialogProps) {
 							render={({ field }) => (
 								<FormItem className='flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4'>
 									<FormControl>
-										<Checkbox
-											checked={field.value}
-											data-testid='rate-limit-checkbox'
-											onCheckedChange={field.onChange}
-										/>
+										<Checkbox checked={field.value} onCheckedChange={field.onChange} />
 									</FormControl>
 									<div className='space-y-1 leading-none'>
 										<FormLabel>Enable Rate Limiting</FormLabel>
@@ -393,12 +360,7 @@ export function CreateApiKeyDialog({ onSuccess }: CreateApiKeyDialogProps) {
 										<FormItem>
 											<FormLabel>Max Requests</FormLabel>
 											<FormControl>
-												<Input
-													placeholder='100'
-													type='number'
-													{...field}
-													data-testid='rate-limit-max-input'
-												/>
+												<Input placeholder='100' type='number' {...field} />
 											</FormControl>
 											<FormDescription>Maximum number of requests allowed</FormDescription>
 											<FormMessage />
@@ -414,7 +376,7 @@ export function CreateApiKeyDialog({ onSuccess }: CreateApiKeyDialogProps) {
 											<FormLabel>Time Window</FormLabel>
 											<Select defaultValue={field.value} onValueChange={field.onChange}>
 												<FormControl>
-													<SelectTrigger data-testid='rate-limit-window-select'>
+													<SelectTrigger>
 														<SelectValue placeholder='Select time window' />
 													</SelectTrigger>
 												</FormControl>
@@ -436,15 +398,15 @@ export function CreateApiKeyDialog({ onSuccess }: CreateApiKeyDialogProps) {
 
 						<DialogFooter>
 							<Button
-								disabled={createMutation.isPending}
-								onClick={() => setOpen(false)}
+								disabled={updateMutation.isPending}
+								onClick={onClose}
 								type='button'
 								variant='outline'
 							>
 								Cancel
 							</Button>
-							<Button data-testid='submit-api-key' disabled={createMutation.isPending} type='submit'>
-								{createMutation.isPending ? 'Creating...' : 'Create Key'}
+							<Button disabled={updateMutation.isPending} type='submit'>
+								{updateMutation.isPending ? 'Updating...' : 'Update Key'}
 							</Button>
 						</DialogFooter>
 					</form>

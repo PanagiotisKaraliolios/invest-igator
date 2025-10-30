@@ -10,7 +10,7 @@
 import { initTRPC, TRPCError } from '@trpc/server';
 import superjson from 'superjson';
 import { ZodError } from 'zod';
-import { hashApiKey, isApiKeyExpired } from '@/lib/api-keys';
+import { hashApiKey, isApiKeyExpired, isRefillDue } from '@/lib/api-keys';
 import { auth } from '@/lib/auth';
 import { db } from '@/server/db';
 
@@ -60,6 +60,109 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
 						}
 					}
 
+					// Check rate limiting if enabled
+					if (
+						apiKeyRecord.rateLimitEnabled &&
+						apiKeyRecord.rateLimitMax &&
+						apiKeyRecord.rateLimitTimeWindow
+					) {
+						const now = new Date();
+						const lastRequest = apiKeyRecord.lastRequest;
+						const requestCount = apiKeyRecord.requestCount;
+
+						// Check if we need to refill
+						let shouldResetRateLimit = false;
+						if (apiKeyRecord.refillAmount && apiKeyRecord.refillInterval && apiKeyRecord.lastRefillAt) {
+							shouldResetRateLimit = isRefillDue(apiKeyRecord.lastRefillAt, apiKeyRecord.refillInterval);
+						} else if (lastRequest) {
+							// If no refill config, check if time window has passed
+							const windowStart = new Date(lastRequest.getTime());
+							const windowEnd = new Date(windowStart.getTime() + apiKeyRecord.rateLimitTimeWindow);
+							shouldResetRateLimit = now >= windowEnd;
+						}
+
+						// If not resetting, check if limit is exceeded using requestCount
+						// We check requestCount >= rateLimitMax because we're about to process THIS request
+						if (!shouldResetRateLimit && requestCount >= apiKeyRecord.rateLimitMax) {
+							// Calculate when the limit will reset
+							const resetAt = lastRequest
+								? new Date(lastRequest.getTime() + apiKeyRecord.rateLimitTimeWindow)
+								: new Date(now.getTime() + apiKeyRecord.rateLimitTimeWindow);
+
+							// Calculate remaining time in seconds
+							const remainingMs = resetAt.getTime() - now.getTime();
+							const remainingSeconds = Math.ceil(remainingMs / 1000);
+							
+							// Format the time message
+							let timeMessage: string;
+							if (remainingSeconds < 60) {
+								timeMessage = `${remainingSeconds} second${remainingSeconds !== 1 ? 's' : ''}`;
+							} else {
+								const remainingMinutes = Math.ceil(remainingSeconds / 60);
+								timeMessage = `${remainingMinutes} minute${remainingMinutes !== 1 ? 's' : ''}`;
+							}
+
+							throw new TRPCError({
+								code: 'TOO_MANY_REQUESTS',
+								message: `Rate limit exceeded. Limit: ${apiKeyRecord.rateLimitMax} requests per ${apiKeyRecord.rateLimitTimeWindow / 1000}s. Try again in ${timeMessage}.`
+							});
+						}
+					}
+
+					// Update request count and last request timestamp
+					// Fire and forget - don't block the request
+					const updateData: {
+						lastRequest: Date;
+						requestCount: { increment: number } | number;
+						lastRefillAt?: Date;
+						remaining?: number;
+					} = {
+						lastRequest: new Date(),
+						requestCount: { increment: 1 }
+					};
+
+					// Handle refill logic if configured
+					if (
+						apiKeyRecord.rateLimitEnabled &&
+						apiKeyRecord.refillAmount &&
+						apiKeyRecord.refillInterval &&
+						apiKeyRecord.lastRefillAt &&
+						isRefillDue(apiKeyRecord.lastRefillAt, apiKeyRecord.refillInterval)
+					) {
+						updateData.lastRefillAt = new Date();
+						updateData.requestCount = 1; // Reset to 1 (this request)
+						updateData.remaining = apiKeyRecord.rateLimitMax! - 1;
+					} else if (
+						apiKeyRecord.rateLimitEnabled &&
+						apiKeyRecord.rateLimitMax &&
+						apiKeyRecord.rateLimitTimeWindow &&
+						apiKeyRecord.lastRequest
+					) {
+						// Check if time window has passed (without refill config)
+						const now = new Date();
+						const windowStart = new Date(apiKeyRecord.lastRequest.getTime());
+						const windowEnd = new Date(windowStart.getTime() + apiKeyRecord.rateLimitTimeWindow);
+
+						if (now >= windowEnd) {
+							// Reset the counter
+							updateData.requestCount = 1;
+							updateData.remaining = apiKeyRecord.rateLimitMax - 1;
+						} else {
+							// Decrement remaining, or initialize if null
+							const currentRemaining = apiKeyRecord.remaining ?? apiKeyRecord.rateLimitMax;
+							updateData.remaining = Math.max(0, currentRemaining - 1);
+						}
+					}
+
+					db.apiKey
+						.update({
+							data: updateData,
+							where: { id: apiKeyRecord.id }
+						})
+						.catch((error) => {
+							console.error('[TRPC Context] Failed to update API key usage:', error);
+						});
+
 					session = {
 						session: {
 							createdAt: apiKeyRecord.createdAt,
@@ -98,6 +201,11 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
 			...opts
 		};
 	} catch (error) {
+		// If it's a TRPCError (like TOO_MANY_REQUESTS), rethrow it
+		if (error instanceof TRPCError) {
+			throw error;
+		}
+		
 		console.error('[TRPC Context] Failed to get session:', error);
 		// Return context without session instead of crashing
 		return {
