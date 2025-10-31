@@ -1,9 +1,10 @@
 'use client';
-import { signOut } from 'next-auth/react';
+
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { signOut } from '@/lib/auth-client';
 import { api } from '@/trpc/react';
 
 export default function DangerZoneCard() {
@@ -12,7 +13,7 @@ export default function DangerZoneCard() {
 		onError: (e) => toast.error(e.message || 'Failed to delete account'),
 		onSuccess: () => {
 			toast.success('Account deleted');
-			void signOut({ callbackUrl: '/' });
+			void signOut();
 		}
 	});
 
