@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { env } from '@/env';
 import { auth } from '@/lib/auth';
 import { createTRPCRouter, protectedProcedure, withPermissions } from '@/server/api/trpc';
-import { sendVerificationRequest } from '@/server/auth/send-verification-request';
+import { sendVerificationEmail } from '@/server/email';
 
 /**
  * Account router - handles user account management operations.
@@ -416,22 +416,13 @@ export const accountRouter = createTRPCRouter({
 			await ctx.db.emailChangeToken.deleteMany({ where: { userId } });
 			await ctx.db.emailChangeToken.create({ data: { expiresAt, newEmail: input.newEmail, token, userId } });
 
-			// Send email with confirmation link (reuse nodemailer via EmailProvider-style server)
+			// Send email with confirmation link
 			const baseUrl = env.BETTER_AUTH_URL;
 			const url = `${baseUrl}/api/email-change/confirm?token=${encodeURIComponent(token)}`;
-			// We can leverage the existing nodemailer config; keep it simple here
 			try {
-				await sendVerificationRequest({
-					expires: expiresAt,
-					identifier: input.newEmail,
-					provider: { from: env.EMAIL_FROM, server: env.EMAIL_SERVER } as any,
-					request: new Request(url),
-					theme: { brandColor: '#f97316' },
-					token,
-					url
-				});
+				await sendVerificationEmail(input.newEmail, url, 'email-change');
 			} catch {
-				// If custom mailer fails, at least return the URL in dev
+				// If mailer fails, at least return the URL in dev
 				if (env.NODE_ENV !== 'production') {
 					console.log('[EmailChange] Confirm URL:', url);
 				}
@@ -481,15 +472,7 @@ export const accountRouter = createTRPCRouter({
 		const baseUrl = env.BETTER_AUTH_URL;
 		const url = `${baseUrl}/api/verify-email/confirm?token=${encodeURIComponent(token)}`;
 		try {
-			await sendVerificationRequest({
-				expires,
-				identifier: user.email,
-				provider: { from: env.EMAIL_FROM, server: env.EMAIL_SERVER } as any,
-				request: new Request(url),
-				theme: { brandColor: '#f97316' },
-				token,
-				url
-			});
+			await sendVerificationEmail(user.email, url, 'verify-email');
 		} catch {
 			if (env.NODE_ENV !== 'production') {
 				console.log('[VerifyEmail] Confirm URL:', url);

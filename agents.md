@@ -25,7 +25,7 @@ Give any autonomous assistant the minimum context required to ship safe, on-bran
 
 ## Security & Compliance Notes
 - Passwords use a pepper from `env.PASSWORD_PEPPER`; any auth changes must respect that scheme.
-- Email flows rely on `EMAIL_SERVER` and `EMAIL_FROM`. Reuse `sendVerificationRequest` instead of rolling new transport logic.
+- Email flows rely on `EMAIL_SERVER` and `EMAIL_FROM`. Reuse the email utilities from `src/server/email.ts` (`sendVerificationEmail`, `sendPasswordResetEmail`, `sendMagicLinkEmail`) instead of rolling new transport logic.
 - When touching ingestion jobs, be mindful of rate limits (Alpha Vantage backoff is built in). Never log raw API keys.
 
 ## When Adding Features

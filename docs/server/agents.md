@@ -18,7 +18,6 @@
 ## External Services
 - InfluxDB queries are assembled as Flux strings. Keep user-controlled values sanitized (uppercase, trimmed) and limit the result sets (see `watchlist.history`).
 - Ingestion jobs live under `src/server/jobs`. If you add new providers, follow the backoff + dedupe patterns and reuse shared helpers.
-- Email flows should reuse `sendVerificationRequest` where possible to leverage existing transporter configuration.
 
 ## API Hygiene
 - Validate all input with Zod. Keep schemas close to the procedure definition for readability.

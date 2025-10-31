@@ -92,7 +92,7 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
 							// Calculate remaining time in seconds
 							const remainingMs = resetAt.getTime() - now.getTime();
 							const remainingSeconds = Math.ceil(remainingMs / 1000);
-							
+
 							// Format the time message
 							let timeMessage: string;
 							if (remainingSeconds < 60) {
@@ -205,7 +205,7 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
 		if (error instanceof TRPCError) {
 			throw error;
 		}
-		
+
 		console.error('[TRPC Context] Failed to get session:', error);
 		// Return context without session instead of crashing
 		return {

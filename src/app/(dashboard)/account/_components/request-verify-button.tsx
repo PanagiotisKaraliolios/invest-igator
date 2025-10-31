@@ -17,7 +17,7 @@ export function RequestVerifyButton({ email }: { email: string }) {
 		setIsPending(true);
 		try {
 			await sendVerificationEmail({
-				callbackURL: '/',
+				callbackURL: '/portfolio',
 				email
 			});
 			toast.success('Verification email sent');

@@ -4,7 +4,7 @@ import { randomBytes } from 'crypto';
 import { z } from 'zod';
 import { env } from '@/env';
 import { createTRPCRouter, protectedProcedure, publicProcedure } from '@/server/api/trpc';
-import { sendVerificationRequest } from '@/server/auth/send-verification-request';
+import { sendPasswordResetEmail } from '@/server/email';
 
 /**
  * Auth router - handles authentication operations.
@@ -67,15 +67,7 @@ export const authRouter = createTRPCRouter({
 		const baseUrl = env.BETTER_AUTH_URL;
 		const url = `${baseUrl}/forgot-password/reset?token=${encodeURIComponent(token)}`;
 		try {
-			await sendVerificationRequest({
-				expires,
-				identifier,
-				provider: { from: env.EMAIL_FROM, server: env.EMAIL_SERVER } as any,
-				request: new Request(url),
-				theme: { brandColor: '#f97316' },
-				token,
-				url
-			});
+			await sendPasswordResetEmail(email, url);
 		} catch {
 			if (env.NODE_ENV !== 'production') {
 				console.log('[PasswordReset] URL:', url);
