@@ -159,7 +159,7 @@ export const watchlistRouter = createTRPCRouter({
 				if (!isValidSymbol(sym)) {
 					throw new TRPCError({
 						code: 'BAD_REQUEST',
-						message: `Invalid symbol format: ${sym}`
+						message: 'One or more symbols have invalid format'
 					});
 				}
 			}
@@ -309,7 +309,7 @@ export const watchlistRouter = createTRPCRouter({
 				if (!isValidSymbol(sym)) {
 					throw new TRPCError({
 						code: 'BAD_REQUEST',
-						message: `Invalid symbol format: ${sym}`
+						message: 'One or more symbols have invalid format'
 					});
 				}
 			}

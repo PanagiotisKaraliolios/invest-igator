@@ -484,7 +484,7 @@ export const apiKeysRouter = createTRPCRouter({
 				}
 
 				// Check if we have enough remaining (before update)
-				if (newRemaining < 0) {
+				if (newRemaining <= 0) {
 					return {
 						error: { code: 'NO_REMAINING', message: 'API key has no remaining requests' },
 						key: null,
