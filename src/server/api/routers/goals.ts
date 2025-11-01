@@ -45,11 +45,11 @@ export const goalsRouter = createTRPCRouter({
 	create: protectedProcedure
 		.input(
 			z.object({
-				note: z.string().optional(),
+				note: z.string().max(1000).optional(), // Add max length
 				targetAmount: z.number().positive('Target amount must be greater than 0'),
 				targetCurrency: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']).default('USD'),
-				targetDate: z.string().optional(), // YYYY-MM-DD (client uses <input type="date">)
-				title: z.string().min(1, 'Title is required')
+				targetDate: z.string().max(10).optional(), // YYYY-MM-DD (client uses <input type="date">)
+				title: z.string().min(1, 'Title is required').max(200) // Add max length
 			})
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -100,7 +100,7 @@ export const goalsRouter = createTRPCRouter({
 	 * @example
 	 * await api.goals.remove.mutate({ id: 'goal_123' });
 	 */
-	remove: protectedProcedure.input(z.object({ id: z.string().min(1) })).mutation(async ({ ctx, input }) => {
+	remove: protectedProcedure.input(z.object({ id: z.string().uuid() })).mutation(async ({ ctx, input }) => {
 		const userId = ctx.session.user.id;
 		const current = await ctx.db.goal.findUnique({ where: { id: input.id } });
 		if (!current || current.userId !== userId) {
@@ -134,12 +134,12 @@ export const goalsRouter = createTRPCRouter({
 	update: protectedProcedure
 		.input(
 			z.object({
-				id: z.string().min(1),
-				note: z.string().nullable().optional(),
+				id: z.string().uuid(), // Validate UUID format
+				note: z.string().max(1000).nullable().optional(), // Add max length
 				targetAmount: z.number().positive().optional(),
 				targetCurrency: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']).optional(),
-				targetDate: z.string().nullable().optional(),
-				title: z.string().min(1).optional()
+				targetDate: z.string().max(10).nullable().optional(), // Add max length for date
+				title: z.string().min(1).max(200).optional() // Add max length
 			})
 		)
 		.mutation(async ({ ctx, input }) => {

@@ -445,21 +445,16 @@ export const apiKeysRouter = createTRPCRouter({
 				}
 			}
 
-			// Check remaining requests
-			if (apiKey.remaining !== null) {
-				// Check if refill is due
+			// Check remaining requests and handle refill
+			let currentRemaining = apiKey.remaining;
+			if (currentRemaining !== null) {
+				// Check if refill is due and update remaining
 				if (isRefillDue(apiKey.lastRefillAt, apiKey.refillInterval)) {
-					const newRemaining = apiKey.remaining + (apiKey.refillAmount ?? 0);
-					await ctx.db.apiKey.update({
-						data: {
-							lastRefillAt: new Date(),
-							remaining: newRemaining
-						},
-						where: { id: apiKey.id }
-					});
+					currentRemaining = currentRemaining + (apiKey.refillAmount ?? 0);
 				}
 
-				if (apiKey.remaining <= 0) {
+				// Now check if we have remaining requests
+				if (currentRemaining <= 0) {
 					return {
 						error: { code: 'NO_REMAINING', message: 'API key has no remaining requests' },
 						key: null,
@@ -484,7 +479,7 @@ export const apiKeysRouter = createTRPCRouter({
 				}
 			}
 
-			// Update usage statistics
+			// Update usage statistics atomically using a transaction
 			const now = new Date();
 			const shouldResetRateLimit =
 				apiKey.rateLimitEnabled &&
@@ -492,16 +487,29 @@ export const apiKeysRouter = createTRPCRouter({
 				apiKey.rateLimitTimeWindow &&
 				now.getTime() - apiKey.lastRequest.getTime() >= apiKey.rateLimitTimeWindow;
 
-			await ctx.db.apiKey.update({
+			const shouldRefill = currentRemaining !== null && isRefillDue(apiKey.lastRefillAt, apiKey.refillInterval);
+
+			const updatedKey = await ctx.db.apiKey.update({
 				data: {
+					lastRefillAt: shouldRefill ? now : undefined,
 					lastRequest: now,
-					remaining: apiKey.remaining !== null ? apiKey.remaining - 1 : null,
+					remaining:
+						currentRemaining !== null
+							? shouldRefill
+								? currentRemaining + (apiKey.refillAmount ?? 0) - 1
+								: currentRemaining - 1
+							: null,
 					requestCount: shouldResetRateLimit ? 1 : apiKey.requestCount + 1
+				},
+				select: {
+					lastRefillAt: true,
+					remaining: true,
+					requestCount: true
 				},
 				where: { id: apiKey.id }
 			});
 
-			// Return valid response
+			// Return valid response with updated values
 			return {
 				error: null,
 				key: {
@@ -509,7 +517,7 @@ export const apiKeysRouter = createTRPCRouter({
 					enabled: apiKey.enabled,
 					expiresAt: apiKey.expiresAt,
 					id: apiKey.id,
-					lastRefillAt: apiKey.lastRefillAt,
+					lastRefillAt: updatedKey.lastRefillAt,
 					lastRequest: now,
 					metadata: apiKey.metadata ? JSON.parse(apiKey.metadata) : null,
 					name: apiKey.name,
@@ -520,8 +528,8 @@ export const apiKeysRouter = createTRPCRouter({
 					rateLimitTimeWindow: apiKey.rateLimitTimeWindow,
 					refillAmount: apiKey.refillAmount,
 					refillInterval: apiKey.refillInterval,
-					remaining: apiKey.remaining !== null ? apiKey.remaining - 1 : null,
-					requestCount: shouldResetRateLimit ? 1 : apiKey.requestCount + 1,
+					remaining: updatedKey.remaining,
+					requestCount: updatedKey.requestCount,
 					start: apiKey.start,
 					updatedAt: apiKey.updatedAt,
 					userId: apiKey.userId
