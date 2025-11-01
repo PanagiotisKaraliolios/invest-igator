@@ -495,7 +495,7 @@ export const apiKeysRouter = createTRPCRouter({
 
 			const updatedKey = await ctx.db.apiKey.update({
 				data: {
-					lastRefillAt: shouldRefill ? now : undefined,
+					...(shouldRefill && { lastRefillAt: now }),
 					lastRequest: now,
 					remaining: newRemaining,
 					requestCount: shouldResetRateLimit ? 1 : apiKey.requestCount + 1

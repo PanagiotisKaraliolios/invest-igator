@@ -42,15 +42,15 @@ export function escapeFluxString(value: string): string {
 
 /**
  * Validates that a symbol contains only allowed characters.
- * Symbols should be alphanumeric with optional dots, hyphens, and underscores.
+ * Symbols should be alphanumeric with optional dots, hyphens, underscores, and carets.
  *
  * @param symbol - The symbol to validate
  * @returns True if valid, false otherwise
  */
 export function isValidSymbol(symbol: string): boolean {
 	// Allow alphanumeric, dots, hyphens, underscores, and carets (common in stock symbols)
-	// Hyphen at start of character class to avoid ambiguity
-	return /^[-A-Z0-9._^]+$/i.test(symbol);
+	// Hyphen at end of character class to avoid ambiguity
+	return /^[A-Z0-9._^-]+$/i.test(symbol);
 }
 
 // Query if a symbol already has any data points

@@ -6,6 +6,12 @@ import { escapeFluxString, influxQueryApi, isValidSymbol, measurement, symbolHas
 import { ingestYahooSymbol } from '@/server/jobs/yahoo-lib';
 
 /**
+ * Maximum number of days for historical data queries.
+ * Set to 7300 days (approximately 20 years) to prevent DoS via large date ranges.
+ */
+const MAX_HISTORICAL_DAYS = 7300;
+
+/**
  * Normalizes a symbol by trimming whitespace and converting to uppercase.
  * Also validates the symbol format.
  *
@@ -130,7 +136,7 @@ export const watchlistRouter = createTRPCRouter({
 	events: withPermissions('watchlist', 'read')
 		.input(
 			z.object({
-				days: z.number().int().min(1).max(7300).default(365), // Cap at 20 years
+				days: z.number().int().min(1).max(MAX_HISTORICAL_DAYS).default(365),
 				symbols: z.array(z.string()).optional()
 			})
 		)
@@ -279,7 +285,7 @@ export const watchlistRouter = createTRPCRouter({
 	history: withPermissions('watchlist', 'read')
 		.input(
 			z.object({
-				days: z.number().int().min(1).max(7300).default(90), // Cap at 20 years
+				days: z.number().int().min(1).max(MAX_HISTORICAL_DAYS).default(90),
 				field: z.enum(['open', 'high', 'low', 'close']).default('close'),
 				symbols: z.array(z.string()).optional()
 			})
