@@ -277,6 +277,42 @@ bun run test:e2e:ui
 
 ---
 
+## 📮 API Testing with Postman
+
+Comprehensive Postman collections are available in the `postman/` directory for testing all API endpoints.
+
+**Collections include:**
+- 🔐 **Authentication** - Sign up, login, password reset (Better Auth)
+- 👤 **Account** - Profile management, 2FA, email changes, OAuth
+- 📊 **Watchlist** - Symbol management, price history, corporate events
+- 💰 **Transactions** - CRUD operations, CSV import/export, filtering
+- 📈 **Portfolio** - Structure and performance analytics (TWR/MWR)
+- 🎯 **Goals** - Financial goals tracking
+- 🔑 **API Keys** - Programmatic access management
+- 👥 **Admin** - User management, audit logs (admin only)
+- 💱 **Currency & Theme** - User preferences
+- 🌐 **FX** - Foreign exchange rates
+
+**Quick start:**
+```sh
+# Import into Postman
+# 1. Open Postman
+# 2. Import postman/Invest-igator-API.postman_collection.json
+# 3. Import postman/Invest-igator.postman_environment.json
+# 4. Configure environment variables (baseUrl, etc.)
+# 5. Sign in via Better Auth endpoints
+```
+
+📚 **See [postman/README.md](./postman/README.md) for detailed usage instructions**
+
+All 59 endpoints are documented with:
+- ✅ Request/response examples
+- ✅ Input validation details
+- ✅ Authentication requirements
+- ✅ Environment variables for easy configuration
+
+---
+
 ## ✅ Linting and typecheck
 
 ```sh
