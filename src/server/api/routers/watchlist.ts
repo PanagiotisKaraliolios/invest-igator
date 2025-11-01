@@ -2,7 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { env } from '@/env';
 import { createTRPCRouter, withPermissions } from '@/server/api/trpc';
-import { influxQueryApi, measurement, symbolHasAnyData } from '@/server/influx';
+import { escapeFluxString, influxQueryApi, isValidSymbol, measurement, symbolHasAnyData } from '@/server/influx';
 import { ingestYahooSymbol } from '@/server/jobs/yahoo-lib';
 
 /**
@@ -51,24 +51,35 @@ export const watchlistRouter = createTRPCRouter({
 			z.object({
 				description: z.string().optional(),
 				displaySymbol: z.string().optional(),
-				symbol: z.string().min(1),
+				symbol: z.string().min(1).max(20), // Add max length for symbols
 				type: z.string().optional()
 			})
 		)
 		.mutation(async ({ ctx, input }) => {
 			const userId = ctx.session.user.id;
+
+			// Validate symbol format to prevent injection attacks
+			const symbol = input.symbol.trim().toUpperCase();
+			if (!isValidSymbol(symbol)) {
+				throw new TRPCError({
+					code: 'BAD_REQUEST',
+					message:
+						'Invalid symbol format. Only alphanumeric characters, dots, hyphens, underscores, and carets are allowed.'
+				});
+			}
+
 			let created = false;
 			let result: any;
 			try {
 				result = await ctx.db.watchlistItem.create({
-					data: { userId, ...input }
+					data: { userId, ...input, symbol }
 				});
 				created = true;
 			} catch (e) {
 				// upsert-like behavior for unique(userId,symbol)
 				await ctx.db.watchlistItem.update({
-					data: { ...input },
-					where: { userId_symbol: { symbol: input.symbol, userId } }
+					data: { ...input, symbol },
+					where: { userId_symbol: { symbol, userId } }
 				});
 				result = { alreadyExists: true } as const;
 			}
@@ -76,10 +87,9 @@ export const watchlistRouter = createTRPCRouter({
 			// Fire-and-forget ingestion if symbol has no data yet
 			void (async () => {
 				try {
-					const sym = input.symbol.trim().toUpperCase();
-					// const has = await symbolHasAnyData(sym);
+					// const has = await symbolHasAnyData(symbol);
 					// if (!has) {
-					await ingestYahooSymbol(sym, { userId });
+					await ingestYahooSymbol(symbol, { userId });
 					// }
 				} catch {}
 			})();
@@ -107,7 +117,7 @@ export const watchlistRouter = createTRPCRouter({
 	events: withPermissions('watchlist', 'read')
 		.input(
 			z.object({
-				days: z.number().int().min(1).default(365),
+				days: z.number().int().min(1).max(7300).default(365), // Cap at 20 years
 				symbols: z.array(z.string()).optional()
 			})
 		)
@@ -125,6 +135,16 @@ export const watchlistRouter = createTRPCRouter({
 			// safety limit
 			symbols = (symbols ?? []).slice(0, 12);
 
+			// Validate all symbols to prevent injection
+			for (const sym of symbols) {
+				if (!isValidSymbol(sym)) {
+					throw new TRPCError({
+						code: 'BAD_REQUEST',
+						message: `Invalid symbol format: ${sym}`
+					});
+				}
+			}
+
 			type Div = { date: string; amount: number };
 			type Split = { date: string; ratio: number; numerator?: number; denominator?: number };
 			type CapG = { date: string; amount: number };
@@ -132,11 +152,12 @@ export const watchlistRouter = createTRPCRouter({
 
 			const days = input.days;
 			for (const sym of symbols) {
+				const escapedSym = escapeFluxString(sym);
 				// Dividends
 				{
 					const flux = `from(bucket: "${env.INFLUXDB_BUCKET}")
   |> range(start: -${days + 3}d)
-  |> filter(fn: (r) => r._measurement == "dividends" and r._field == "amount" and r.symbol == "${sym}")
+  |> filter(fn: (r) => r._measurement == "dividends" and r._field == "amount" and r.symbol == "${escapedSym}")
   |> keep(columns: ["_time", "_value"]) 
   |> sort(columns: ["_time"])`;
 					const arr: Div[] = [];
@@ -165,7 +186,7 @@ export const watchlistRouter = createTRPCRouter({
 				{
 					const flux = `from(bucket: "${env.INFLUXDB_BUCKET}")
   |> range(start: -${days + 3}d)
-  |> filter(fn: (r) => r._measurement == "splits" and r._field == "ratio" and r.symbol == "${sym}")
+  |> filter(fn: (r) => r._measurement == "splits" and r._field == "ratio" and r.symbol == "${escapedSym}")
   |> keep(columns: ["_time", "_value"]) 
   |> sort(columns: ["_time"])`;
 					const arr: Split[] = [];
@@ -194,7 +215,7 @@ export const watchlistRouter = createTRPCRouter({
 				{
 					const flux = `from(bucket: "${env.INFLUXDB_BUCKET}")
   |> range(start: -${days + 3}d)
-  |> filter(fn: (r) => r._measurement == "capital_gains" and r._field == "amount" and r.symbol == "${sym}")
+  |> filter(fn: (r) => r._measurement == "capital_gains" and r._field == "amount" and r.symbol == "${escapedSym}")
   |> keep(columns: ["_time", "_value"]) 
   |> sort(columns: ["_time"])`;
 					const arr: CapG[] = [];
@@ -245,7 +266,7 @@ export const watchlistRouter = createTRPCRouter({
 	history: withPermissions('watchlist', 'read')
 		.input(
 			z.object({
-				days: z.number().int().min(1).default(90),
+				days: z.number().int().min(1).max(7300).default(90), // Cap at 20 years
 				field: z.enum(['open', 'high', 'low', 'close']).default('close'),
 				symbols: z.array(z.string()).optional()
 			})
@@ -264,6 +285,16 @@ export const watchlistRouter = createTRPCRouter({
 			// safety limit
 			symbols = (symbols ?? []).slice(0, 12);
 
+			// Validate all symbols to prevent injection
+			for (const sym of symbols) {
+				if (!isValidSymbol(sym)) {
+					throw new TRPCError({
+						code: 'BAD_REQUEST',
+						message: `Invalid symbol format: ${sym}`
+					});
+				}
+			}
+
 			const series: Record<string, Array<{ date: string; value: number }>> = {};
 			// Choose aggregation bucket to cap points for large ranges
 			const days = input.days;
@@ -281,9 +312,10 @@ export const watchlistRouter = createTRPCRouter({
 			}
 
 			for (const sym of symbols) {
+				const escapedSym = escapeFluxString(sym);
 				const flux = `from(bucket: "${env.INFLUXDB_BUCKET}")
   |> range(start: -${days + 3}d)
-  |> filter(fn: (r) => r._measurement == "${measurement}" and r._field == "${input.field}" and r.symbol == "${sym}")
+  |> filter(fn: (r) => r._measurement == "${measurement}" and r._field == "${input.field}" and r.symbol == "${escapedSym}")
   |> aggregateWindow(every: ${every}, fn: last, createEmpty: true)
   |> fill(usePrevious: true)
   |> keep(columns: ["_time", "_value"]) 
@@ -344,18 +376,28 @@ export const watchlistRouter = createTRPCRouter({
 	 * await api.watchlist.remove.mutate({ symbol: 'AAPL' });
 	 */
 	remove: withPermissions('watchlist', 'delete')
-		.input(z.object({ symbol: z.string().min(1) }))
+		.input(z.object({ symbol: z.string().min(1).max(20) }))
 		.mutation(async ({ ctx, input }) => {
 			const userId = ctx.session.user.id;
+			const symbol = input.symbol.trim().toUpperCase();
+
+			// Validate symbol format
+			if (!isValidSymbol(symbol)) {
+				throw new TRPCError({
+					code: 'BAD_REQUEST',
+					message: 'Invalid symbol format'
+				});
+			}
+
 			const hasTx = await ctx.db.transaction.findFirst({
 				select: { id: true },
-				where: { symbol: input.symbol.trim().toUpperCase(), userId }
+				where: { symbol, userId }
 			});
 			if (hasTx) {
 				throw new TRPCError({ code: 'BAD_REQUEST', message: 'Cannot remove a symbol that has transactions.' });
 			}
 			await ctx.db.watchlistItem.delete({
-				where: { userId_symbol: { symbol: input.symbol, userId } }
+				where: { userId_symbol: { symbol, userId } }
 			});
 			return { success: true } as const;
 		}),
@@ -414,12 +456,22 @@ export const watchlistRouter = createTRPCRouter({
 	 * await api.watchlist.toggleStar.mutate({ symbol: 'AAPL', starred: true });
 	 */
 	toggleStar: withPermissions('watchlist', 'write')
-		.input(z.object({ starred: z.boolean().optional(), symbol: z.string().min(1) }))
+		.input(z.object({ starred: z.boolean().optional(), symbol: z.string().min(1).max(20) }))
 		.mutation(async ({ ctx, input }) => {
 			const userId = ctx.session.user.id;
+			const symbol = input.symbol.trim().toUpperCase();
+
+			// Validate symbol format
+			if (!isValidSymbol(symbol)) {
+				throw new TRPCError({
+					code: 'BAD_REQUEST',
+					message: 'Invalid symbol format'
+				});
+			}
+
 			const current = await ctx.db.watchlistItem.findUnique({
 				select: { starred: true },
-				where: { userId_symbol: { symbol: input.symbol, userId } }
+				where: { userId_symbol: { symbol, userId } }
 			});
 			const next = input.starred ?? !current?.starred;
 
@@ -434,9 +486,9 @@ export const watchlistRouter = createTRPCRouter({
 			}
 			await ctx.db.watchlistItem.update({
 				data: { starred: next },
-				where: { userId_symbol: { symbol: input.symbol, userId } }
+				where: { userId_symbol: { symbol, userId } }
 			});
-			return { starred: next, symbol: input.symbol } as const;
+			return { starred: next, symbol } as const;
 		})
 });
 

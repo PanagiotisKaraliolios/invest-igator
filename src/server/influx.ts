@@ -27,11 +27,42 @@ export type DailyBar = {
 
 export const measurement = 'daily_bars'; // measurement name in Influx
 
+/**
+ * Escapes a string value for use in Flux queries to prevent injection attacks.
+ * Flux uses double quotes for string literals, so we escape any double quotes
+ * and backslashes in the input.
+ *
+ * @param value - The string value to escape
+ * @returns Escaped string safe for use in Flux queries
+ */
+export function escapeFluxString(value: string): string {
+	// Escape backslashes first, then double quotes
+	return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
+/**
+ * Validates that a symbol contains only allowed characters.
+ * Symbols should be alphanumeric with optional dots, hyphens, and underscores.
+ *
+ * @param symbol - The symbol to validate
+ * @returns True if valid, false otherwise
+ */
+export function isValidSymbol(symbol: string): boolean {
+	// Allow alphanumeric, dots, hyphens, underscores, and carets (common in stock symbols)
+	return /^[A-Z0-9.\-_^]+$/i.test(symbol);
+}
+
 // Query if a symbol already has any data points
 export async function symbolHasAnyData(symbol: string): Promise<boolean> {
+	// Validate symbol to prevent injection
+	if (!isValidSymbol(symbol)) {
+		throw new Error('Invalid symbol format');
+	}
+
+	const escapedSymbol = escapeFluxString(symbol);
 	const flux = `from(bucket: "${env.INFLUXDB_BUCKET}")
   |> range(start: -50y)
-  |> filter(fn: (r) => r._measurement == "${measurement}" and r.symbol == "${symbol}" )
+  |> filter(fn: (r) => r._measurement == "${measurement}" and r.symbol == "${escapedSymbol}" )
   |> limit(n: 1)`;
 
 	let has = false;
