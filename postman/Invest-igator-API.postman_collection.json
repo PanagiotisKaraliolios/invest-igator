@@ -1,2032 +1,1737 @@
 {
-	"info": {
-		"_postman_id": "invest-igator-api-v1",
-		"name": "Invest-igator API",
-		"description": "Complete API collection for Invest-igator application. Includes tRPC endpoints and Better Auth authentication.\n\n## Setup\n1. Import this collection into Postman\n2. Create an environment with these variables:\n   - `baseUrl`: Your API base URL (e.g., http://localhost:3000 or https://yourdomain.com)\n   - `authToken`: Session token (obtained after login)\n   - `apiKey`: API key for programmatic access (optional)\n\n## Authentication\n- Most endpoints require authentication via session cookie or API key\n- Use Better Auth login endpoints first to obtain a session\n- tRPC endpoints use POST method to `/api/trpc/{router}.{procedure}`\n\n## Usage\n- All tRPC inputs are sent as JSON in the request body\n- Response format is JSON\n- Check individual request descriptions for required inputs and expected responses",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-	},
 	"auth": {
-		"type": "bearer",
 		"bearer": [
 			{
 				"key": "token",
-				"value": "{{authToken}}",
-				"type": "string"
+				"type": "string",
+				"value": "{{authToken}}"
 			}
-		]
+		],
+		"type": "bearer"
 	},
-	"variable": [
-		{
-			"key": "baseUrl",
-			"value": "http://localhost:3000",
-			"type": "string"
-		}
-	],
+	"info": {
+		"_exporter_id": "25514403",
+		"_postman_id": "54d4cd50-f594-4506-88f6-604b2f9afad5",
+		"description": "Complete API collection for Invest-igator application. Includes tRPC endpoints and Better Auth authentication.\n\n## Setup\n1. Import this collection into Postman\n2. Create an environment with these variables:\n   - `baseUrl`: Your API base URL (e.g., http://localhost:3000 or https://yourdomain.com)\n   - `authToken`: Session token (obtained after login)\n   - `apiKey`: API key for programmatic access (optional)\n\n## Authentication\n- Most endpoints require authentication via session cookie or API key\n- Use Better Auth login endpoints first to obtain a session\n- tRPC endpoints use POST method to `/api/trpc/{router}.{procedure}`\n\n## Usage\n- All tRPC inputs are sent as JSON in the request body\n- Response format is JSON\n- Check individual request descriptions for required inputs and expected responses",
+		"name": "Invest-igator API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
 	"item": [
 		{
-			"name": "Auth",
 			"description": "Authentication operations - signup, login, password reset. All endpoints are public.",
 			"item": [
 				{
 					"name": "Check Email Exists",
 					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"0\": {\n    \"json\": \"user@example.com\"\n  }\n}"
 						},
+						"description": "Check if an email address is already registered. Returns {exists: boolean}.\n\nInput: Email string in batch format\nBody: {\"0\": {\"json\": \"user@example.com\"}}\nQuery param: batch=1\nOutput: {exists: boolean}",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/auth.checkEmail?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"auth.checkEmail"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "auth.checkEmail"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Check if an email address is already registered. Returns {exists: boolean}.\n\nInput: Email string in batch format\nBody: {\"0\": {\"json\": \"user@example.com\"}}\nQuery param: batch=1\nOutput: {exists: boolean}"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/auth.checkEmail?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "Sign Up",
 					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"email\": \"newuser@example.com\",\n      \"password\": \"securePassword123\",\n      \"name\": \"John Doe\"\n    }\n  }\n}"
 						},
+						"description": "Create a new user account with email and password.\n\nRequired fields:\n- email: Valid email address\n- password: Minimum 1 character\n- name: User's full name\n\nOptional:\n- confirmPassword: Accepted but ignored\n\nBody format: {\"0\": {\"json\": {object}}}\nQuery param: batch=1\nReturns: {ok: true}",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/auth.signup?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"auth.signup"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "auth.signup"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Create a new user account with email and password.\n\nRequired fields:\n- email: Valid email address\n- password: Minimum 1 character\n- name: User's full name\n\nOptional:\n- confirmPassword: Accepted but ignored\n\nBody format: {\"0\": {\"json\": {object}}}\nQuery param: batch=1\nReturns: {ok: true}"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/auth.signup?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "Request Password Reset",
 					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"email\": \"user@example.com\"\n    }\n  }\n}"
 						},
+						"description": "Send a password reset email. Always returns success to prevent account enumeration.\n\nInput:\n- email: Email address\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/auth.requestPasswordReset?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"auth.requestPasswordReset"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "auth.requestPasswordReset"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Send a password reset email. Always returns success to prevent account enumeration.\n\nInput:\n- email: Email address\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/auth.requestPasswordReset?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "Reset Password",
 					"request": {
-						"method": "POST",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"token\": \"reset_token_from_email\",\n      \"password\": \"newPassword123\"\n    }\n  }\n}"
+						},
+						"description": "Reset password using a valid token from email.\n\nRequired:\n- token: Password reset token (min 10 chars)\n- password: New password (min 8, max 200 chars)\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
 						"header": [
 							{
 								"key": "Content-Type",
 								"value": "application/json"
 							}
 						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"token\": \"reset_token_from_email\",\n      \"password\": \"newPassword123\"\n    }\n  }\n}"
-						},
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/auth.resetPassword?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"auth.resetPassword"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "auth.resetPassword"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Reset password using a valid token from email.\n\nRequired:\n- token: Password reset token (min 10 chars)\n- password: New password (min 8, max 200 chars)\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/auth.resetPassword?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "Better Auth - Sign In (Credentials)",
 					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"yourPassword123\"\n}"
 						},
-						"url": {
-							"raw": "{{baseUrl}}/api/auth/sign-in/email",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"auth",
-								"sign-in",
-								"email"
-							]
-						},
-						"description": "Sign in with email and password using Better Auth. Sets session cookie on success."
-					}
-				},
-				{
-					"name": "Better Auth - Sign Out",
-					"request": {
-						"method": "POST",
+						"description": "Sign in with email and password using Better Auth. Sets session cookie on success.",
 						"header": [
 							{
 								"key": "Content-Type",
 								"value": "application/json"
 							}
 						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/auth/sign-out",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"auth",
-								"sign-out"
-							]
-						},
-						"description": "Sign out and clear session cookie."
-					}
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "sign-in", "email"],
+							"raw": "{{baseUrl}}/api/auth/sign-in/email"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Better Auth - Sign Out",
+					"request": {
+						"description": "Sign out and clear session cookie.",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"method": "POST",
+						"url": {
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "sign-out"],
+							"raw": "{{baseUrl}}/api/auth/sign-out"
+						}
+					},
+					"response": []
 				}
-			]
+			],
+			"name": "Auth"
 		},
 		{
-			"name": "Account",
 			"description": "User account management - profile, passwords, 2FA, email changes, OAuth connections. All procedures require authentication.",
 			"item": [
 				{
 					"name": "Get Current User Profile",
 					"request": {
-						"method": "POST",
+						"description": "Get current user profile information.\n\nReturns:\n- id: User ID\n- email: Email address\n- name: User name\n- avatar: Profile picture URL (nullable)\n- emailVerified: Whether email is verified\n- hasPassword: Whether user has password set\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
 						"header": [
 							{
 								"key": "Content-Type",
 								"value": "application/json"
 							}
 						],
+						"method": "GET",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/account.getMe?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"account.getMe"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "account.getMe"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Get current user profile information.\n\nReturns:\n- id: User ID\n- email: Email address\n- name: User name\n- avatar: Profile picture URL (nullable)\n- emailVerified: Whether email is verified\n- hasPassword: Whether user has password set\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/account.getMe?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "Update Profile",
 					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"name\": \"John Doe Updated\",\n      \"image\": \"https://example.com/avatar.jpg\"\n    }\n  }\n}"
 						},
+						"description": "Update user profile name and avatar.\n\nRequired:\n- name: User name (1-100 chars)\n\nOptional:\n- image: Avatar URL or empty string to remove\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/account.updateProfile?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"account.updateProfile"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "account.updateProfile"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Update user profile name and avatar.\n\nRequired:\n- name: User name (1-100 chars)\n\nOptional:\n- image: Avatar URL or empty string to remove\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/account.updateProfile?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "Upload Profile Picture",
 					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"dataUrl\": \"data:image/jpeg;base64,/9j/4AAQSkZJRg...\"\n    }\n  }\n}"
 						},
+						"description": "Upload profile picture from data URL. Server compresses and resizes to 512x512 JPEG.\n\nRequired:\n- dataUrl: Base64 encoded image (png, jpeg, jpg, gif, webp)\n\nReturns: {url: string}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/account.uploadProfilePicture?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"account.uploadProfilePicture"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "account.uploadProfilePicture"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Upload profile picture from data URL. Server compresses and resizes to 512x512 JPEG.\n\nRequired:\n- dataUrl: Base64 encoded image (png, jpeg, jpg, gif, webp)\n\nReturns: {url: string}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/account.uploadProfilePicture?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "Change Password",
 					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"currentPassword\": \"oldPassword123\",\n      \"newPassword\": \"newPassword456\"\n    }\n  }\n}"
 						},
+						"description": "Change password (credential accounts only).\n\nRequired:\n- currentPassword: Current password\n- newPassword: New password (8-200 chars)\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/account.changePassword?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"account.changePassword"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "account.changePassword"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Change password (credential accounts only).\n\nRequired:\n- currentPassword: Current password\n- newPassword: New password (8-200 chars)\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/account.changePassword?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "Set Password (OAuth Users)",
 					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"newPassword\": \"newPassword123\"\n    }\n  }\n}"
 						},
+						"description": "Set password for OAuth-only accounts.\n\nRequired:\n- newPassword: Password (8-200 chars)\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/account.setPassword?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"account.setPassword"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "account.setPassword"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Set password for OAuth-only accounts.\n\nRequired:\n- newPassword: Password (8-200 chars)\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/account.setPassword?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "Get Two-Factor State",
 					"request": {
-						"method": "POST",
+						"description": "Get two-factor authentication state.\n\nReturns:\n- enabled: Boolean\n- pending: Boolean\n- hasSecret: Boolean\n- hasPassword: Boolean\n- recoveryCodesRemaining: Number\n- confirmedAt: ISO date or null\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
 						"header": [
 							{
 								"key": "Content-Type",
 								"value": "application/json"
 							}
 						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/account.getTwoFactorState?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"account.getTwoFactorState"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "account.getTwoFactorState"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Get two-factor authentication state.\n\nReturns:\n- enabled: Boolean\n- pending: Boolean\n- hasSecret: Boolean\n- hasPassword: Boolean\n- recoveryCodesRemaining: Number\n- confirmedAt: ISO date or null\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/account.getTwoFactorState?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "Cancel Two-Factor Setup",
 					"request": {
-						"method": "POST",
+						"description": "Cancel in-progress 2FA setup (when not yet enabled).\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
 						"header": [
 							{
 								"key": "Content-Type",
 								"value": "application/json"
 							}
 						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/account.cancelTwoFactorSetup?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"account.cancelTwoFactorSetup"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "account.cancelTwoFactorSetup"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Cancel in-progress 2FA setup (when not yet enabled).\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/account.cancelTwoFactorSetup?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "Request Email Change",
 					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"newEmail\": \"newemail@example.com\",\n      \"currentPassword\": \"yourPassword123\"\n    }\n  }\n}"
 						},
+						"description": "Request email change. Requires current password if set.\n\nRequired:\n- newEmail: New email address\n\nOptional:\n- currentPassword: Required if password is set\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/account.requestEmailChange?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"account.requestEmailChange"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "account.requestEmailChange"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Request email change. Requires current password if set.\n\nRequired:\n- newEmail: New email address\n\nOptional:\n- currentPassword: Required if password is set\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/account.requestEmailChange?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "Confirm Email Change",
 					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"token\": \"verification_token_from_email\"\n    }\n  }\n}"
 						},
+						"description": "Confirm email change using verification token.\n\nRequired:\n- token: Verification token (min 10 chars)\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/account.confirmEmailChange?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"account.confirmEmailChange"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "account.confirmEmailChange"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Confirm email change using verification token.\n\nRequired:\n- token: Verification token (min 10 chars)\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/account.confirmEmailChange?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "Request Email Verification",
 					"request": {
-						"method": "POST",
+						"description": "Send email verification link (deprecated - prefer Better Auth).\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
 						"header": [
 							{
 								"key": "Content-Type",
 								"value": "application/json"
 							}
 						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/account.requestEmailVerification?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"account.requestEmailVerification"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "account.requestEmailVerification"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Send email verification link (deprecated - prefer Better Auth).\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/account.requestEmailVerification?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "List OAuth Accounts",
 					"request": {
-						"method": "POST",
+						"description": "List all connected OAuth provider accounts.\n\nReturns: Array of {id, providerId, accountId}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
 						"header": [
 							{
 								"key": "Content-Type",
 								"value": "application/json"
 							}
 						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/account.listOAuthAccounts?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"account.listOAuthAccounts"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "account.listOAuthAccounts"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "List all connected OAuth provider accounts.\n\nReturns: Array of {id, providerId, accountId}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/account.listOAuthAccounts?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "Disconnect OAuth Account",
 					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"accountId\": \"oauth_account_id\"\n    }\n  }\n}"
 						},
-						"url": {
-							"raw": "{{baseUrl}}/api/trpc/account.disconnectOAuthAccount?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"account.disconnectOAuthAccount"
-							],
-							"query": [
-								{
-									"key": "batch",
-									"value": "1"
-								}
-							]
-						},
-						"description": "Disconnect a linked OAuth provider. Cannot remove last auth method.\n\nRequired:\n- accountId: OAuth account ID\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
-				},
-				{
-					"name": "Delete Account",
-					"request": {
-						"method": "POST",
+						"description": "Disconnect a linked OAuth provider. Cannot remove last auth method.\n\nRequired:\n- accountId: OAuth account ID\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
 						"header": [
 							{
 								"key": "Content-Type",
 								"value": "application/json"
 							}
 						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"confirm\": true\n    }\n  }\n}"
-						},
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/account.deleteAccount?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"account.deleteAccount"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "account.disconnectOAuthAccount"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
+							],
+							"raw": "{{baseUrl}}/api/trpc/account.disconnectOAuthAccount?batch=1"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Account",
+					"request": {
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"confirm\": true\n    }\n  }\n}"
 						},
-						"description": "Permanently delete user account and all data.\n\nRequired:\n- confirm: Must be true\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+						"description": "Permanently delete user account and all data.\n\nRequired:\n- confirm: Must be true\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"method": "POST",
+						"url": {
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "account.deleteAccount"],
+							"query": [
+								{
+									"key": "batch",
+									"value": "1"
+								}
+							],
+							"raw": "{{baseUrl}}/api/trpc/account.deleteAccount?batch=1"
+						}
+					},
+					"response": []
 				}
-			]
+			],
+			"name": "Account"
 		},
 		{
-			"name": "Watchlist",
 			"description": "Watchlist management with market data from InfluxDB. All procedures require authentication.",
 			"item": [
 				{
 					"name": "Add Symbol to Watchlist",
 					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"symbol\": \"AAPL\",\n      \"displaySymbol\": \"Apple Inc.\",\n      \"description\": \"Technology company\",\n      \"type\": \"Stock\"\n    }\n  }\n}"
 						},
+						"description": "Add a symbol to watchlist. Triggers background data ingestion.\n\nRequired:\n- symbol: Stock symbol\n\nOptional:\n- displaySymbol: Display name\n- description: Description\n- type: Security type\n\nReturns: Created item or {alreadyExists: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/watchlist.add?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"watchlist.add"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "watchlist.add"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Add a symbol to watchlist. Triggers background data ingestion.\n\nRequired:\n- symbol: Stock symbol\n\nOptional:\n- displaySymbol: Display name\n- description: Description\n- type: Security type\n\nReturns: Created item or {alreadyExists: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/watchlist.add?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "List Watchlist Items",
 					"request": {
-						"method": "POST",
+						"description": "Get all watchlist items for current user.\n\nReturns: Array of watchlist items with symbol, displaySymbol, description, type, starred, createdAt\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
 						"header": [
 							{
 								"key": "Content-Type",
 								"value": "application/json"
 							}
 						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/watchlist.list?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"watchlist.list"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "watchlist.list"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Get all watchlist items for current user.\n\nReturns: Array of watchlist items with symbol, displaySymbol, description, type, starred, createdAt\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/watchlist.list?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "Remove Symbol from Watchlist",
 					"request": {
-						"method": "POST",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"symbol\": \"AAPL\"\n    }\n  }\n}"
+						},
+						"description": "Remove symbol from watchlist.\n\nRequired:\n- symbol: Stock symbol\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
 						"header": [
 							{
 								"key": "Content-Type",
 								"value": "application/json"
 							}
 						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"symbol\": \"AAPL\"\n    }\n  }\n}"
-						},
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/watchlist.remove?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"watchlist.remove"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "watchlist.remove"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Remove symbol from watchlist.\n\nRequired:\n- symbol: Stock symbol\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/watchlist.remove?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "Search Symbols",
 					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"query\": \"AAPL\"\n    }\n  }\n}"
 						},
+						"description": "Search for symbols via Finnhub API.\n\nRequired:\n- query: Search query string\n\nReturns: Array of search results\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/watchlist.search?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"watchlist.search"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "watchlist.search"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Search for symbols via Finnhub API.\n\nRequired:\n- query: Search query string\n\nReturns: Array of search results\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/watchlist.search?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "Get Price History",
 					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"symbols\": [\n        \"AAPL\",\n        \"MSFT\"\n      ],\n      \"days\": 90\n    }\n  }\n}"
 						},
+						"description": "Get historical price data from InfluxDB.\n\nOptional:\n- symbols: Array of symbols (default: user's starred/recent)\n- days: Lookback period (default: 365, min: 1)\n\nReturns: Object keyed by symbol with arrays of {date, close} points\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/watchlist.history?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"watchlist.history"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "watchlist.history"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Get historical price data from InfluxDB.\n\nOptional:\n- symbols: Array of symbols (default: user's starred/recent)\n- days: Lookback period (default: 365, min: 1)\n\nReturns: Object keyed by symbol with arrays of {date, close} points\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/watchlist.history?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "Get Corporate Events",
 					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"symbols\": [\n        \"AAPL\"\n      ],\n      \"days\": 365\n    }\n  }\n}"
 						},
-						"url": {
-							"raw": "{{baseUrl}}/api/trpc/watchlist.events?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"watchlist.events"
-							],
-							"query": [
-								{
-									"key": "batch",
-									"value": "1"
-								}
-							]
-						},
-						"description": "Get corporate events (dividends, splits, capital gains).\n\nOptional:\n- symbols: Array of symbols (default: user's starred/recent)\n- days: Lookback period (default: 365, min: 1)\n\nReturns: Object keyed by symbol with dividends, splits, capitalGains arrays\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
-				},
-				{
-					"name": "Toggle Star Symbol",
-					"request": {
-						"method": "POST",
+						"description": "Get corporate events (dividends, splits, capital gains).\n\nOptional:\n- symbols: Array of symbols (default: user's starred/recent)\n- days: Lookback period (default: 365, min: 1)\n\nReturns: Object keyed by symbol with dividends, splits, capitalGains arrays\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
 						"header": [
 							{
 								"key": "Content-Type",
 								"value": "application/json"
 							}
 						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"symbol\": \"AAPL\"\n    }\n  }\n}"
-						},
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/watchlist.toggleStar?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"watchlist.toggleStar"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "watchlist.events"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
+							],
+							"raw": "{{baseUrl}}/api/trpc/watchlist.events?batch=1"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Toggle Star Symbol",
+					"request": {
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"symbol\": \"AAPL\"\n    }\n  }\n}"
 						},
-						"description": "Star or unstar a symbol (max 5 starred).\n\nRequired:\n- symbol: Stock symbol\n\nReturns: {starred: boolean}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+						"description": "Star or unstar a symbol (max 5 starred).\n\nRequired:\n- symbol: Stock symbol\n\nReturns: {starred: boolean}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"method": "POST",
+						"url": {
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "watchlist.toggleStar"],
+							"query": [
+								{
+									"key": "batch",
+									"value": "1"
+								}
+							],
+							"raw": "{{baseUrl}}/api/trpc/watchlist.toggleStar?batch=1"
+						}
+					},
+					"response": []
 				}
-			]
+			],
+			"name": "Watchlist"
 		},
 		{
-			"name": "Transactions",
 			"description": "Investment transaction management with CSV import/export. All procedures require authentication.",
 			"item": [
 				{
 					"name": "Create Transaction",
 					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"date\": \"2024-01-15\",\n      \"type\": \"BUY\",\n      \"symbol\": \"AAPL\",\n      \"quantity\": 10,\n      \"price\": 150.5,\n      \"currency\": \"USD\",\n      \"fees\": 9.99,\n      \"notes\": \"Initial purchase\"\n    }\n  }\n}"
 						},
+						"description": "Create a new transaction.\n\nRequired:\n- date: ISO date string\n- type: BUY, SELL, DIVIDEND, FEE, etc.\n- symbol: Stock symbol\n- quantity: Number (can be negative for sells)\n- price: Unit price\n- currency: Currency code\n\nOptional:\n- fees: Transaction fees\n- notes: Additional notes\n\nReturns: Created transaction object\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/transactions.create?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"transactions.create"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "transactions.create"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Create a new transaction.\n\nRequired:\n- date: ISO date string\n- type: BUY, SELL, DIVIDEND, FEE, etc.\n- symbol: Stock symbol\n- quantity: Number (can be negative for sells)\n- price: Unit price\n- currency: Currency code\n\nOptional:\n- fees: Transaction fees\n- notes: Additional notes\n\nReturns: Created transaction object\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/transactions.create?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "List Transactions",
 					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"page\": 1,\n      \"pageSize\": 50,\n      \"symbol\": \"AAPL\",\n      \"type\": \"BUY\",\n      \"from\": \"2024-01-01\",\n      \"to\": \"2024-12-31\"\n    }\n  }\n}"
 						},
+						"description": "List transactions with filters and pagination.\n\nOptional:\n- page: Page number (default: 1)\n- pageSize: Items per page (default: 50, max: 100)\n- symbol: Filter by symbol\n- type: Filter by transaction type\n- from: Start date (ISO)\n- to: End date (ISO)\n\nReturns: {items: Transaction[], total: number, page: number, pageSize: number}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/transactions.list?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"transactions.list"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "transactions.list"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "List transactions with filters and pagination.\n\nOptional:\n- page: Page number (default: 1)\n- pageSize: Items per page (default: 50, max: 100)\n- symbol: Filter by symbol\n- type: Filter by transaction type\n- from: Start date (ISO)\n- to: End date (ISO)\n\nReturns: {items: Transaction[], total: number, page: number, pageSize: number}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/transactions.list?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "Update Transaction",
 					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"id\": \"transaction_id\",\n      \"quantity\": 15,\n      \"price\": 152.0,\n      \"notes\": \"Updated quantity\"\n    }\n  }\n}"
 						},
+						"description": "Update an existing transaction.\n\nRequired:\n- id: Transaction ID\n\nOptional: Any transaction fields to update\n\nReturns: Updated transaction object\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/transactions.update?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"transactions.update"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "transactions.update"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Update an existing transaction.\n\nRequired:\n- id: Transaction ID\n\nOptional: Any transaction fields to update\n\nReturns: Updated transaction object\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/transactions.update?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "Remove Transaction",
 					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"id\": \"transaction_id\"\n    }\n  }\n}"
 						},
+						"description": "Delete a single transaction.\n\nRequired:\n- id: Transaction ID\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/transactions.remove?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"transactions.remove"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "transactions.remove"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Delete a single transaction.\n\nRequired:\n- id: Transaction ID\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/transactions.remove?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "Bulk Remove Transactions",
 					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"ids\": [\n        \"transaction_id_1\",\n        \"transaction_id_2\"\n      ]\n    }\n  }\n}"
 						},
+						"description": "Delete multiple transactions.\n\nRequired:\n- ids: Array of transaction IDs\n\nReturns: {count: number}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/transactions.bulkRemove?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"transactions.bulkRemove"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "transactions.bulkRemove"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Delete multiple transactions.\n\nRequired:\n- ids: Array of transaction IDs\n\nReturns: {count: number}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/transactions.bulkRemove?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "Import CSV",
 					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"csvContent\": \"date,type,symbol,quantity,price,currency,fees,notes\\n2024-01-15,BUY,AAPL,10,150.50,USD,9.99,Purchase\",\n      \"skipDuplicates\": true\n    }\n  }\n}"
 						},
+						"description": "Import transactions from CSV with duplicate detection.\n\nRequired:\n- csvContent: CSV string\n\nOptional:\n- skipDuplicates: Skip duplicate transactions (default: true)\n\nReturns: {imported: number, skipped: number, errors: string[]}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/transactions.importCsv?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"transactions.importCsv"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "transactions.importCsv"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Import transactions from CSV with duplicate detection.\n\nRequired:\n- csvContent: CSV string\n\nOptional:\n- skipDuplicates: Skip duplicate transactions (default: true)\n\nReturns: {imported: number, skipped: number, errors: string[]}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/transactions.importCsv?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "Export CSV",
 					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"from\": \"2024-01-01\",\n      \"to\": \"2024-12-31\",\n      \"symbol\": \"AAPL\"\n    }\n  }\n}"
 						},
-						"url": {
-							"raw": "{{baseUrl}}/api/trpc/transactions.exportCsv?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"transactions.exportCsv"
-							],
-							"query": [
-								{
-									"key": "batch",
-									"value": "1"
-								}
-							]
-						},
-						"description": "Export transactions to CSV.\n\nOptional:\n- from: Start date (ISO)\n- to: End date (ISO)\n- symbol: Filter by symbol\n\nReturns: {csvContent: string}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
-				},
-				{
-					"name": "Get Import Duplicates",
-					"request": {
-						"method": "POST",
+						"description": "Export transactions to CSV.\n\nOptional:\n- from: Start date (ISO)\n- to: End date (ISO)\n- symbol: Filter by symbol\n\nReturns: {csvContent: string}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
 						"header": [
 							{
 								"key": "Content-Type",
 								"value": "application/json"
 							}
 						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"csvContent\": \"date,type,symbol,quantity,price,currency\\n2024-01-15,BUY,AAPL,10,150.50,USD\"\n    }\n  }\n}"
-						},
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/transactions.importDuplicates?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"transactions.importDuplicates"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "transactions.exportCsv"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
+							],
+							"raw": "{{baseUrl}}/api/trpc/transactions.exportCsv?batch=1"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Import Duplicates",
+					"request": {
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"csvContent\": \"date,type,symbol,quantity,price,currency\\n2024-01-15,BUY,AAPL,10,150.50,USD\"\n    }\n  }\n}"
 						},
-						"description": "Check for duplicate transactions before import.\n\nRequired:\n- csvContent: CSV string\n\nReturns: Array of duplicate transactions\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+						"description": "Check for duplicate transactions before import.\n\nRequired:\n- csvContent: CSV string\n\nReturns: Array of duplicate transactions\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"method": "POST",
+						"url": {
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "transactions.importDuplicates"],
+							"query": [
+								{
+									"key": "batch",
+									"value": "1"
+								}
+							],
+							"raw": "{{baseUrl}}/api/trpc/transactions.importDuplicates?batch=1"
+						}
+					},
+					"response": []
 				}
-			]
+			],
+			"name": "Transactions"
 		},
 		{
-			"name": "Portfolio",
 			"description": "Portfolio analytics and performance calculations. All procedures require authentication.",
 			"item": [
 				{
 					"name": "Get Portfolio Structure",
 					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"currency\": \"USD\"\n    }\n  }\n}"
 						},
-						"url": {
-							"raw": "{{baseUrl}}/api/trpc/portfolio.structure?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"portfolio.structure"
-							],
-							"query": [
-								{
-									"key": "batch",
-									"value": "1"
-								}
-							]
-						},
-						"description": "Get current portfolio holdings with weights and values.\n\nOptional:\n- currency: Target currency (default: USD)\n\nReturns: Array of holdings with symbol, quantity, currentPrice, value, weight, costBasis\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
-				},
-				{
-					"name": "Get Portfolio Performance",
-					"request": {
-						"method": "POST",
+						"description": "Get current portfolio holdings with weights and values.\n\nOptional:\n- currency: Target currency (default: USD)\n\nReturns: Array of holdings with symbol, quantity, currentPrice, value, weight, costBasis\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
 						"header": [
 							{
 								"key": "Content-Type",
 								"value": "application/json"
 							}
 						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"from\": \"2024-01-01\",\n      \"to\": \"2024-12-31\",\n      \"currency\": \"USD\"\n    }\n  }\n}"
-						},
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/portfolio.performance?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"portfolio.performance"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "portfolio.structure"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
+							],
+							"raw": "{{baseUrl}}/api/trpc/portfolio.structure?batch=1"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Portfolio Performance",
+					"request": {
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"from\": \"2024-01-01\",\n      \"to\": \"2024-12-31\",\n      \"currency\": \"USD\"\n    }\n  }\n}"
 						},
-						"description": "Calculate portfolio performance metrics (TWR/MWR).\n\nRequired:\n- from: Start date (ISO yyyy-mm-dd)\n- to: End date (ISO yyyy-mm-dd)\n\nOptional:\n- currency: Target currency (default: USD)\n\nReturns:\n- points: Daily {date, netAssets, yieldTwr, yieldMwr}\n- totalReturnTwr: Total TWR (%)\n- totalReturnMwr: Total MWR (%)\n- prevDayReturnTwr: Previous day TWR change (%)\n- prevDayReturnMwr: Previous day MWR change (%)\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+						"description": "Calculate portfolio performance metrics (TWR/MWR).\n\nRequired:\n- from: Start date (ISO yyyy-mm-dd)\n- to: End date (ISO yyyy-mm-dd)\n\nOptional:\n- currency: Target currency (default: USD)\n\nReturns:\n- points: Daily {date, netAssets, yieldTwr, yieldMwr}\n- totalReturnTwr: Total TWR (%)\n- totalReturnMwr: Total MWR (%)\n- prevDayReturnTwr: Previous day TWR change (%)\n- prevDayReturnMwr: Previous day MWR change (%)\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"method": "POST",
+						"url": {
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "portfolio.performance"],
+							"query": [
+								{
+									"key": "batch",
+									"value": "1"
+								}
+							],
+							"raw": "{{baseUrl}}/api/trpc/portfolio.performance?batch=1"
+						}
+					},
+					"response": []
 				}
-			]
+			],
+			"name": "Portfolio"
 		},
 		{
-			"name": "Goals",
 			"description": "Financial goals tracking and management. All procedures require authentication.",
 			"item": [
 				{
 					"name": "Create Goal",
 					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"name\": \"Retirement Fund\",\n      \"targetAmount\": 1000000,\n      \"currency\": \"USD\",\n      \"targetDate\": \"2045-12-31\",\n      \"description\": \"Save for retirement\"\n    }\n  }\n}"
 						},
+						"description": "Create a new financial goal.\n\nRequired:\n- name: Goal name\n- targetAmount: Target amount\n- currency: Currency code\n- targetDate: Target date (ISO)\n\nOptional:\n- description: Goal description\n\nReturns: Created goal object\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/goals.create?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"goals.create"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "goals.create"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Create a new financial goal.\n\nRequired:\n- name: Goal name\n- targetAmount: Target amount\n- currency: Currency code\n- targetDate: Target date (ISO)\n\nOptional:\n- description: Goal description\n\nReturns: Created goal object\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/goals.create?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "List Goals",
 					"request": {
-						"method": "POST",
+						"description": "List all user goals.\n\nReturns: Array of goal objects with name, targetAmount, currency, targetDate, currentAmount, progress\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
 						"header": [
 							{
 								"key": "Content-Type",
 								"value": "application/json"
 							}
 						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/goals.list?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"goals.list"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "goals.list"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "List all user goals.\n\nReturns: Array of goal objects with name, targetAmount, currency, targetDate, currentAmount, progress\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/goals.list?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "Update Goal",
 					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"id\": \"goal_id\",\n      \"name\": \"Updated Goal Name\",\n      \"targetAmount\": 1500000\n    }\n  }\n}"
 						},
-						"url": {
-							"raw": "{{baseUrl}}/api/trpc/goals.update?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"goals.update"
-							],
-							"query": [
-								{
-									"key": "batch",
-									"value": "1"
-								}
-							]
-						},
-						"description": "Update goal details.\n\nRequired:\n- id: Goal ID\n\nOptional: Any goal fields to update\n\nReturns: Updated goal object\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
-				},
-				{
-					"name": "Remove Goal",
-					"request": {
-						"method": "POST",
+						"description": "Update goal details.\n\nRequired:\n- id: Goal ID\n\nOptional: Any goal fields to update\n\nReturns: Updated goal object\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
 						"header": [
 							{
 								"key": "Content-Type",
 								"value": "application/json"
 							}
 						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"id\": \"goal_id\"\n    }\n  }\n}"
-						},
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/goals.remove?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"goals.remove"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "goals.update"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
+							],
+							"raw": "{{baseUrl}}/api/trpc/goals.update?batch=1"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Goal",
+					"request": {
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"id\": \"goal_id\"\n    }\n  }\n}"
 						},
-						"description": "Delete a goal.\n\nRequired:\n- id: Goal ID\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+						"description": "Delete a goal.\n\nRequired:\n- id: Goal ID\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"method": "POST",
+						"url": {
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "goals.remove"],
+							"query": [
+								{
+									"key": "batch",
+									"value": "1"
+								}
+							],
+							"raw": "{{baseUrl}}/api/trpc/goals.remove?batch=1"
+						}
+					},
+					"response": []
 				}
-			]
+			],
+			"name": "Goals"
 		},
 		{
-			"name": "API Keys",
 			"description": "API key management for programmatic access. All procedures require authentication.",
 			"item": [
 				{
 					"name": "Create API Key",
 					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"name\": \"My API Key\",\n      \"expiresAt\": \"2025-12-31T23:59:59Z\",\n      \"permissions\": {\n        \"watchlist\": [\n          \"read\",\n          \"write\"\n        ],\n        \"transactions\": [\n          \"read\"\n        ]\n      },\n      \"rateLimit\": 1000\n    }\n  }\n}"
 						},
+						"description": "Create new API key with optional expiration, rate limits, and permissions.\n\nRequired:\n- name: Key name\n\nOptional:\n- expiresAt: Expiration date (ISO)\n- permissions: Permission object\n- rateLimit: Rate limit per hour\n\nReturns: {key: string, ...metadata} (key shown only once)\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/apiKeys.create?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"apiKeys.create"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "apiKeys.create"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Create new API key with optional expiration, rate limits, and permissions.\n\nRequired:\n- name: Key name\n\nOptional:\n- expiresAt: Expiration date (ISO)\n- permissions: Permission object\n- rateLimit: Rate limit per hour\n\nReturns: {key: string, ...metadata} (key shown only once)\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/apiKeys.create?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "List API Keys",
 					"request": {
-						"method": "POST",
+						"description": "List all user's API keys (without actual key values).\n\nReturns: Array of API key metadata objects\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
 						"header": [
 							{
 								"key": "Content-Type",
 								"value": "application/json"
 							}
 						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/apiKeys.list?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"apiKeys.list"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "apiKeys.list"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "List all user's API keys (without actual key values).\n\nReturns: Array of API key metadata objects\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/apiKeys.list?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "Get API Key Details",
 					"request": {
-						"method": "POST",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"id\": \"api_key_id\"\n    }\n  }\n}"
+						},
+						"description": "Get specific API key details.\n\nRequired:\n- id: API key ID\n\nReturns: API key metadata object\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
 						"header": [
 							{
 								"key": "Content-Type",
 								"value": "application/json"
 							}
 						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"id\": \"api_key_id\"\n    }\n  }\n}"
-						},
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/apiKeys.get?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"apiKeys.get"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "apiKeys.get"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Get specific API key details.\n\nRequired:\n- id: API key ID\n\nReturns: API key metadata object\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/apiKeys.get?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "Update API Key",
 					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"id\": \"api_key_id\",\n      \"name\": \"Updated Key Name\",\n      \"rateLimit\": 2000\n    }\n  }\n}"
 						},
+						"description": "Update API key settings.\n\nRequired:\n- id: API key ID\n\nOptional: Fields to update\n\nReturns: Updated API key metadata\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/apiKeys.update?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"apiKeys.update"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "apiKeys.update"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Update API key settings.\n\nRequired:\n- id: API key ID\n\nOptional: Fields to update\n\nReturns: Updated API key metadata\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/apiKeys.update?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "Delete API Key",
 					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"id\": \"api_key_id\"\n    }\n  }\n}"
 						},
+						"description": "Delete an API key.\n\nRequired:\n- id: API key ID\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/apiKeys.delete?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"apiKeys.delete"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "apiKeys.delete"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Delete an API key.\n\nRequired:\n- id: API key ID\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/apiKeys.delete?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "Verify API Key",
 					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"key\": \"your_api_key_here\"\n    }\n  }\n}"
 						},
-						"url": {
-							"raw": "{{baseUrl}}/api/trpc/apiKeys.verify?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"apiKeys.verify"
-							],
-							"query": [
-								{
-									"key": "batch",
-									"value": "1"
-								}
-							]
-						},
-						"description": "Verify an API key and check permissions.\n\nRequired:\n- key: API key string\n\nReturns: {valid: boolean, permissions: object}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
-				},
-				{
-					"name": "Delete Expired Keys",
-					"request": {
-						"method": "POST",
+						"description": "Verify an API key and check permissions.\n\nRequired:\n- key: API key string\n\nReturns: {valid: boolean, permissions: object}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
 						"header": [
 							{
 								"key": "Content-Type",
 								"value": "application/json"
 							}
 						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/apiKeys.deleteExpired?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"apiKeys.deleteExpired"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "apiKeys.verify"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Clean up expired API keys.\n\nReturns: {count: number}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/apiKeys.verify?batch=1"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Expired Keys",
+					"request": {
+						"description": "Clean up expired API keys.\n\nReturns: {count: number}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"method": "POST",
+						"url": {
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "apiKeys.deleteExpired"],
+							"query": [
+								{
+									"key": "batch",
+									"value": "1"
+								}
+							],
+							"raw": "{{baseUrl}}/api/trpc/apiKeys.deleteExpired?batch=1"
+						}
+					},
+					"response": []
 				}
-			]
+			],
+			"name": "API Keys"
 		},
 		{
-			"name": "Admin",
 			"description": "Admin-only procedures for user management and statistics. Requires admin or superadmin role.",
 			"item": [
 				{
 					"name": "List Users",
 					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"page\": 1,\n      \"perPage\": 50,\n      \"search\": \"user@example.com\",\n      \"sortBy\": \"createdAt\",\n      \"sortDir\": \"desc\"\n    }\n  }\n}"
 						},
+						"description": "List users with search and pagination.\n\nOptional:\n- page: Page number (default: 1)\n- perPage: Items per page (default: 50, max: 100)\n- search: Search by email or name\n- sortBy: Sort field (email, name, role, createdAt)\n- sortDir: Sort direction (asc, desc)\n\nReturns: {users: User[], total: number, page: number, perPage: number}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/admin.listUsers?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"admin.listUsers"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "admin.listUsers"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "List users with search and pagination.\n\nOptional:\n- page: Page number (default: 1)\n- perPage: Items per page (default: 50, max: 100)\n- search: Search by email or name\n- sortBy: Sort field (email, name, role, createdAt)\n- sortDir: Sort direction (asc, desc)\n\nReturns: {users: User[], total: number, page: number, perPage: number}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/admin.listUsers?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "Set User Role",
 					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"userId\": \"user_id\",\n      \"role\": \"admin\"\n    }\n  }\n}"
 						},
+						"description": "Set user role (admin/user). Only superadmin can set superadmin role.\n\nRequired:\n- userId: User ID\n- role: New role (user, admin, superadmin)\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/admin.setRole?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"admin.setRole"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "admin.setRole"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Set user role (admin/user). Only superadmin can set superadmin role.\n\nRequired:\n- userId: User ID\n- role: New role (user, admin, superadmin)\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/admin.setRole?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "Ban User",
 					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"userId\": \"user_id\",\n      \"banReason\": \"Violation of terms\"\n    }\n  }\n}"
 						},
+						"description": "Ban a user. Admins can ban regular users, only superadmins can ban admins.\n\nRequired:\n- userId: User ID\n\nOptional:\n- banReason: Reason for ban\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/admin.banUser?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"admin.banUser"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "admin.banUser"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Ban a user. Admins can ban regular users, only superadmins can ban admins.\n\nRequired:\n- userId: User ID\n\nOptional:\n- banReason: Reason for ban\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/admin.banUser?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "Unban User",
 					"request": {
-						"method": "POST",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"userId\": \"user_id\"\n    }\n  }\n}"
+						},
+						"description": "Unban a user.\n\nRequired:\n- userId: User ID\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
 						"header": [
 							{
 								"key": "Content-Type",
 								"value": "application/json"
 							}
 						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"userId\": \"user_id\"\n    }\n  }\n}"
-						},
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/admin.unbanUser?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"admin.unbanUser"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "admin.unbanUser"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Unban a user.\n\nRequired:\n- userId: User ID\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/admin.unbanUser?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "Remove User",
 					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"userId\": \"user_id\"\n    }\n  }\n}"
 						},
+						"description": "Delete a user account. Only superadmin can delete admins.\n\nRequired:\n- userId: User ID\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/admin.removeUser?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"admin.removeUser"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "admin.removeUser"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Delete a user account. Only superadmin can delete admins.\n\nRequired:\n- userId: User ID\n\nReturns: {ok: true}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/admin.removeUser?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "Get Admin Statistics",
 					"request": {
-						"method": "POST",
+						"description": "Get admin dashboard statistics.\n\nReturns: Object with user counts, activity metrics, etc.\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
 						"header": [
 							{
 								"key": "Content-Type",
 								"value": "application/json"
 							}
 						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/admin.getStats?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"admin.getStats"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "admin.getStats"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Get admin dashboard statistics.\n\nReturns: Object with user counts, activity metrics, etc.\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/admin.getStats?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "List Audit Logs",
 					"request": {
-						"method": "POST",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"page\": 1,\n      \"perPage\": 50,\n      \"action\": \"BAN_USER\",\n      \"from\": \"2024-01-01\",\n      \"to\": \"2024-12-31\"\n    }\n  }\n}"
+						},
+						"description": "List audit logs with filters.\n\nOptional:\n- page: Page number\n- perPage: Items per page\n- action: Filter by action type\n- from: Start date\n- to: End date\n\nReturns: {logs: AuditLog[], total: number}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
 						"header": [
 							{
 								"key": "Content-Type",
 								"value": "application/json"
 							}
 						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"page\": 1,\n      \"perPage\": 50,\n      \"action\": \"BAN_USER\",\n      \"from\": \"2024-01-01\",\n      \"to\": \"2024-12-31\"\n    }\n  }\n}"
-						},
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/admin.listAuditLogs?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"admin.listAuditLogs"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "admin.listAuditLogs"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "List audit logs with filters.\n\nOptional:\n- page: Page number\n- perPage: Items per page\n- action: Filter by action type\n- from: Start date\n- to: End date\n\nReturns: {logs: AuditLog[], total: number}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/admin.listAuditLogs?batch=1"
+						}
+					},
+					"response": []
 				}
-			]
+			],
+			"name": "Admin"
 		},
 		{
-			"name": "Currency",
 			"description": "User currency preference management. All procedures require authentication.",
 			"item": [
 				{
 					"name": "Get Preferred Currency",
 					"request": {
-						"method": "POST",
+						"description": "Get user's preferred currency.\n\nReturns: {currency: string | null}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
 						"header": [
 							{
 								"key": "Content-Type",
 								"value": "application/json"
 							}
 						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/currency.getCurrency?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"currency.getCurrency"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "currency.getCurrency"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Get user's preferred currency.\n\nReturns: {currency: string | null}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/currency.getCurrency?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "Set Preferred Currency",
 					"request": {
-						"method": "POST",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"0\": {\n    \"json\": \"USD\"\n  }\n}"
+						},
+						"description": "Set user's preferred currency. Options: EUR, USD, GBP, HKD, CHF, RUB\n\nInput: Currency code string\nBody format: {\"0\": {\"json\": \"USD\"}}\nQuery param: batch=1\n\nReturns: {ok: true}",
 						"header": [
 							{
 								"key": "Content-Type",
 								"value": "application/json"
 							}
 						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"0\": {\n    \"json\": \"USD\"\n  }\n}"
-						},
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/currency.setCurrency?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"currency.setCurrency"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "currency.setCurrency"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Set user's preferred currency. Options: EUR, USD, GBP, HKD, CHF, RUB\n\nInput: Currency code string\nBody format: {\"0\": {\"json\": \"USD\"}}\nQuery param: batch=1\n\nReturns: {ok: true}"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/currency.setCurrency?batch=1"
+						}
+					},
+					"response": []
 				}
-			]
+			],
+			"name": "Currency"
 		},
 		{
-			"name": "Theme",
 			"description": "User theme (light/dark mode) preferences. All procedures require authentication.",
 			"item": [
 				{
 					"name": "Get Theme Preference",
 					"request": {
-						"method": "POST",
+						"description": "Get user's theme preference.\n\nReturns: {theme: 'light' | 'dark'}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
 						"header": [
 							{
 								"key": "Content-Type",
 								"value": "application/json"
 							}
 						],
+						"method": "GET",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/theme.getTheme?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"theme.getTheme"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "theme.getTheme"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Get user's theme preference.\n\nReturns: {theme: 'light' | 'dark'}\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/theme.getTheme?batch=1"
+						}
+					},
+					"response": []
 				},
 				{
 					"name": "Set Theme Preference",
 					"request": {
-						"method": "POST",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"0\": {\n    \"json\": \"dark\"\n  }\n}"
+						},
+						"description": "Set theme to 'light' or 'dark'.\n\nInput: 'light' | 'dark'\nBody format: {\"0\": {\"json\": \"dark\"}}\nQuery param: batch=1\n\nReturns: {ok: true}",
 						"header": [
 							{
 								"key": "Content-Type",
 								"value": "application/json"
 							}
 						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"0\": {\n    \"json\": \"dark\"\n  }\n}"
-						},
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/theme.setTheme?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"theme.setTheme"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "theme.setTheme"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Set theme to 'light' or 'dark'.\n\nInput: 'light' | 'dark'\nBody format: {\"0\": {\"json\": \"dark\"}}\nQuery param: batch=1\n\nReturns: {ok: true}"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/theme.setTheme?batch=1"
+						}
+					},
+					"response": []
 				}
-			]
+			],
+			"name": "Theme"
 		},
 		{
-			"name": "FX",
 			"description": "Foreign exchange rate data. All procedures require authentication.",
 			"item": [
 				{
 					"name": "Get FX Conversion Matrix",
 					"request": {
-						"method": "POST",
+						"description": "Get foreign exchange conversion rates matrix.\n\nReturns: Object with conversion rates between supported currencies\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
 						"header": [
 							{
 								"key": "Content-Type",
 								"value": "application/json"
 							}
 						],
+						"method": "POST",
 						"url": {
-							"raw": "{{baseUrl}}/api/trpc/fx.matrix?batch=1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"trpc",
-								"fx.matrix"
-							],
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "trpc", "fx.matrix"],
 							"query": [
 								{
 									"key": "batch",
 									"value": "1"
 								}
-							]
-						},
-						"description": "Get foreign exchange conversion rates matrix.\n\nReturns: Object with conversion rates between supported currencies\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1"
-					}
+							],
+							"raw": "{{baseUrl}}/api/trpc/fx.matrix?batch=1"
+						}
+					},
+					"response": []
 				}
-			]
+			],
+			"name": "FX"
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"type": "string",
+			"value": "http://localhost:3000"
 		}
 	]
 }
