@@ -1,5 +1,13 @@
 {
 	"servers": {
+		"brave": {
+			"args": ["run", "-i", "--rm", "-e", "BRAVE_MCP_TRANSPORT", "-e", "BRAVE_API_KEY", "mcp/brave-search"],
+			"command": "docker",
+			"env": {
+				"BRAVE_API_KEY": "BSAKy45YiAx71Qp8oVL7vNTxuzEied1",
+				"BRAVE_MCP_TRANSPORT": "stdio"
+			}
+		},
 		"next-devtools": {
 			"args": ["-y", "next-devtools-mcp@latest"],
 			"command": "bunx"
