@@ -175,6 +175,34 @@ Examples:
 - `POST /api/trpc/watchlist.list` - List watchlist items
 - `POST /api/trpc/transactions.create` - Create transaction
 
+### tRPC Input Format
+
+When calling tRPC endpoints via HTTP:
+
+**For procedures with object inputs:**
+```json
+{
+  "date": "2024-11-01",
+  "type": "BUY",
+  "symbol": "AAPL"
+}
+```
+
+**For procedures with simple inputs (string, number, enum):**
+```json
+{
+  "input": "value"
+}
+```
+
+Examples:
+- `auth.checkEmail`: `{"input": "user@example.com"}`
+- `currency.setCurrency`: `{"input": "USD"}`
+- `theme.setTheme`: `{"input": "dark"}`
+
+**For procedures with no input (queries):**
+- Leave body empty or omit it
+
 ## 🧪 Testing Workflow
 
 ### Basic Testing Flow:

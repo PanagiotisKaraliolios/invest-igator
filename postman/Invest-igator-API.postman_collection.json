@@ -39,14 +39,14 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "\"user@example.com\""
+							"raw": "{\n  \"input\": \"user@example.com\"\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/trpc/auth.checkEmail",
 							"host": ["{{baseUrl}}"],
 							"path": ["api", "trpc", "auth.checkEmail"]
 						},
-						"description": "Check if an email address is already registered. Returns {exists: boolean}.\n\nInput: Email string\nOutput: {exists: boolean}"
+						"description": "Check if an email address is already registered. Returns {exists: boolean}.\n\nInput: Email string (wrapped in {\"input\": \"email\"})\nOutput: {exists: boolean}"
 					}
 				},
 				{
@@ -1249,14 +1249,14 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "\"USD\""
+							"raw": "{\n  \"input\": \"USD\"\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/trpc/currency.setCurrency",
 							"host": ["{{baseUrl}}"],
 							"path": ["api", "trpc", "currency.setCurrency"]
 						},
-						"description": "Set user's preferred currency. Options: EUR, USD, GBP, HKD, CHF, RUB\n\nInput: Currency code string\n\nReturns: {ok: true}"
+						"description": "Set user's preferred currency. Options: EUR, USD, GBP, HKD, CHF, RUB\n\nInput: Currency code string (wrapped in {\"input\": \"USD\"})\n\nReturns: {ok: true}"
 					}
 				}
 			]
@@ -1295,14 +1295,14 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "\"dark\""
+							"raw": "{\n  \"input\": \"dark\"\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/trpc/theme.setTheme",
 							"host": ["{{baseUrl}}"],
 							"path": ["api", "trpc", "theme.setTheme"]
 						},
-						"description": "Set theme to 'light' or 'dark'.\n\nInput: 'light' | 'dark'\n\nReturns: {ok: true}"
+						"description": "Set theme to 'light' or 'dark'.\n\nInput: 'light' | 'dark' (wrapped in {\"input\": \"dark\"})\n\nReturns: {ok: true}"
 					}
 				}
 			]
