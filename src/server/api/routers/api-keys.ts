@@ -493,12 +493,8 @@ export const apiKeysRouter = createTRPCRouter({
 				data: {
 					lastRefillAt: shouldRefill ? now : undefined,
 					lastRequest: now,
-					remaining:
-						currentRemaining !== null
-							? shouldRefill
-								? currentRemaining + (apiKey.refillAmount ?? 0) - 1
-								: currentRemaining - 1
-							: null,
+					// currentRemaining was already incremented if refill was due, so just subtract 1
+					remaining: currentRemaining !== null ? currentRemaining - 1 : null,
 					requestCount: shouldResetRateLimit ? 1 : apiKey.requestCount + 1
 				},
 				select: {
