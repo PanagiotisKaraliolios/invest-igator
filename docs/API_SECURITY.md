@@ -11,7 +11,7 @@ The invest-igator API is built using tRPC v11 with comprehensive security measur
 - Rate limiting and quota management
 - Audit logging for administrative actions
 
-## Security Fixes Applied (November 2024)
+## Security Fixes Applied (November 2025)
 
 ### 1. Flux Injection Prevention (Critical)
 
@@ -365,7 +365,7 @@ If a security vulnerability is discovered:
 
 ## Version History
 
-- **2024-11-01**: Initial security review and fixes
+- **2025-11-01**: Initial security review and fixes
   - Fixed Flux injection vulnerabilities
   - Enhanced input validation across all routers
   - Fixed API key verification race condition

@@ -6,6 +6,26 @@ import { escapeFluxString, influxQueryApi, isValidSymbol, measurement, symbolHas
 import { ingestYahooSymbol } from '@/server/jobs/yahoo-lib';
 
 /**
+ * Normalizes a symbol by trimming whitespace and converting to uppercase.
+ * Also validates the symbol format.
+ *
+ * @param symbol - The symbol to normalize
+ * @returns Normalized symbol
+ * @throws {TRPCError} If symbol format is invalid
+ */
+function normalizeAndValidateSymbol(symbol: string): string {
+	const normalized = symbol.trim().toUpperCase();
+	if (!isValidSymbol(normalized)) {
+		throw new TRPCError({
+			code: 'BAD_REQUEST',
+			message:
+				'Invalid symbol format. Only alphanumeric characters, dots, hyphens, underscores, and carets are allowed.'
+		});
+	}
+	return normalized;
+}
+
+/**
  * Watchlist router - manages user watchlists and market data.
  * All procedures require authentication (protectedProcedure).
  *
@@ -58,15 +78,8 @@ export const watchlistRouter = createTRPCRouter({
 		.mutation(async ({ ctx, input }) => {
 			const userId = ctx.session.user.id;
 
-			// Validate symbol format to prevent injection attacks
-			const symbol = input.symbol.trim().toUpperCase();
-			if (!isValidSymbol(symbol)) {
-				throw new TRPCError({
-					code: 'BAD_REQUEST',
-					message:
-						'Invalid symbol format. Only alphanumeric characters, dots, hyphens, underscores, and carets are allowed.'
-				});
-			}
+			// Normalize and validate symbol format to prevent injection attacks
+			const symbol = normalizeAndValidateSymbol(input.symbol);
 
 			let created = false;
 			let result: any;
@@ -379,15 +392,8 @@ export const watchlistRouter = createTRPCRouter({
 		.input(z.object({ symbol: z.string().min(1).max(20) }))
 		.mutation(async ({ ctx, input }) => {
 			const userId = ctx.session.user.id;
-			const symbol = input.symbol.trim().toUpperCase();
-
-			// Validate symbol format
-			if (!isValidSymbol(symbol)) {
-				throw new TRPCError({
-					code: 'BAD_REQUEST',
-					message: 'Invalid symbol format'
-				});
-			}
+			// Normalize and validate symbol format
+			const symbol = normalizeAndValidateSymbol(input.symbol);
 
 			const hasTx = await ctx.db.transaction.findFirst({
 				select: { id: true },
@@ -459,15 +465,8 @@ export const watchlistRouter = createTRPCRouter({
 		.input(z.object({ starred: z.boolean().optional(), symbol: z.string().min(1).max(20) }))
 		.mutation(async ({ ctx, input }) => {
 			const userId = ctx.session.user.id;
-			const symbol = input.symbol.trim().toUpperCase();
-
-			// Validate symbol format
-			if (!isValidSymbol(symbol)) {
-				throw new TRPCError({
-					code: 'BAD_REQUEST',
-					message: 'Invalid symbol format'
-				});
-			}
+			// Normalize and validate symbol format
+			const symbol = normalizeAndValidateSymbol(input.symbol);
 
 			const current = await ctx.db.watchlistItem.findUnique({
 				select: { starred: true },

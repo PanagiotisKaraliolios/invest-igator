@@ -445,24 +445,6 @@ export const apiKeysRouter = createTRPCRouter({
 				}
 			}
 
-			// Check remaining requests and handle refill
-			let currentRemaining = apiKey.remaining;
-			if (currentRemaining !== null) {
-				// Check if refill is due and update remaining
-				if (isRefillDue(apiKey.lastRefillAt, apiKey.refillInterval)) {
-					currentRemaining = currentRemaining + (apiKey.refillAmount ?? 0);
-				}
-
-				// Now check if we have remaining requests
-				if (currentRemaining <= 0) {
-					return {
-						error: { code: 'NO_REMAINING', message: 'API key has no remaining requests' },
-						key: null,
-						valid: false
-					};
-				}
-			}
-
 			// Check permissions if required
 			if (input.permissions) {
 				const keyPermissions = apiKey.permissions ? JSON.parse(apiKey.permissions) : null;
@@ -479,7 +461,7 @@ export const apiKeysRouter = createTRPCRouter({
 				}
 			}
 
-			// Update usage statistics atomically using a transaction
+			// Update usage statistics atomically
 			const now = new Date();
 			const shouldResetRateLimit =
 				apiKey.rateLimitEnabled &&
@@ -487,14 +469,35 @@ export const apiKeysRouter = createTRPCRouter({
 				apiKey.rateLimitTimeWindow &&
 				now.getTime() - apiKey.lastRequest.getTime() >= apiKey.rateLimitTimeWindow;
 
-			const shouldRefill = currentRemaining !== null && isRefillDue(apiKey.lastRefillAt, apiKey.refillInterval);
+			// Check if refill is due (single check)
+			const shouldRefill = apiKey.remaining !== null && isRefillDue(apiKey.lastRefillAt, apiKey.refillInterval);
+
+			// Calculate new remaining count
+			let newRemaining: number | null = null;
+			if (apiKey.remaining !== null) {
+				if (shouldRefill) {
+					// Refill and then consume this request
+					newRemaining = apiKey.remaining + (apiKey.refillAmount ?? 0) - 1;
+				} else {
+					// Just consume this request
+					newRemaining = apiKey.remaining - 1;
+				}
+
+				// Check if we have enough remaining (before update)
+				if (newRemaining < 0) {
+					return {
+						error: { code: 'NO_REMAINING', message: 'API key has no remaining requests' },
+						key: null,
+						valid: false
+					};
+				}
+			}
 
 			const updatedKey = await ctx.db.apiKey.update({
 				data: {
 					lastRefillAt: shouldRefill ? now : undefined,
 					lastRequest: now,
-					// currentRemaining was already incremented if refill was due, so just subtract 1
-					remaining: currentRemaining !== null ? currentRemaining - 1 : null,
+					remaining: newRemaining,
 					requestCount: shouldResetRateLimit ? 1 : apiKey.requestCount + 1
 				},
 				select: {
