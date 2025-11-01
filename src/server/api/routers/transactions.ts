@@ -81,7 +81,7 @@ export const transactionsRouter = createTRPCRouter({
 	 * console.log(`Deleted ${result.deleted} transactions`);
 	 */
 	bulkRemove: protectedProcedure
-		.input(z.object({ ids: z.array(z.string().min(1)).min(1) }))
+		.input(z.object({ ids: z.array(z.string().uuid()).min(1).max(100) })) // Add UUID validation and max limit
 		.mutation(async ({ ctx, input }) => {
 			const userId = ctx.session.user.id;
 			const toDelete = await ctx.db.transaction.findMany({
@@ -779,7 +779,7 @@ export const transactionsRouter = createTRPCRouter({
 	 * @throws {TRPCError} NOT_FOUND - If transaction not found or not owned by user
 	 * @returns {success: true}
 	 */
-	remove: protectedProcedure.input(z.object({ id: z.string().min(1) })).mutation(async ({ ctx, input }) => {
+	remove: protectedProcedure.input(z.object({ id: z.string().uuid() })).mutation(async ({ ctx, input }) => {
 		const userId = ctx.session.user.id;
 		const current = await ctx.db.transaction.findUnique({ where: { id: input.id } });
 		if (!current || current.userId !== userId) {
@@ -817,13 +817,13 @@ export const transactionsRouter = createTRPCRouter({
 					.optional(),
 				fee: z.number().nullable().optional(),
 				feeCurrency: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']).nullable().optional(),
-				id: z.string().min(1),
-				note: z.string().nullable().optional(),
+				id: z.string().uuid(), // Validate UUID format
+				note: z.string().max(1000).nullable().optional(), // Add max length
 				price: z.number().optional(),
 				priceCurrency: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']).optional(),
 				quantity: z.number().optional(),
 				side: z.enum(['BUY', 'SELL']).optional(),
-				symbol: z.string().min(1).optional()
+				symbol: z.string().min(1).max(20).optional() // Add max length for symbols
 			})
 		)
 		.mutation(async ({ ctx, input }) => {

@@ -69,8 +69,8 @@ export const adminRouter = createTRPCRouter({
 	banUser: adminProcedure
 		.input(
 			z.object({
-				banReason: z.string().optional(),
-				userId: z.string()
+				banReason: z.string().max(500).optional(), // Add max length
+				userId: z.string().uuid() // Validate UUID format
 			})
 		)
 		.mutation(async ({ input, ctx }) => {
@@ -155,15 +155,15 @@ export const adminRouter = createTRPCRouter({
 	getAuditLogs: adminProcedure
 		.input(
 			z.object({
-				action: z.string().optional(),
-				adminId: z.string().optional(),
+				action: z.string().max(100).optional(), // Add max length
+				adminId: z.string().uuid().optional(), // Validate UUID format
 				endDate: z.date().optional(),
 				limit: z.number().min(1).max(100).default(50),
 				offset: z.number().min(0).default(0),
 				sortBy: z.enum(['createdAt', 'action']).default('createdAt'),
 				sortDir: z.enum(['asc', 'desc']).default('desc'),
 				startDate: z.date().optional(),
-				targetId: z.string().optional()
+				targetId: z.string().uuid().optional() // Validate UUID format
 			})
 		)
 		.query(async ({ input, ctx }) => {
@@ -259,7 +259,7 @@ export const adminRouter = createTRPCRouter({
 				offset: z.number().min(0).default(0),
 				searchField: z.enum(['email', 'name']).optional(),
 				searchOperator: z.enum(['contains', 'starts_with', 'ends_with']).optional(),
-				searchValue: z.string().optional(),
+				searchValue: z.string().max(200).optional(), // Add max length to prevent abuse
 				sortBy: z.enum(['email', 'name', 'role', 'createdAt']).default('createdAt'),
 				sortDir: z.enum(['asc', 'desc']).default('desc')
 			})
@@ -312,7 +312,7 @@ export const adminRouter = createTRPCRouter({
 	removeUser: adminProcedure
 		.input(
 			z.object({
-				userId: z.string()
+				userId: z.string().uuid() // Validate UUID format
 			})
 		)
 		.mutation(async ({ input, ctx }) => {
@@ -399,7 +399,7 @@ export const adminRouter = createTRPCRouter({
 		.input(
 			z.object({
 				role: z.enum(['superadmin', 'admin', 'user']),
-				userId: z.string()
+				userId: z.string().uuid() // Validate UUID format
 			})
 		)
 		.mutation(async ({ input, ctx }) => {
@@ -509,7 +509,7 @@ export const adminRouter = createTRPCRouter({
 	unbanUser: adminProcedure
 		.input(
 			z.object({
-				userId: z.string()
+				userId: z.string().uuid() // Validate UUID format
 			})
 		)
 		.mutation(async ({ input, ctx }) => {
