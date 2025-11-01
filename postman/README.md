@@ -167,41 +167,49 @@ All requests use environment variables where possible. To customize:
 
 All tRPC endpoints follow this pattern:
 ```
-POST {{baseUrl}}/api/trpc/{router}.{procedure}
+POST {{baseUrl}}/api/trpc/{router}.{procedure}?batch=1
 ```
 
+**Important:** All tRPC endpoints require the `batch=1` query parameter.
+
 Examples:
-- `POST /api/trpc/account.getMe` - Get current user
-- `POST /api/trpc/watchlist.list` - List watchlist items
-- `POST /api/trpc/transactions.create` - Create transaction
+- `POST /api/trpc/account.getMe?batch=1` - Get current user
+- `POST /api/trpc/watchlist.list?batch=1` - List watchlist items
+- `POST /api/trpc/transactions.create?batch=1` - Create transaction
 
-### tRPC Input Format
+### tRPC Batch Input Format
 
-When calling tRPC endpoints via HTTP:
+tRPC uses a batch format for HTTP requests. All inputs must be wrapped in the following structure:
 
 **For procedures with object inputs:**
 ```json
 {
-  "date": "2024-11-01",
-  "type": "BUY",
-  "symbol": "AAPL"
+  "0": {
+    "json": {
+      "date": "2024-11-01",
+      "type": "BUY",
+      "symbol": "AAPL"
+    }
+  }
 }
 ```
 
 **For procedures with simple inputs (string, number, enum):**
 ```json
 {
-  "input": "value"
+  "0": {
+    "json": "value"
+  }
 }
 ```
 
 Examples:
-- `auth.checkEmail`: `{"input": "user@example.com"}`
-- `currency.setCurrency`: `{"input": "USD"}`
-- `theme.setTheme`: `{"input": "dark"}`
+- `auth.checkEmail`: `{"0": {"json": "user@example.com"}}`
+- `currency.setCurrency`: `{"0": {"json": "USD"}}`
+- `theme.setTheme`: `{"0": {"json": "dark"}}`
 
 **For procedures with no input (queries):**
-- Leave body empty or omit it
+- Leave body empty or set to `{}`
 
 ## 🧪 Testing Workflow
 
