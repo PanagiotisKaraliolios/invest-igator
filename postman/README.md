@@ -276,7 +276,7 @@ GET {{baseUrl}}/api/docs
 This returns a comprehensive OpenAPI 3.0 schema with all endpoints documented.
 
 ### Using Scalar API Reference
-The app includes [@scalar/nextjs-api-reference](https://github.com/scalar/scalar) for interactive API documentation. Visit your local instance to explore the API interactively.
+The app includes [@scalar/nextjs-api-reference](https://github.com/scalar/scalar) for interactive API documentation. Visit `{{baseUrl}}/api/reference` (e.g., `http://localhost:3000/api/reference` for local development) to explore the API interactively.
 
 ## 🐛 Troubleshooting
 
