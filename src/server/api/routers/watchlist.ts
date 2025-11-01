@@ -2,7 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { env } from '@/env';
 import { createTRPCRouter, withPermissions } from '@/server/api/trpc';
-import { escapeFluxString, influxQueryApi, isValidSymbol, measurement, symbolHasAnyData } from '@/server/influx';
+import { escapeFluxString, influxQueryApi, isValidSymbol, measurement } from '@/server/influx';
 import { ingestYahooSymbol } from '@/server/jobs/yahoo-lib';
 
 /**
