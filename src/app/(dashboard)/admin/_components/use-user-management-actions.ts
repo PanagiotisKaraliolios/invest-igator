@@ -86,8 +86,10 @@ export function useUserManagementActions() {
 		removeUserMutation.mutate({ userId });
 	};
 
-	const handleImpersonateUser = async (userId: string) => {
+	const handleImpersonateUser = async (userId: string, userName?: string, userEmail?: string) => {
 		try {
+			const displayName = userName || userEmail || 'user';
+
 			const result = await authClient.admin.impersonateUser({ userId });
 
 			if (result.error) {
@@ -95,7 +97,7 @@ export function useUserManagementActions() {
 				return;
 			}
 
-			toast.success('Now impersonating user');
+			toast.success(`Now impersonating ${displayName}`);
 
 			// Revalidate TRPC queries and refresh the page
 			await utils.account.getMe.invalidate();

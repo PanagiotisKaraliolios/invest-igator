@@ -17,7 +17,7 @@ interface UserActionsDropdownProps {
 	isSuperadmin: boolean;
 	onBanUser: (userId: string, email: string) => void;
 	onDeleteUser: (userId: string) => void;
-	onImpersonateUser: (userId: string) => void;
+	onImpersonateUser: (userId: string, userName?: string, userEmail?: string) => void;
 	onSetRole: (userId: string, role: 'superadmin' | 'admin' | 'user') => void;
 	onUnbanUser: (userId: string) => void;
 	user: User;
@@ -34,7 +34,8 @@ export function UserActionsDropdown({
 	user
 }: UserActionsDropdownProps) {
 	// Admins cannot perform any actions on superadmin accounts
-	if (user.role === 'superadmin' && !isSuperadmin) {
+	// Users cannot perform any actions on themselves
+	if ((user.role === 'superadmin' && !isSuperadmin) || user.id === currentUserId) {
 		return (
 			<Button disabled size='icon' variant='ghost'>
 				<MoreHorizontal className='size-4' />
@@ -102,7 +103,9 @@ export function UserActionsDropdown({
 				{user.id !== currentUserId && user.role !== 'superadmin' && (
 					<>
 						<DropdownMenuSeparator />
-						<DropdownMenuItem onClick={() => onImpersonateUser(user.id)}>
+						<DropdownMenuItem
+							onClick={() => onImpersonateUser(user.id, user.name ?? undefined, user.email ?? undefined)}
+						>
 							<UserRoundCog className='mr-2 size-4' />
 							Impersonate User
 						</DropdownMenuItem>

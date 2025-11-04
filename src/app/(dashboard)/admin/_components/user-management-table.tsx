@@ -69,8 +69,6 @@ export function UserManagementTable() {
 
 	const sortDir = sorting[0]?.desc ? 'desc' : 'asc';
 
-	const utils = api.useUtils();
-
 	// Get current user's role to determine available actions
 	const { data: currentUser } = api.account.getMe.useQuery();
 	const isSuperadmin = currentUser?.role === 'superadmin';
