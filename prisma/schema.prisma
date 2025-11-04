@@ -65,6 +65,8 @@ model Session {
   expiresAt       DateTime @map("expires") // Map to Better Auth's expected field
   ipAddress       String?
   userAgent       String?
+  location        String? // Geographic location (e.g., "New York, USA")
+  device          String? // Device type (e.g., "iPhone 14 Pro")
   impersonatedBy  String? // Admin plugin: ID of admin impersonating this session
   createdAt       DateTime @default(now())
   updatedAt       DateTime @default(now()) @updatedAt

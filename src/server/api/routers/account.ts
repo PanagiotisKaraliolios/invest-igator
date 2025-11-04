@@ -268,6 +268,46 @@ export const accountRouter = createTRPCRouter({
 			role: user.role
 		} as const;
 	}),
+	/**
+	 * Retrieves recent login sessions for the authenticated user.
+	 * Returns the last 10 sessions with user agent, device, location, and timestamp information.
+	 * Excludes impersonated sessions (admin sessions are not shown to the user).
+	 *
+	 * Requires: account:read permission
+	 *
+	 * @returns Array of recent sessions with formatted details
+	 *
+	 * @example
+	 * const sessions = await api.account.getRecentSessions.query();
+	 */
+	getRecentSessions: withPermissions('account', 'read').query(async ({ ctx }) => {
+		const userId = ctx.session.user.id;
+
+		const sessions = await ctx.db.session.findMany({
+			orderBy: { createdAt: 'desc' },
+			select: {
+				createdAt: true,
+				device: true,
+				id: true,
+				ipAddress: true,
+				location: true,
+				userAgent: true
+			},
+			take: 10,
+			where: {
+				impersonatedBy: null, // Exclude admin impersonation sessions
+				userId
+			}
+		});
+
+		return sessions.map((session) => ({
+			date: session.createdAt,
+			device: session.device ?? 'Unknown Device',
+			id: session.id,
+			location: session.location ?? 'Unknown Location',
+			userAgent: session.userAgent ?? 'Unknown'
+		}));
+	}),
 
 	/**
 	 * Retrieves the user's two-factor authentication state.

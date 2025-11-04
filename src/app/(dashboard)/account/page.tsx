@@ -4,14 +4,13 @@ import ConnectedAccountsCard from '@/app/(dashboard)/account/_components/connect
 import DangerZoneCard from '@/app/(dashboard)/account/_components/danger-zone-card';
 import PasswordCard from '@/app/(dashboard)/account/_components/password-card';
 import ProfileCard from '@/app/(dashboard)/account/_components/profile-card';
+import RecentLogsCard from '@/app/(dashboard)/account/_components/recent-logs-card';
 import TwoFactorCard from '@/app/(dashboard)/account/_components/two-factor-card';
 import { TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { auth } from '@/lib/auth';
 import AccountTabsClient from './_components/account-tabs-client';
 
 export default async function AccountPage() {
-	const session = await auth.api.getSession({ headers: await headers() });
-
 	return (
 		<AccountTabsClient defaultValue='profile' valid={['profile', 'security', 'api-keys', 'danger']}>
 			<TabsList>
@@ -31,6 +30,9 @@ export default async function AccountPage() {
 						</div>
 						<PasswordCard />
 						<ConnectedAccountsCard />
+						<div className='md:col-span-2'>
+							<RecentLogsCard />
+						</div>
 					</div>
 				</TabsContent>
 				<TabsContent className='col-span-1 md:col-span-2' value='api-keys'>
