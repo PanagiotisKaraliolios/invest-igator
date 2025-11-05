@@ -1,6 +1,6 @@
 'use client';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AlertCircle, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
@@ -50,7 +50,13 @@ export default function PasswordCard() {
 		[profile.data?.hasPassword]
 	);
 
-	const form = useForm<z.infer<typeof schema>>({
+	const {
+		formState: { errors },
+		handleSubmit,
+		register,
+		reset,
+		setError
+	} = useForm<z.infer<typeof schema>>({
 		defaultValues: { confirmPassword: '', currentPassword: '', newPassword: '' },
 		resolver: zodResolver(schema)
 	});
@@ -62,7 +68,7 @@ export default function PasswordCard() {
 	const change = api.account.changePassword.useMutation({
 		onError: (e) => toast.error(e.message || 'Failed to change password'),
 		onSuccess: () => {
-			form.reset();
+			reset();
 			toast.success('Password changed');
 		}
 	});
@@ -70,7 +76,7 @@ export default function PasswordCard() {
 	const setPw = api.account.setPassword.useMutation({
 		onError: (e) => toast.error(e.message || 'Failed to set password'),
 		onSuccess: () => {
-			form.reset();
+			reset();
 			toast.success('Password set');
 			// refetch profile to reflect hasPassword=true
 			profile.refetch();
@@ -80,7 +86,7 @@ export default function PasswordCard() {
 	// Prevent same new vs current password when changing
 	const onSubmit = (values: z.infer<typeof schema>) => {
 		if (profile.data?.hasPassword && values.currentPassword && values.currentPassword === values.newPassword) {
-			form.setError('newPassword', {
+			setError('newPassword', {
 				message: 'New password must be different from current password',
 				type: 'manual'
 			});
@@ -125,121 +131,96 @@ export default function PasswordCard() {
 						</AlertDescription>
 					</Alert>
 				) : (
-					<Form key={profile.data?.hasPassword ? 'with-pass' : 'no-pass'} {...form}>
-						<form className='space-y-3' data-testid='password-form' onSubmit={form.handleSubmit(onSubmit)}>
-							{profile.data?.hasPassword ? (
-								<FormField
-									control={form.control}
-									name='currentPassword'
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Current password</FormLabel>
-											<FormControl>
-												<InputGroup>
-													<InputGroupInput
-														data-testid='current-password-input'
-														disabled={change.isPending}
-														placeholder='••••••••'
-														type={showCurrent ? 'text' : 'password'}
-														{...field}
-													/>
-													<InputGroupAddon align='inline-end'>
-														<InputGroupButton
-															aria-label={showCurrent ? 'Hide password' : 'Show password'}
-															onClick={() => setShowCurrent((s) => !s)}
-														>
-															{showCurrent ? (
-																<EyeOff className='h-4 w-4' />
-															) : (
-																<Eye className='h-4 w-4' />
-															)}
-														</InputGroupButton>
-													</InputGroupAddon>
-												</InputGroup>
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
+					<form
+						className='space-y-3'
+						data-testid='password-form'
+						key={profile.data?.hasPassword ? 'with-pass' : 'no-pass'}
+						onSubmit={handleSubmit(onSubmit)}
+					>
+						{profile.data?.hasPassword ? (
+							<Field data-invalid={!!errors.currentPassword}>
+								<FieldLabel htmlFor='current-password'>Current password</FieldLabel>
+								<InputGroup>
+									<InputGroupInput
+										{...register('currentPassword')}
+										aria-invalid={!!errors.currentPassword}
+										data-testid='current-password-input'
+										disabled={change.isPending}
+										id='current-password'
+										placeholder='••••••••'
+										type={showCurrent ? 'text' : 'password'}
+									/>
+									<InputGroupAddon align='inline-end'>
+										<InputGroupButton
+											aria-label={showCurrent ? 'Hide password' : 'Show password'}
+											onClick={() => setShowCurrent((s) => !s)}
+										>
+											{showCurrent ? <EyeOff className='h-4 w-4' /> : <Eye className='h-4 w-4' />}
+										</InputGroupButton>
+									</InputGroupAddon>
+								</InputGroup>
+								<FieldError errors={[errors.currentPassword]} />
+							</Field>
+						) : null}
+						<Field data-invalid={!!errors.newPassword}>
+							<FieldLabel htmlFor='new-password'>
+								{profile.data?.hasPassword ? 'New password' : 'Password'}
+							</FieldLabel>
+							<InputGroup>
+								<InputGroupInput
+									{...register('newPassword')}
+									aria-invalid={!!errors.newPassword}
+									data-testid='new-password-input'
+									disabled={change.isPending || setPw.isPending}
+									id='new-password'
+									placeholder='••••••••'
+									type={showNew ? 'text' : 'password'}
 								/>
-							) : null}
-							<FormField
-								control={form.control}
-								name='newPassword'
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>{profile.data?.hasPassword ? 'New password' : 'Password'}</FormLabel>
-										<FormControl>
-											<InputGroup>
-												<InputGroupInput
-													data-testid='new-password-input'
-													disabled={change.isPending || setPw.isPending}
-													placeholder='••••••••'
-													type={showNew ? 'text' : 'password'}
-													{...field}
-												/>
-												<InputGroupAddon align='inline-end'>
-													<InputGroupButton
-														aria-label={showNew ? 'Hide password' : 'Show password'}
-														onClick={() => setShowNew((s) => !s)}
-													>
-														{showNew ? (
-															<EyeOff className='h-4 w-4' />
-														) : (
-															<Eye className='h-4 w-4' />
-														)}
-													</InputGroupButton>
-												</InputGroupAddon>
-											</InputGroup>
-										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-							<FormField
-								control={form.control}
-								name='confirmPassword'
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>
-											Confirm {profile.data?.hasPassword ? 'new password' : 'password'}
-										</FormLabel>
-										<FormControl>
-											<InputGroup>
-												<InputGroupInput
-													data-testid='confirm-password-input'
-													disabled={change.isPending || setPw.isPending}
-													placeholder='••••••••'
-													type={showConfirm ? 'text' : 'password'}
-													{...field}
-												/>
-												<InputGroupAddon align='inline-end'>
-													<InputGroupButton
-														aria-label={showConfirm ? 'Hide password' : 'Show password'}
-														onClick={() => setShowConfirm((s) => !s)}
-													>
-														{showConfirm ? (
-															<EyeOff className='h-4 w-4' />
-														) : (
-															<Eye className='h-4 w-4' />
-														)}
-													</InputGroupButton>
-												</InputGroupAddon>
-											</InputGroup>
-										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-							<Button
-								data-testid='password-submit-button'
-								disabled={change.isPending || setPw.isPending}
-								type='submit'
-							>
-								{(change.isPending || setPw.isPending) && <Spinner className='mr-2' />}
-								{profile.data?.hasPassword ? 'Change password' : 'Set password'}
-							</Button>
-						</form>
-					</Form>
+								<InputGroupAddon align='inline-end'>
+									<InputGroupButton
+										aria-label={showNew ? 'Hide password' : 'Show password'}
+										onClick={() => setShowNew((s) => !s)}
+									>
+										{showNew ? <EyeOff className='h-4 w-4' /> : <Eye className='h-4 w-4' />}
+									</InputGroupButton>
+								</InputGroupAddon>
+							</InputGroup>
+							<FieldError errors={[errors.newPassword]} />
+						</Field>
+						<Field data-invalid={!!errors.confirmPassword}>
+							<FieldLabel htmlFor='confirm-password'>
+								Confirm {profile.data?.hasPassword ? 'new password' : 'password'}
+							</FieldLabel>
+							<InputGroup>
+								<InputGroupInput
+									{...register('confirmPassword')}
+									aria-invalid={!!errors.confirmPassword}
+									data-testid='confirm-password-input'
+									disabled={change.isPending || setPw.isPending}
+									id='confirm-password'
+									placeholder='••••••••'
+									type={showConfirm ? 'text' : 'password'}
+								/>
+								<InputGroupAddon align='inline-end'>
+									<InputGroupButton
+										aria-label={showConfirm ? 'Hide password' : 'Show password'}
+										onClick={() => setShowConfirm((s) => !s)}
+									>
+										{showConfirm ? <EyeOff className='h-4 w-4' /> : <Eye className='h-4 w-4' />}
+									</InputGroupButton>
+								</InputGroupAddon>
+							</InputGroup>
+							<FieldError errors={[errors.confirmPassword]} />
+						</Field>
+						<Button
+							data-testid='password-submit-button'
+							disabled={change.isPending || setPw.isPending}
+							type='submit'
+						>
+							{(change.isPending || setPw.isPending) && <Spinner className='mr-2' />}
+							{profile.data?.hasPassword ? 'Change password' : 'Set password'}
+						</Button>
+					</form>
 				)}
 			</CardContent>
 		</Card>

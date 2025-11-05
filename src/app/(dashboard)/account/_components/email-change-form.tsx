@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { api } from '@/trpc/react';
@@ -18,7 +18,12 @@ const emailChangeSchema = z.object({
 type EmailChangeFormInput = z.infer<typeof emailChangeSchema>;
 
 export function EmailChangeForm({ onDone }: EmailChangeFormProps) {
-	const form = useForm<EmailChangeFormInput>({
+	const {
+		formState: { errors },
+		handleSubmit,
+		register,
+		reset
+	} = useForm<EmailChangeFormInput>({
 		defaultValues: { currentPassword: '', newEmail: '' },
 		resolver: zodResolver(emailChangeSchema)
 	});
@@ -26,71 +31,53 @@ export function EmailChangeForm({ onDone }: EmailChangeFormProps) {
 	const request = api.account.requestEmailChange.useMutation({
 		onError: (e) => toast.error(e.message || 'Failed to start email change'),
 		onSuccess: () => {
-			form.reset({ currentPassword: '', newEmail: '' });
+			reset({ currentPassword: '', newEmail: '' });
 			toast.success('Check your new email for a confirmation link');
 			onDone?.();
 		}
 	});
 
 	return (
-		<Form {...form}>
-			<form
-				className='space-y-3'
-				onSubmit={form.handleSubmit((vals) =>
-					request.mutate({
-						currentPassword: vals.currentPassword?.trim() || undefined,
-						newEmail: vals.newEmail.trim()
-					})
-				)}
-			>
-				<FormField
-					control={form.control}
-					name='newEmail'
-					render={({ field }) => (
-						<FormItem>
-							<FormLabel>New email</FormLabel>
-							<FormControl>
-								<Input
-									disabled={request.isPending}
-									id='new-email'
-									onChange={field.onChange}
-									type='email'
-									value={field.value ?? ''}
-								/>
-							</FormControl>
-							<FormMessage />
-						</FormItem>
-					)}
+		<form
+			className='space-y-3'
+			onSubmit={handleSubmit((vals) =>
+				request.mutate({
+					currentPassword: vals.currentPassword?.trim() || undefined,
+					newEmail: vals.newEmail.trim()
+				})
+			)}
+		>
+			<Field data-invalid={!!errors.newEmail}>
+				<FieldLabel htmlFor='new-email'>New email</FieldLabel>
+				<Input
+					{...register('newEmail')}
+					aria-invalid={!!errors.newEmail}
+					disabled={request.isPending}
+					id='new-email'
+					type='email'
 				/>
+				<FieldError errors={[errors.newEmail]} />
+			</Field>
 
-				<FormField
-					control={form.control}
-					name='currentPassword'
-					render={({ field }) => (
-						<FormItem>
-							<FormLabel>Current password (if set)</FormLabel>
-							<FormControl>
-								<Input
-									disabled={request.isPending}
-									id='curr-pass'
-									onChange={field.onChange}
-									type='password'
-									value={field.value ?? ''}
-								/>
-							</FormControl>
-							<FormMessage />
-						</FormItem>
-					)}
+			<Field data-invalid={!!errors.currentPassword}>
+				<FieldLabel htmlFor='curr-pass'>Current password (if set)</FieldLabel>
+				<Input
+					{...register('currentPassword')}
+					aria-invalid={!!errors.currentPassword}
+					disabled={request.isPending}
+					id='curr-pass'
+					type='password'
 				/>
+				<FieldError errors={[errors.currentPassword]} />
+			</Field>
 
-				<div className='flex justify-end gap-2'>
-					<Button disabled={request.isPending} type='submit'>
-						{request.isPending && <Spinner className='mr-2' />}
-						Send confirmation link
-					</Button>
-				</div>
-			</form>
-		</Form>
+			<div className='flex justify-end gap-2'>
+				<Button disabled={request.isPending} type='submit'>
+					{request.isPending && <Spinner className='mr-2' />}
+					Send confirmation link
+				</Button>
+			</div>
+		</form>
 	);
 }
 

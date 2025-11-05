@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { forgetPassword } from '@/lib/auth-client';
@@ -20,7 +20,12 @@ type FormValues = z.infer<typeof schema>;
 function ForgotPasswordRequestForm() {
 	const [submitted, setSubmitted] = useState(false);
 	const [isLoading, setIsLoading] = useState(false);
-	const form = useForm<FormValues>({
+	const {
+		formState: { errors },
+		handleSubmit,
+		register,
+		reset
+	} = useForm<FormValues>({
 		defaultValues: { email: '' },
 		resolver: zodResolver(schema)
 	});
@@ -34,7 +39,7 @@ function ForgotPasswordRequestForm() {
 			});
 			setSubmitted(true);
 			toast.success("If an account exists, we've sent a reset link.");
-			form.reset();
+			reset();
 		} catch (error) {
 			setSubmitted(true);
 			toast.success("If an account exists, we've sent a reset link.");
@@ -52,32 +57,24 @@ function ForgotPasswordRequestForm() {
 	}
 
 	return (
-		<Form {...form}>
-			<form className='space-y-4' data-testid='forgot-form' onSubmit={form.handleSubmit(onSubmit)}>
-				<FormField
-					control={form.control}
-					name='email'
-					render={({ field }) => (
-						<FormItem>
-							<FormLabel>Email</FormLabel>
-							<FormControl>
-								<Input
-									placeholder='you@example.com'
-									type='email'
-									{...field}
-									data-testid='forgot-email'
-								/>
-							</FormControl>
-							<FormMessage />
-						</FormItem>
-					)}
+		<form className='space-y-4' data-testid='forgot-form' onSubmit={handleSubmit(onSubmit)}>
+			<Field data-invalid={!!errors.email}>
+				<FieldLabel htmlFor='forgot-email'>Email</FieldLabel>
+				<Input
+					aria-invalid={!!errors.email}
+					data-testid='forgot-email'
+					id='forgot-email'
+					placeholder='you@example.com'
+					type='email'
+					{...register('email')}
 				/>
-				<Button className='w-full' data-testid='forgot-submit' disabled={isLoading} type='submit'>
-					{isLoading && <Spinner className='mr-2' />}
-					{isLoading ? 'Sending…' : 'Send reset link'}
-				</Button>
-			</form>
-		</Form>
+				<FieldError errors={[errors.email]} />
+			</Field>
+			<Button className='w-full' data-testid='forgot-submit' disabled={isLoading} type='submit'>
+				{isLoading && <Spinner className='mr-2' />}
+				{isLoading ? 'Sending…' : 'Send reset link'}
+			</Button>
+		</form>
 	);
 }
 

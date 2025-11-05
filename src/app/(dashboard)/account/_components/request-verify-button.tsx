@@ -29,7 +29,7 @@ export function RequestVerifyButton({ email }: { email: string }) {
 	};
 
 	return (
-		<Button disabled={isPending} onClick={handleClick} size='sm' type='button' variant='default'>
+		<Button disabled={isPending} onClick={handleClick} type='button' variant='default'>
 			{isPending && <Spinner className='mr-2' />}
 			{isPending ? 'Sending…' : 'Verify email'}
 		</Button>

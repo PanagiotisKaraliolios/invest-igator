@@ -17,9 +17,7 @@ export function EmailChangeDialog() {
 	return (
 		<Dialog onOpenChange={setOpen} open={open}>
 			<DialogTrigger asChild>
-				<Button size='sm' variant='outline'>
-					Change email
-				</Button>
+				<Button variant='outline'>Change email</Button>
 			</DialogTrigger>
 			<DialogContent>
 				<DialogHeader>

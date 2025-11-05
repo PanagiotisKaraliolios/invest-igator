@@ -9,7 +9,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group';
 import { signUp } from '@/lib/auth-client';
@@ -31,7 +31,12 @@ const schema = z
 
 export function SignUpForm() {
 	const router = useRouter();
-	const form = useForm<z.infer<typeof schema>>({
+	const {
+		formState: { errors, isSubmitting },
+		handleSubmit,
+		register,
+		setError: setFormError
+	} = useForm<z.infer<typeof schema>>({
 		defaultValues: { confirmPassword: '', email: '', name: '', password: '' },
 		resolver: zodResolver(schema)
 	});
@@ -53,9 +58,9 @@ export function SignUpForm() {
 			if (result.error) {
 				const message = result.error.message ?? 'Failed to create account';
 				if (message.includes('already exists') || message.includes('email')) {
-					form.setError('email', { message, type: 'manual' });
+					setFormError('email', { message, type: 'manual' });
 				} else {
-					form.setError('name', { message, type: 'manual' });
+					setFormError('name', { message, type: 'manual' });
 				}
 				return;
 			}
@@ -64,7 +69,7 @@ export function SignUpForm() {
 			setCountdown(3);
 		} catch (err) {
 			const message = (err as { message?: string })?.message ?? 'Failed to create account';
-			form.setError('email', { message, type: 'manual' });
+			setFormError('email', { message, type: 'manual' });
 		}
 	}
 
@@ -85,125 +90,96 @@ export function SignUpForm() {
 				<CardDescription>Sign up with your name and email</CardDescription>
 			</CardHeader>
 			<CardContent>
-				<Form {...form}>
-					<form className='space-y-4' onSubmit={form.handleSubmit(onSubmit)}>
-						<FormField
-							control={form.control}
-							name='name'
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>Name</FormLabel>
-									<FormControl>
-										<Input placeholder='Jane Doe' {...field} />
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
+				<form className='space-y-4' onSubmit={handleSubmit(onSubmit)}>
+					<Field data-invalid={!!errors.name}>
+						<FieldLabel htmlFor='signup-name'>Name</FieldLabel>
+						<Input
+							aria-invalid={!!errors.name}
+							id='signup-name'
+							placeholder='Jane Doe'
+							{...register('name')}
 						/>
-						<FormField
-							control={form.control}
-							name='email'
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>Email</FormLabel>
-									<FormControl>
-										<Input placeholder='jane@example.com' {...field} />
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
+						<FieldError errors={[errors.name]} />
+					</Field>
+					<Field data-invalid={!!errors.email}>
+						<FieldLabel htmlFor='signup-email'>Email</FieldLabel>
+						<Input
+							aria-invalid={!!errors.email}
+							id='signup-email'
+							placeholder='jane@example.com'
+							type='email'
+							{...register('email')}
 						/>
-						<FormField
-							control={form.control}
-							name='password'
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel htmlFor='signup-password'>Password</FormLabel>
-									<FormControl>
-										<InputGroup>
-											<InputGroupInput
-												id='signup-password'
-												placeholder='••••••••'
-												type={showPassword ? 'text' : 'password'}
-												{...field}
-											/>
-											<InputGroupAddon align='inline-end'>
-												<InputGroupButton
-													aria-label={showPassword ? 'Hide password' : 'Show password'}
-													onClick={() => setShowPassword((s) => !s)}
-													size='icon-xs'
-													variant='ghost'
-												>
-													{showPassword ? (
-														<EyeOff className='h-4 w-4' />
-													) : (
-														<Eye className='h-4 w-4' />
-													)}
-												</InputGroupButton>
-											</InputGroupAddon>
-										</InputGroup>
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-						<FormField
-							control={form.control}
-							name='confirmPassword'
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel htmlFor='signup-confirm-password'>Confirm password</FormLabel>
-									<FormControl>
-										<InputGroup>
-											<InputGroupInput
-												id='signup-confirm-password'
-												placeholder='••••••••'
-												type={showConfirmPassword ? 'text' : 'password'}
-												{...field}
-											/>
-											<InputGroupAddon align='inline-end'>
-												<InputGroupButton
-													aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-													onClick={() => setShowConfirmPassword((s) => !s)}
-													size='icon-xs'
-													variant='ghost'
-												>
-													{showConfirmPassword ? (
-														<EyeOff className='h-4 w-4' />
-													) : (
-														<Eye className='h-4 w-4' />
-													)}
-												</InputGroupButton>
-											</InputGroupAddon>
-										</InputGroup>
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-						{info ? (
-							<div className='rounded bg-muted/50 p-3 text-sm'>
-								{info}
-								{countdown !== null ? (
-									<div className='mt-1'>Redirecting to login in {countdown}s…</div>
-								) : null}
-							</div>
-						) : null}
-						<Button
-							className='h-auto w-full whitespace-normal break-words leading-tight'
-							disabled={form.formState.isSubmitting}
-							type='submit'
-						>
-							{form.formState.isSubmitting ? 'Creating…' : 'Create account'}
-						</Button>
-						<div className='text-muted-foreground mt-2 text-center text-sm'>
-							Already have an account?{' '}
-							<Link className='underline underline-offset-4 hover:text-foreground' href='/login'>
-								Log in
-							</Link>
+						<FieldError errors={[errors.email]} />
+					</Field>
+					<Field data-invalid={!!errors.password}>
+						<FieldLabel htmlFor='signup-password'>Password</FieldLabel>
+						<InputGroup>
+							<InputGroupInput
+								aria-invalid={!!errors.password}
+								id='signup-password'
+								placeholder='••••••••'
+								type={showPassword ? 'text' : 'password'}
+								{...register('password')}
+							/>
+							<InputGroupAddon align='inline-end'>
+								<InputGroupButton
+									aria-label={showPassword ? 'Hide password' : 'Show password'}
+									onClick={() => setShowPassword((s) => !s)}
+									size='icon-xs'
+									variant='ghost'
+								>
+									{showPassword ? <EyeOff className='h-4 w-4' /> : <Eye className='h-4 w-4' />}
+								</InputGroupButton>
+							</InputGroupAddon>
+						</InputGroup>
+						<FieldError errors={[errors.password]} />
+					</Field>
+					<Field data-invalid={!!errors.confirmPassword}>
+						<FieldLabel htmlFor='signup-confirm-password'>Confirm password</FieldLabel>
+						<InputGroup>
+							<InputGroupInput
+								aria-invalid={!!errors.confirmPassword}
+								id='signup-confirm-password'
+								placeholder='••••••••'
+								type={showConfirmPassword ? 'text' : 'password'}
+								{...register('confirmPassword')}
+							/>
+							<InputGroupAddon align='inline-end'>
+								<InputGroupButton
+									aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+									onClick={() => setShowConfirmPassword((s) => !s)}
+									size='icon-xs'
+									variant='ghost'
+								>
+									{showConfirmPassword ? <EyeOff className='h-4 w-4' /> : <Eye className='h-4 w-4' />}
+								</InputGroupButton>
+							</InputGroupAddon>
+						</InputGroup>
+						<FieldError errors={[errors.confirmPassword]} />
+					</Field>
+					{info ? (
+						<div className='rounded bg-muted/50 p-3 text-sm'>
+							{info}
+							{countdown !== null ? (
+								<div className='mt-1'>Redirecting to login in {countdown}s…</div>
+							) : null}
 						</div>
-					</form>
-				</Form>
+					) : null}
+					<Button
+						className='h-auto w-full whitespace-normal wrap-break-word leading-tight'
+						disabled={isSubmitting}
+						type='submit'
+					>
+						{isSubmitting ? 'Creating…' : 'Create account'}
+					</Button>
+					<div className='text-muted-foreground mt-2 text-center text-sm'>
+						Already have an account?{' '}
+						<Link className='underline underline-offset-4 hover:text-foreground' href='/login'>
+							Log in
+						</Link>
+					</div>
+				</form>
 			</CardContent>
 		</Card>
 	);

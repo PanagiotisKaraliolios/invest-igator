@@ -40,9 +40,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { describePermissions, formatPermissions } from '@/lib/api-key-permissions';
 import { api } from '@/trpc/react';
+import { CreateApiKeyDialog, EditApiKeyDialog } from './api-key-dialog';
 import { ApiKeyDisplayDialog } from './api-key-display-dialog';
-import { CreateApiKeyDialog } from './create-api-key-dialog';
-import { EditApiKeyDialog } from './edit-api-key-dialog';
 
 export function ApiKeysCard() {
 	const [keyToDelete, setKeyToDelete] = useState<string | null>(null);

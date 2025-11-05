@@ -7,7 +7,6 @@ import ProfileCard from '@/app/(dashboard)/account/_components/profile-card';
 import RecentLogsCard from '@/app/(dashboard)/account/_components/recent-logs-card';
 import TwoFactorCard from '@/app/(dashboard)/account/_components/two-factor-card';
 import { TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { auth } from '@/lib/auth';
 import AccountTabsClient from './_components/account-tabs-client';
 
 export default async function AccountPage() {

@@ -30,6 +30,7 @@ Next.js App Router (T3-ish) with tRPC v11, Prisma/PostgreSQL, NextAuth, shadcn/u
 
 ## UI Components & Patterns
 - shadcn/ui in `src/components/ui/*`; toasts via `sonner`; theme cookie-based.
+- Forms: Use `Field` component from `src/components/ui/field.tsx` for all form fields. Do NOT use the old `Form`/`FormField`/`FormItem` pattern. Structure fields as: `<Field data-invalid={!!errors.fieldName}><FieldLabel htmlFor="id">Label</FieldLabel><Input {...register('fieldName')} aria-invalid={!!errors.fieldName} id="id" /><FieldError errors={[errors.fieldName]} /></Field>`. Use `useForm` from react-hook-form with destructured `{ register, handleSubmit, formState: { errors } }`. For custom controls like `InputOTP`, wrap with `Controller` from react-hook-form.
 - Tables: Use TanStack Table v8 for complex data tables with sorting, filtering, and pagination. See `src/app/(dashboard)/admin/_components/user-management-table.tsx` and `audit-logs-table.tsx` for full implementation patterns.
 - Date pickers: Use reusable `DateRangePicker` from `src/components/ui/date-range-picker.tsx` with `strictMaxDate` prop to enforce date constraints.
 - Search inputs: Apply debouncing with `useDebounce` hook (300ms) from `src/hooks/use-debounce.ts` for better UX and reduced API calls.
@@ -61,6 +62,7 @@ Next.js App Router (T3-ish) with tRPC v11, Prisma/PostgreSQL, NextAuth, shadcn/u
 - Influx helpers: `src/server/influx.ts`; Ingest job: `src/server/jobs/ingest-alpha.ts`.
 - Admin routers: `src/server/api/routers/admin.ts` with sorting params (sortBy/sortDir) for both users and audit logs.
 - Table components: `src/app/(dashboard)/admin/_components/user-management-table.tsx` and `audit-logs-table.tsx` for reference implementations.
+- Form examples: All auth forms (`src/app/(auth)/login/_components/*`, `src/app/(auth)/signup/_components/sign-up-form.tsx`, `src/app/forgot-password/*`) use Field component pattern.
 - Feature example: `src/server/api/routers/watchlist.ts` + `src/app/(dashboard)/watchlist/*`.
 
 

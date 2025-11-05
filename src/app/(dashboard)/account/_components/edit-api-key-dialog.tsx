@@ -16,7 +16,7 @@ import {
 	DialogHeader,
 	DialogTitle
 } from '@/components/ui/dialog';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -85,7 +85,14 @@ export function EditApiKeyDialog({ apiKey, onClose, open }: EditApiKeyDialogProp
 		}
 	}, [apiKey.permissions]);
 
-	const form = useForm<EditApiKeyFormValues>({
+	const {
+		formState: { errors },
+		handleSubmit,
+		register,
+		reset,
+		setValue,
+		watch
+	} = useForm<EditApiKeyFormValues>({
 		defaultValues: {
 			name: apiKey.name ?? '',
 			permissionTemplate: permissionTemplate,
@@ -98,14 +105,14 @@ export function EditApiKeyDialog({ apiKey, onClose, open }: EditApiKeyDialogProp
 
 	// Update form when apiKey changes
 	useEffect(() => {
-		form.reset({
+		reset({
 			name: apiKey.name ?? '',
 			permissionTemplate: permissionTemplate,
 			rateLimitEnabled: apiKey.rateLimitEnabled,
 			rateLimitMax: apiKey.rateLimitMax?.toString() ?? '100',
 			rateLimitTimeWindow: apiKey.rateLimitTimeWindow?.toString() ?? '3600000'
 		});
-	}, [apiKey, permissionTemplate, form]);
+	}, [apiKey, permissionTemplate, reset]);
 
 	const updateMutation = api.apiKeys.update.useMutation({
 		onError: (error) => {
@@ -192,227 +199,191 @@ export function EditApiKeyDialog({ apiKey, onClose, open }: EditApiKeyDialogProp
 		});
 	};
 
-	const rateLimitEnabled = form.watch('rateLimitEnabled');
+	const rateLimitEnabled = watch('rateLimitEnabled');
 
 	return (
 		<Dialog onOpenChange={onClose} open={open}>
-			<DialogContent className='sm:max-w-[500px] max-h-[90vh] overflow-y-auto'>
+			<DialogContent className='sm:max-w-[600px] lg:max-w-[700px] max-h-[90vh] overflow-y-auto'>
 				<DialogHeader>
 					<DialogTitle>Edit API Key</DialogTitle>
 					<DialogDescription>Update the settings for this API key.</DialogDescription>
 				</DialogHeader>
-				<Form {...form}>
-					<form className='space-y-4' onSubmit={form.handleSubmit(onSubmit)}>
-						<FormField
-							control={form.control}
-							name='name'
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>Name</FormLabel>
-									<FormControl>
-										<Input placeholder='My API Key' {...field} />
-									</FormControl>
-									<FormDescription>A descriptive name to identify this key</FormDescription>
-									<FormMessage />
-								</FormItem>
-							)}
+				<form className='space-y-3' onSubmit={handleSubmit(onSubmit)}>
+					<Field data-invalid={!!errors.name}>
+						<FieldLabel htmlFor='edit-api-key-name'>Name</FieldLabel>
+						<Input
+							{...register('name')}
+							aria-invalid={!!errors.name}
+							id='edit-api-key-name'
+							placeholder='My API Key'
 						/>
+						<p className='text-sm text-muted-foreground'>A descriptive name to identify this key</p>
+						<FieldError errors={[errors.name]} />
+					</Field>
 
-						<Separator />
+					<Separator />
 
-						<div className='space-y-4'>
-							<div>
-								<Label>Permissions</Label>
-								<p className='text-sm text-muted-foreground mt-1'>
-									Control what this API key can access
-								</p>
-							</div>
-
-							<FormField
-								control={form.control}
-								name='permissionTemplate'
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>Permission Template</FormLabel>
-										<Select
-											defaultValue={permissionTemplate}
-											onValueChange={(value) => {
-												field.onChange(value);
-												handlePermissionTemplateChange(value as PermissionTemplate);
-											}}
-											value={permissionTemplate}
-										>
-											<FormControl>
-												<SelectTrigger>
-													<SelectValue placeholder='Select permission template' />
-												</SelectTrigger>
-											</FormControl>
-											<SelectContent>
-												{(Object.keys(PERMISSION_TEMPLATES) as PermissionTemplate[]).map(
-													(template) => (
-														<SelectItem key={template} value={template}>
-															{template === 'read-only' && '🔍 Read Only'}
-															{template === 'full-access' && '🔓 Full Access'}
-															{template === 'portfolio-manager' && '💼 Portfolio Manager'}
-															{template === 'custom' && '⚙️ Custom'}
-														</SelectItem>
-													)
-												)}
-											</SelectContent>
-										</Select>
-										<FormDescription>
-											{PERMISSION_TEMPLATES[permissionTemplate].description}
-										</FormDescription>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-
-							{permissionTemplate === 'custom' && (
-								<div className='space-y-3 rounded-md border p-4'>
-									<div className='flex items-center gap-2 text-sm text-muted-foreground'>
-										<Info className='h-4 w-4' />
-										<span>Select specific permissions for this key</span>
-									</div>
-									{(
-										Object.entries(PERMISSION_SCOPES) as [
-											PermissionScope,
-											(typeof PERMISSION_SCOPES)[PermissionScope]
-										][]
-									).map(([scope, config]) => {
-										const actions = config.actions as readonly string[];
-										return (
-											<div className='space-y-2' key={scope}>
-												<Label className='text-sm font-medium'>{config.description}</Label>
-												<div className='flex flex-wrap gap-2'>
-													{actions.map((action) => {
-														const isChecked =
-															customPermissions[scope]?.includes(action) ?? false;
-														return (
-															<div className='flex items-center space-x-2' key={action}>
-																<Checkbox
-																	checked={isChecked}
-																	id={`${scope}-${action}`}
-																	onCheckedChange={() =>
-																		toggleScopeAction(scope, action)
-																	}
-																/>
-																<label
-																	className='text-sm cursor-pointer'
-																	htmlFor={`${scope}-${action}`}
-																>
-																	{action}
-																</label>
-															</div>
-														);
-													})}
-												</div>
-											</div>
-										);
-									})}
-								</div>
-							)}
-
-							{permissionTemplate !== 'custom' && (
-								<div className='rounded-md border p-4 space-y-2 bg-muted/50'>
-									<Label className='text-sm font-medium'>Included Permissions</Label>
-									<div className='space-y-1 text-sm text-muted-foreground'>
-										{Object.entries(PERMISSION_TEMPLATES[permissionTemplate].permissions).map(
-											([scope, actions]) => (
-												<div key={scope}>
-													<span className='font-medium text-foreground'>
-														{PERMISSION_SCOPES[scope as PermissionScope]?.description ??
-															scope}
-														:
-													</span>{' '}
-													{[...actions].join(', ')}
-												</div>
-											)
-										)}
-									</div>
-								</div>
-							)}
+					<div className='space-y-3'>
+						<div>
+							<Label>Permissions</Label>
+							<p className='text-sm text-muted-foreground mt-1'>Control what this API key can access</p>
 						</div>
 
-						<Separator />
+						<Field data-invalid={!!errors.permissionTemplate}>
+							<FieldLabel htmlFor='edit-permission-template'>Permission Template</FieldLabel>
+							<Select
+								onValueChange={(value) => {
+									setValue('permissionTemplate', value);
+									handlePermissionTemplateChange(value as PermissionTemplate);
+								}}
+								value={permissionTemplate}
+							>
+								<SelectTrigger id='edit-permission-template'>
+									<SelectValue placeholder='Select permission template' />
+								</SelectTrigger>
+								<SelectContent>
+									{(Object.keys(PERMISSION_TEMPLATES) as PermissionTemplate[]).map((template) => (
+										<SelectItem key={template} value={template}>
+											{template === 'read-only' && '🔍 Read Only'}
+											{template === 'full-access' && '🔓 Full Access'}
+											{template === 'portfolio-manager' && '💼 Portfolio Manager'}
+											{template === 'custom' && '⚙️ Custom'}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+							<p className='text-sm text-muted-foreground'>
+								{PERMISSION_TEMPLATES[permissionTemplate].description}
+							</p>
+							<FieldError errors={[errors.permissionTemplate]} />
+						</Field>
 
-						<FormField
-							control={form.control}
-							name='rateLimitEnabled'
-							render={({ field }) => (
-								<FormItem className='flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4'>
-									<FormControl>
-										<Checkbox checked={field.value} onCheckedChange={field.onChange} />
-									</FormControl>
-									<div className='space-y-1 leading-none'>
-										<FormLabel>Enable Rate Limiting</FormLabel>
-										<FormDescription>Limit the number of requests per time window</FormDescription>
-									</div>
-								</FormItem>
-							)}
-						/>
-
-						{rateLimitEnabled && (
-							<div className='space-y-4 rounded-md border p-4'>
-								<FormField
-									control={form.control}
-									name='rateLimitMax'
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Max Requests</FormLabel>
-											<FormControl>
-												<Input placeholder='100' type='number' {...field} />
-											</FormControl>
-											<FormDescription>Maximum number of requests allowed</FormDescription>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-
-								<FormField
-									control={form.control}
-									name='rateLimitTimeWindow'
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Time Window</FormLabel>
-											<Select defaultValue={field.value} onValueChange={field.onChange}>
-												<FormControl>
-													<SelectTrigger>
-														<SelectValue placeholder='Select time window' />
-													</SelectTrigger>
-												</FormControl>
-												<SelectContent>
-													<SelectItem value='60000'>1 minute</SelectItem>
-													<SelectItem value='300000'>5 minutes</SelectItem>
-													<SelectItem value='900000'>15 minutes</SelectItem>
-													<SelectItem value='3600000'>1 hour</SelectItem>
-													<SelectItem value='86400000'>1 day</SelectItem>
-												</SelectContent>
-											</Select>
-											<FormDescription>Time period for rate limit calculation</FormDescription>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
+						{permissionTemplate === 'custom' && (
+							<div className='space-y-2 rounded-md border p-3'>
+								<div className='flex items-center gap-2 text-sm text-muted-foreground'>
+									<Info className='h-4 w-4' />
+									<span>Select specific permissions for this key</span>
+								</div>
+								{(
+									Object.entries(PERMISSION_SCOPES) as [
+										PermissionScope,
+										(typeof PERMISSION_SCOPES)[PermissionScope]
+									][]
+								).map(([scope, config]) => {
+									const actions = config.actions as readonly string[];
+									return (
+										<div className='space-y-1.5' key={scope}>
+											<Label className='text-sm font-medium'>{config.description}</Label>
+											<div className='flex flex-wrap gap-2'>
+												{actions.map((action) => {
+													const isChecked =
+														customPermissions[scope]?.includes(action) ?? false;
+													return (
+														<div className='flex items-center space-x-2' key={action}>
+															<Checkbox
+																checked={isChecked}
+																id={`edit-${scope}-${action}`}
+																onCheckedChange={() => toggleScopeAction(scope, action)}
+															/>
+															<label
+																className='text-sm cursor-pointer'
+																htmlFor={`edit-${scope}-${action}`}
+															>
+																{action}
+															</label>
+														</div>
+													);
+												})}
+											</div>
+										</div>
+									);
+								})}
 							</div>
 						)}
 
-						<DialogFooter>
-							<Button
-								disabled={updateMutation.isPending}
-								onClick={onClose}
-								type='button'
-								variant='outline'
-							>
-								Cancel
-							</Button>
-							<Button disabled={updateMutation.isPending} type='submit'>
-								{updateMutation.isPending && <Spinner className='mr-2' />}
-								{updateMutation.isPending ? 'Updating...' : 'Update Key'}
-							</Button>
-						</DialogFooter>
-					</form>
-				</Form>
+						{permissionTemplate !== 'custom' && (
+							<div className='rounded-md border p-3 space-y-1.5 bg-muted/50'>
+								<Label className='text-sm font-medium'>Included Permissions</Label>
+								<div className='space-y-0.5 text-sm text-muted-foreground'>
+									{Object.entries(PERMISSION_TEMPLATES[permissionTemplate].permissions).map(
+										([scope, actions]) => (
+											<div key={scope}>
+												<span className='font-medium text-foreground'>
+													{PERMISSION_SCOPES[scope as PermissionScope]?.description ?? scope}:
+												</span>{' '}
+												{[...actions].join(', ')}
+											</div>
+										)
+									)}
+								</div>
+							</div>
+						)}
+					</div>
+
+					<Separator />
+
+					<div className='flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3'>
+						<Checkbox
+							checked={rateLimitEnabled}
+							id='edit-rate-limit-enabled'
+							onCheckedChange={(checked) => setValue('rateLimitEnabled', !!checked)}
+						/>
+						<div className='space-y-0.5 leading-none'>
+							<Label htmlFor='edit-rate-limit-enabled'>Enable Rate Limiting</Label>
+							<p className='text-sm text-muted-foreground'>
+								Limit the number of requests per time window
+							</p>
+						</div>
+					</div>
+
+					{rateLimitEnabled && (
+						<div className='grid grid-cols-1 lg:grid-cols-2 gap-3 rounded-md border p-3'>
+							<Field data-invalid={!!errors.rateLimitMax}>
+								<FieldLabel htmlFor='edit-rate-limit-max'>Max Requests</FieldLabel>
+								<Input
+									{...register('rateLimitMax')}
+									aria-invalid={!!errors.rateLimitMax}
+									id='edit-rate-limit-max'
+									placeholder='100'
+									type='number'
+								/>
+								<p className='text-sm text-muted-foreground'>Maximum number of requests allowed</p>
+								<FieldError errors={[errors.rateLimitMax]} />
+							</Field>
+
+							<Field data-invalid={!!errors.rateLimitTimeWindow}>
+								<FieldLabel htmlFor='edit-rate-limit-window'>Time Window</FieldLabel>
+								<Select
+									defaultValue={apiKey.rateLimitTimeWindow?.toString() ?? '3600000'}
+									onValueChange={(value) => setValue('rateLimitTimeWindow', value)}
+								>
+									<SelectTrigger id='edit-rate-limit-window'>
+										<SelectValue placeholder='Select time window' />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value='60000'>1 minute</SelectItem>
+										<SelectItem value='300000'>5 minutes</SelectItem>
+										<SelectItem value='900000'>15 minutes</SelectItem>
+										<SelectItem value='3600000'>1 hour</SelectItem>
+										<SelectItem value='86400000'>1 day</SelectItem>
+									</SelectContent>
+								</Select>
+								<p className='text-sm text-muted-foreground'>Time period for rate limit calculation</p>
+								<FieldError errors={[errors.rateLimitTimeWindow]} />
+							</Field>
+						</div>
+					)}
+
+					<DialogFooter>
+						<Button disabled={updateMutation.isPending} onClick={onClose} type='button' variant='outline'>
+							Cancel
+						</Button>
+						<Button disabled={updateMutation.isPending} type='submit'>
+							{updateMutation.isPending && <Spinner className='mr-2' />}
+							{updateMutation.isPending ? 'Updating...' : 'Update Key'}
+						</Button>
+					</DialogFooter>
+				</form>
 			</DialogContent>
 		</Dialog>
 	);

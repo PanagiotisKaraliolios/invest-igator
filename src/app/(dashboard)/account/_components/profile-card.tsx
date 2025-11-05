@@ -1,6 +1,6 @@
 'use client';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -9,11 +9,11 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
-import { api, type RouterOutputs } from '@/trpc/react';
+import { api } from '@/trpc/react';
 import { EditProfilePictureDialog } from './edit-profile-picture-dialog';
 import { EmailChangeDialog } from './email-change-dialog';
 import { RequestVerifyButton } from './request-verify-button';
@@ -42,11 +42,15 @@ export default function ProfileCard() {
 		onSuccess: async () => {
 			await utils.account.getMe.invalidate();
 			toast.success('Profile updated');
-			// Ensure session-backed UI (e.g., header avatar) refreshes
 		}
 	});
 
-	const form = useForm<ProfileFormInput>({
+	const {
+		formState: { errors, isDirty },
+		handleSubmit,
+		register,
+		reset
+	} = useForm<ProfileFormInput>({
 		defaultValues: {
 			name: profileData?.name ?? ''
 		},
@@ -55,16 +59,13 @@ export default function ProfileCard() {
 
 	// Keep form in sync if the server-provided profileData values change
 	useEffect(() => {
-		form.reset({ name: profileData?.name ?? '' });
-		// eslint-disable-next-line react-hooks/exhaustive-deps
+		reset({ name: profileData?.name ?? '' });
 	}, [profileData?.name]);
 
 	const onSubmit = (values: ProfileFormInput) => {
 		const trimmedName = (values.name ?? '').trim();
 		update.mutate({ name: trimmedName });
 	};
-
-	const isDirty = form.formState.isDirty;
 
 	// Get initials for avatar fallback
 	const initials =
@@ -126,71 +127,63 @@ export default function ProfileCard() {
 				<CardHeader>
 					<CardTitle>Profile</CardTitle>
 				</CardHeader>
-				<Form {...form}>
-					<form onSubmit={form.handleSubmit(onSubmit)}>
-						<CardContent className='space-y-3'>
-							{/* Profile Picture Section */}
-							<div className='space-y-2'>
-								<FormLabel>Profile Picture</FormLabel>
-								<div className='flex items-center gap-4'>
-									<Avatar className='h-20 w-20'>
-										<AvatarImage
-											alt={profileData?.name ?? 'User'}
-											src={profileData?.avatar ?? undefined}
-										/>
-										<AvatarFallback>{initials}</AvatarFallback>
-									</Avatar>
-									<Button onClick={() => setEditPictureOpen(true)} type='button' variant='outline'>
-										Edit
-									</Button>
-								</div>
+				<form onSubmit={handleSubmit(onSubmit)}>
+					<CardContent className='space-y-3'>
+						{/* Profile Picture Section */}
+						<div className='space-y-2'>
+							<FieldLabel>Profile Picture</FieldLabel>
+							<div className='flex items-center gap-4'>
+								<Avatar className='h-20 w-20'>
+									<AvatarImage
+										alt={profileData?.name ?? 'User'}
+										src={profileData?.avatar ?? undefined}
+									/>
+									<AvatarFallback>{initials}</AvatarFallback>
+								</Avatar>
+								<Button onClick={() => setEditPictureOpen(true)} type='button' variant='outline'>
+									Edit
+								</Button>
 							</div>
+						</div>
 
-							<FormField
-								control={form.control}
-								name='name'
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel htmlFor='name'>Name</FormLabel>
-										<FormControl>
-											<Input
-												disabled={update.isPending}
-												id='name'
-												placeholder='Your name'
-												{...field}
-											/>
-										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
+						<Field data-invalid={!!errors.name}>
+							<FieldLabel htmlFor='name'>Name</FieldLabel>
+							<Input
+								{...register('name')}
+								aria-invalid={!!errors.name}
+								disabled={update.isPending}
+								id='name'
+								placeholder='Your name'
 							/>
+							<FieldError errors={[errors.name]} />
+						</Field>
 
-							<div className='flex items-center justify-between'>
-								<div className='flex items-center gap-2'>
-									<p className='text-xs text-muted-foreground'>Email: {profileData?.email}</p>
-									{!profileData?.emailVerified && profileData?.email ? (
-										<RequestVerifyButton email={profileData.email} />
-									) : null}
-								</div>
+						<Field>
+							<FieldLabel htmlFor='email'>Email</FieldLabel>
+							<div className='flex items-center gap-2'>
+								<Input disabled id='email' readOnly type='email' value={profileData?.email ?? ''} />
 								<EmailChangeDialog />
+								{!profileData?.emailVerified && profileData?.email ? (
+									<RequestVerifyButton email={profileData.email} />
+								) : null}
 							</div>
-						</CardContent>
-						<CardFooter className='flex items-center gap-2'>
-							<Button
-								disabled={!isDirty || update.isPending}
-								onClick={() => form.reset({ name: profileData?.name ?? '' })}
-								type='button'
-								variant='outline'
-							>
-								Cancel
-							</Button>
-							<Button disabled={!isDirty || update.isPending} type='submit'>
-								{update.isPending && <Spinner className='mr-2' />}
-								Save changes
-							</Button>
-						</CardFooter>
-					</form>
-				</Form>
+						</Field>
+					</CardContent>
+					<CardFooter className='flex items-center gap-2 pt-6'>
+						<Button
+							disabled={!isDirty || update.isPending}
+							onClick={() => reset({ name: profileData?.name ?? '' })}
+							type='button'
+							variant='outline'
+						>
+							Cancel
+						</Button>
+						<Button disabled={!isDirty || update.isPending} type='submit'>
+							{update.isPending && <Spinner className='mr-2' />}
+							Save changes
+						</Button>
+					</CardFooter>
+				</form>
 			</Card>
 
 			<EditProfilePictureDialog

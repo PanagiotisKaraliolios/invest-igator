@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { authClient } from '@/lib/auth-client';
 
@@ -20,10 +20,16 @@ export function MagicLinkLoginForm() {
 	const [success, setSuccess] = useState(false);
 
 	const schema = z.object({
-		email: z.string().email('Enter a valid email')
+		email: z.email('Enter a valid email')
 	});
 
-	const form = useForm<z.infer<typeof schema>>({
+	const {
+		formState: { errors, isSubmitting },
+		handleSubmit,
+		register,
+		reset,
+		setError: setFormError
+	} = useForm<z.infer<typeof schema>>({
 		defaultValues: { email: '' },
 		resolver: zodResolver(schema)
 	});
@@ -42,14 +48,14 @@ export function MagicLinkLoginForm() {
 
 			if (result.error) {
 				const message = result.error.message || 'Failed to send magic link. Please try again.';
-				form.setError('email', { message, type: 'manual' });
+				setFormError('email', { message, type: 'manual' });
 				setError(message);
 				return;
 			}
 
 			// Success - show confirmation message
 			setSuccess(true);
-			form.reset();
+			reset();
 		} catch (err) {
 			setError('Something went wrong. Please try again.');
 		}
@@ -65,45 +71,32 @@ export function MagicLinkLoginForm() {
 	}
 
 	return (
-		<Form {...form}>
-			<form className='grid gap-4' onSubmit={form.handleSubmit(onSubmit)}>
-				{error && (
-					<Alert variant='destructive'>
-						<AlertTitle>Error</AlertTitle>
-						<AlertDescription>{error}</AlertDescription>
-					</Alert>
-				)}
+		<form className='grid gap-4' onSubmit={handleSubmit(onSubmit)}>
+			{error && (
+				<Alert variant='destructive'>
+					<AlertTitle>Error</AlertTitle>
+					<AlertDescription>{error}</AlertDescription>
+				</Alert>
+			)}
 
-				<FormField
-					control={form.control}
-					name='email'
-					render={({ field }) => (
-						<FormItem>
-							<FormLabel>Email</FormLabel>
-							<FormControl>
-								<Input
-									autoComplete='email'
-									data-testid='magic-link-email-input'
-									disabled={form.formState.isSubmitting}
-									placeholder='name@example.com'
-									type='email'
-									{...field}
-								/>
-							</FormControl>
-							<FormMessage />
-						</FormItem>
-					)}
+			<Field data-invalid={!!errors.email}>
+				<FieldLabel htmlFor='magic-link-email'>Email</FieldLabel>
+				<Input
+					aria-invalid={!!errors.email}
+					autoComplete='email'
+					data-testid='magic-link-email-input'
+					disabled={isSubmitting}
+					id='magic-link-email'
+					placeholder='name@example.com'
+					type='email'
+					{...register('email')}
 				/>
+				<FieldError errors={[errors.email]} />
+			</Field>
 
-				<Button
-					className='w-full'
-					data-testid='magic-link-submit-button'
-					disabled={form.formState.isSubmitting}
-					type='submit'
-				>
-					{form.formState.isSubmitting ? 'Sending magic link...' : 'Send magic link'}
-				</Button>
-			</form>
-		</Form>
+			<Button className='w-full' data-testid='magic-link-submit-button' disabled={isSubmitting} type='submit'>
+				{isSubmitting ? 'Sending magic link...' : 'Send magic link'}
+			</Button>
+		</form>
 	);
 }

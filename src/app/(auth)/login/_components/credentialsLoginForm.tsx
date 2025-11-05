@@ -5,7 +5,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,7 @@ import {
 	DialogHeader,
 	DialogTitle
 } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group';
 import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from '@/components/ui/input-otp';
@@ -57,7 +57,13 @@ export function CredentialsLoginForm() {
 			.max(64, 'Code is too long')
 	});
 
-	const form = useForm<z.infer<typeof schema>>({
+	const {
+		clearErrors,
+		formState: { errors, isSubmitting },
+		handleSubmit,
+		register,
+		setError: setFormError
+	} = useForm<z.infer<typeof schema>>({
 		defaultValues: { email: '', password: '' },
 		resolver: zodResolver(schema)
 	});
@@ -87,15 +93,15 @@ export function CredentialsLoginForm() {
 				setOtpError(null);
 				setUseRecoveryCode(false);
 				setOtpOpen(true);
-				form.clearErrors();
+				clearErrors();
 				return;
 			}
 
 			// Handle other errors
 			if (result.error) {
 				const message = result.error.message || 'Invalid email or password.';
-				form.setError('email', { message, type: 'manual' });
-				form.setError('password', { message: ' ', type: 'manual' });
+				setFormError('email', { message, type: 'manual' });
+				setFormError('password', { message: ' ', type: 'manual' });
 				setError(message);
 				return;
 			}
@@ -160,8 +166,8 @@ export function CredentialsLoginForm() {
 	}
 
 	return (
-		<Form {...form}>
-			<form onSubmit={form.handleSubmit(onSubmit)}>
+		<>
+			<form onSubmit={handleSubmit(onSubmit)}>
 				<div className='grid gap-6'>
 					{error ? (
 						<Alert variant='destructive'>
@@ -169,77 +175,54 @@ export function CredentialsLoginForm() {
 							<AlertDescription>{error}</AlertDescription>
 						</Alert>
 					) : null}
-					<FormField
-						control={form.control}
-						name='email'
-						render={({ field }) => (
-							<FormItem>
-								<FormLabel htmlFor='cred-email'>Email</FormLabel>
-								<FormControl>
-									<Input
-										data-testid='cred-email'
-										disabled={form.formState.isSubmitting}
-										id='cred-email'
-										placeholder='m@example.com'
-										type='email'
-										{...field}
-									/>
-								</FormControl>
-								<FormMessage />
-							</FormItem>
-						)}
-					/>
-					<FormField
-						control={form.control}
-						name='password'
-						render={({ field }) => (
-							<FormItem>
-								<div className='flex items-center'>
-									<FormLabel htmlFor='cred-password'>Password</FormLabel>
-									<Link
-										className='ml-auto text-sm underline-offset-4 hover:underline'
-										href='/forgot-password'
-									>
-										Forgot your password?
-									</Link>
-								</div>
-								<FormControl>
-									<InputGroup>
-										<InputGroupInput
-											data-testid='cred-password'
-											disabled={form.formState.isSubmitting}
-											id='cred-password'
-											type={showPassword ? 'text' : 'password'}
-											{...field}
-										/>
-										<InputGroupAddon align='inline-end'>
-											<InputGroupButton
-												aria-label={showPassword ? 'Hide password' : 'Show password'}
-												data-testid='toggle-password-visibility'
-												onClick={() => setShowPassword((s) => !s)}
-												size='icon-xs'
-												variant='ghost'
-											>
-												{showPassword ? (
-													<EyeOff className='h-4 w-4' />
-												) : (
-													<Eye className='h-4 w-4' />
-												)}
-											</InputGroupButton>
-										</InputGroupAddon>
-									</InputGroup>
-								</FormControl>
-								<FormMessage />
-							</FormItem>
-						)}
-					/>
-					<Button
-						className='w-full'
-						data-testid='cred-submit'
-						disabled={form.formState.isSubmitting}
-						type='submit'
-					>
-						{form.formState.isSubmitting ? 'Logging in…' : 'Login'}
+					<Field data-invalid={!!errors.email}>
+						<FieldLabel htmlFor='cred-email'>Email</FieldLabel>
+						<Input
+							aria-invalid={!!errors.email}
+							data-testid='cred-email'
+							disabled={isSubmitting}
+							id='cred-email'
+							placeholder='m@example.com'
+							type='email'
+							{...register('email')}
+						/>
+						<FieldError errors={[errors.email]} />
+					</Field>
+					<Field data-invalid={!!errors.password}>
+						<div className='flex items-center'>
+							<FieldLabel htmlFor='cred-password'>Password</FieldLabel>
+							<Link
+								className='ml-auto text-sm underline-offset-4 hover:underline'
+								href='/forgot-password'
+							>
+								Forgot your password?
+							</Link>
+						</div>
+						<InputGroup>
+							<InputGroupInput
+								aria-invalid={!!errors.password}
+								data-testid='cred-password'
+								disabled={isSubmitting}
+								id='cred-password'
+								type={showPassword ? 'text' : 'password'}
+								{...register('password')}
+							/>
+							<InputGroupAddon align='inline-end'>
+								<InputGroupButton
+									aria-label={showPassword ? 'Hide password' : 'Show password'}
+									data-testid='toggle-password-visibility'
+									onClick={() => setShowPassword((s) => !s)}
+									size='icon-xs'
+									variant='ghost'
+								>
+									{showPassword ? <EyeOff className='h-4 w-4' /> : <Eye className='h-4 w-4' />}
+								</InputGroupButton>
+							</InputGroupAddon>
+						</InputGroup>
+						<FieldError errors={[errors.password]} />
+					</Field>
+					<Button className='w-full' data-testid='cred-submit' disabled={isSubmitting} type='submit'>
+						{isSubmitting ? 'Logging in…' : 'Login'}
 					</Button>
 				</div>
 			</form>
@@ -252,100 +235,93 @@ export function CredentialsLoginForm() {
 							in.
 						</DialogDescription>
 					</DialogHeader>
-					<Form {...otpForm}>
-						<form className='space-y-4' onSubmit={otpForm.handleSubmit(onSubmitOtp)}>
-							<FormField
-								control={otpForm.control}
-								name='otp'
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel htmlFor='otp-input'>Authentication code</FormLabel>
-										<FormControl>
-											<div className='space-y-2'>
-												{useRecoveryCode ? (
-													<Input
-														autoComplete='one-time-code'
-														disabled={otpForm.formState.isSubmitting}
-														id='otp-input'
-														onChange={field.onChange}
-														placeholder='ABCDE-FGHIJ'
-														value={field.value ?? ''}
-													/>
-												) : (
-													<InputOTP
-														autoFocus
-														disabled={otpForm.formState.isSubmitting}
-														maxLength={6}
-														onChange={(val) => field.onChange(val)}
-														value={field.value || ''}
-													>
-														<InputOTPGroup>
-															{Array.from({ length: 3 }).map((_, index) => (
-																<InputOTPSlot index={index} key={`otp-${index}`} />
-															))}
-														</InputOTPGroup>
-														<InputOTPSeparator />
-														<InputOTPGroup>
-															{Array.from({ length: 3 }).map((_, index) => (
-																<InputOTPSlot
-																	index={index + 3}
-																	key={`otp-${index + 3}`}
-																/>
-															))}
-														</InputOTPGroup>
-													</InputOTP>
-												)}
-												<div className='flex justify-between text-xs text-muted-foreground'>
-													<button
-														className='hover:text-primary'
-														onClick={() => {
-															setUseRecoveryCode((prev) => !prev);
-															otpForm.reset();
-															setOtpError(null);
-														}}
-														type='button'
-													>
-														{useRecoveryCode
-															? 'Use authenticator code instead'
-															: 'Use a recovery code instead'}
-													</button>
-													<span>
-														{useRecoveryCode
-															? 'Recovery codes are 10 characters.'
-															: 'Six digits from your authenticator app.'}
-													</span>
-												</div>
-											</div>
-										</FormControl>
-										<FormMessage />
-									</FormItem>
+					<form className='space-y-4' onSubmit={otpForm.handleSubmit(onSubmitOtp)}>
+						<Field data-invalid={!!otpForm.formState.errors.otp}>
+							<FieldLabel htmlFor='otp-input'>Authentication code</FieldLabel>
+							<div className='space-y-2'>
+								{useRecoveryCode ? (
+									<Input
+										aria-invalid={!!otpForm.formState.errors.otp}
+										autoComplete='one-time-code'
+										disabled={otpForm.formState.isSubmitting}
+										id='otp-input'
+										placeholder='ABCDE-FGHIJ'
+										{...otpForm.register('otp')}
+									/>
+								) : (
+									<Controller
+										control={otpForm.control}
+										name='otp'
+										render={({ field }) => (
+											<InputOTP
+												autoFocus
+												disabled={otpForm.formState.isSubmitting}
+												maxLength={6}
+												onChange={field.onChange}
+												value={field.value || ''}
+											>
+												<InputOTPGroup>
+													{Array.from({ length: 3 }).map((_, index) => (
+														<InputOTPSlot index={index} key={`otp-${index}`} />
+													))}
+												</InputOTPGroup>
+												<InputOTPSeparator />
+												<InputOTPGroup>
+													{Array.from({ length: 3 }).map((_, index) => (
+														<InputOTPSlot index={index + 3} key={`otp-${index + 3}`} />
+													))}
+												</InputOTPGroup>
+											</InputOTP>
+										)}
+									/>
 								)}
-							/>
-							{otpError && !otpForm.formState.errors.otp ? (
-								<p className='text-destructive text-sm'>{otpError}</p>
-							) : null}
-							<div className='flex items-center space-x-2'>
-								<Checkbox
-									checked={trustDevice}
-									id='trust-device'
-									onCheckedChange={(checked) => setTrustDevice(checked === true)}
-								/>
-								<label
-									className='text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70'
-									htmlFor='trust-device'
-								>
-									Trust this device for 30 days
-								</label>
+								<div className='flex justify-between text-xs text-muted-foreground'>
+									<button
+										className='hover:text-primary'
+										onClick={() => {
+											setUseRecoveryCode((prev) => !prev);
+											otpForm.reset();
+											setOtpError(null);
+										}}
+										type='button'
+									>
+										{useRecoveryCode
+											? 'Use authenticator code instead'
+											: 'Use a recovery code instead'}
+									</button>
+									<span>
+										{useRecoveryCode
+											? 'Recovery codes are 10 characters.'
+											: 'Six digits from your authenticator app.'}
+									</span>
+								</div>
 							</div>
-							<DialogFooter>
-								<Button disabled={otpForm.formState.isSubmitting} type='submit'>
-									{otpForm.formState.isSubmitting ? 'Verifying…' : 'Verify code'}
-								</Button>
-							</DialogFooter>
-						</form>
-					</Form>
+							<FieldError errors={[otpForm.formState.errors.otp]} />
+						</Field>
+						{otpError && !otpForm.formState.errors.otp ? (
+							<p className='text-destructive text-sm'>{otpError}</p>
+						) : null}
+						<div className='flex items-center space-x-2'>
+							<Checkbox
+								checked={trustDevice}
+								id='trust-device'
+								onCheckedChange={(checked) => setTrustDevice(checked === true)}
+							/>
+							<label
+								className='text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70'
+								htmlFor='trust-device'
+							>
+								Trust this device for 30 days
+							</label>
+						</div>
+						<DialogFooter>
+							<Button disabled={otpForm.formState.isSubmitting} type='submit'>
+								{otpForm.formState.isSubmitting ? 'Verifying…' : 'Verify code'}
+							</Button>
+						</DialogFooter>
+					</form>
 				</DialogContent>
 			</Dialog>
-		</Form>
+		</>
 	);
 }

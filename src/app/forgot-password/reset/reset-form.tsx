@@ -8,8 +8,9 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group';
 import { resetPassword } from '@/lib/auth-client';
 
 const schema = z
@@ -32,7 +33,11 @@ function ResetPasswordForm({ token }: { token: string }) {
 	const [showConfirm, setShowConfirm] = useState(false);
 	const [isLoading, setIsLoading] = useState(false);
 	const router = useRouter();
-	const form = useForm<FormValues>({
+	const {
+		formState: { errors },
+		handleSubmit,
+		register
+	} = useForm<FormValues>({
 		defaultValues: { confirm: '', password: '' },
 		resolver: zodResolver(schema)
 	});
@@ -62,72 +67,62 @@ function ResetPasswordForm({ token }: { token: string }) {
 	}
 
 	return (
-		<Form {...form}>
-			<form className='space-y-4' data-testid='reset-form' onSubmit={form.handleSubmit(onSubmit)}>
-				<FormField
-					control={form.control}
-					name='password'
-					render={({ field }) => (
-						<FormItem>
-							<FormLabel>New password</FormLabel>
-							<FormControl>
-								<div className='relative'>
-									<Input
-										autoComplete='new-password'
-										type={showNew ? 'text' : 'password'}
-										{...field}
-										data-testid='reset-password'
-									/>
-									<button
-										aria-label={showNew ? 'Hide password' : 'Show password'}
-										className='absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground'
-										data-testid='reset-toggle-new'
-										onClick={() => setShowNew((s) => !s)}
-										type='button'
-									>
-										{showNew ? <EyeOff size={18} /> : <Eye size={18} />}
-									</button>
-								</div>
-							</FormControl>
-							<FormMessage />
-						</FormItem>
-					)}
-				/>
-				<FormField
-					control={form.control}
-					name='confirm'
-					render={({ field }) => (
-						<FormItem>
-							<FormLabel>Confirm password</FormLabel>
-							<FormControl>
-								<div className='relative'>
-									<Input
-										autoComplete='new-password'
-										type={showConfirm ? 'text' : 'password'}
-										{...field}
-										data-testid='reset-confirm'
-									/>
-									<button
-										aria-label={showConfirm ? 'Hide password' : 'Show password'}
-										className='absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground'
-										data-testid='reset-toggle-confirm'
-										onClick={() => setShowConfirm((s) => !s)}
-										type='button'
-									>
-										{showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
-									</button>
-								</div>
-							</FormControl>
-							<FormMessage />
-						</FormItem>
-					)}
-				/>
+		<form className='space-y-4' data-testid='reset-form' onSubmit={handleSubmit(onSubmit)}>
+			<Field data-invalid={!!errors.password}>
+				<FieldLabel htmlFor='reset-password'>New password</FieldLabel>
+				<InputGroup>
+					<InputGroupInput
+						aria-invalid={!!errors.password}
+						autoComplete='new-password'
+						data-testid='reset-password'
+						id='reset-password'
+						type={showNew ? 'text' : 'password'}
+						{...register('password')}
+					/>
+					<InputGroupAddon align='inline-end'>
+						<InputGroupButton
+							aria-label={showNew ? 'Hide password' : 'Show password'}
+							data-testid='reset-toggle-new'
+							onClick={() => setShowNew((s) => !s)}
+							size='icon-xs'
+							variant='ghost'
+						>
+							{showNew ? <EyeOff className='h-4 w-4' /> : <Eye className='h-4 w-4' />}
+						</InputGroupButton>
+					</InputGroupAddon>
+				</InputGroup>
+				<FieldError errors={[errors.password]} />
+			</Field>
+			<Field data-invalid={!!errors.confirm}>
+				<FieldLabel htmlFor='reset-confirm'>Confirm password</FieldLabel>
+				<InputGroup>
+					<InputGroupInput
+						aria-invalid={!!errors.confirm}
+						autoComplete='new-password'
+						data-testid='reset-confirm'
+						id='reset-confirm'
+						type={showConfirm ? 'text' : 'password'}
+						{...register('confirm')}
+					/>
+					<InputGroupAddon align='inline-end'>
+						<InputGroupButton
+							aria-label={showConfirm ? 'Hide password' : 'Show password'}
+							data-testid='reset-toggle-confirm'
+							onClick={() => setShowConfirm((s) => !s)}
+							size='icon-xs'
+							variant='ghost'
+						>
+							{showConfirm ? <EyeOff className='h-4 w-4' /> : <Eye className='h-4 w-4' />}
+						</InputGroupButton>
+					</InputGroupAddon>
+				</InputGroup>
+				<FieldError errors={[errors.confirm]} />
+			</Field>
 
-				<Button className='w-full' data-testid='reset-submit' disabled={isLoading} type='submit'>
-					{isLoading ? 'Updating…' : 'Update password'}
-				</Button>
-			</form>
-		</Form>
+			<Button className='w-full' data-testid='reset-submit' disabled={isLoading} type='submit'>
+				{isLoading ? 'Updating…' : 'Update password'}
+			</Button>
+		</form>
 	);
 }
 
