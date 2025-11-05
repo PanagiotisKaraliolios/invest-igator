@@ -19,8 +19,8 @@ const config = {
 				protocol: 'https'
 			}
 		]
-	},
-	reactCompiler: true
+	}
+	// reactCompiler: true // Disabled for Docker builds - Turbopack has issues with babel plugin resolution
 };
 
 export default config;
