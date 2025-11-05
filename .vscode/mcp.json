@@ -1,5 +1,9 @@
 {
 	"servers": {
+		"docfork": {
+			"args": ["-y", "docfork"],
+			"command": "bunx" 
+		},
 		"next-devtools": {
 			"args": ["-y", "next-devtools-mcp@latest"],
 			"command": "bunx"
