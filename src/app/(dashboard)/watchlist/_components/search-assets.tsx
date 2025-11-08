@@ -48,7 +48,7 @@ export default function SearchAssets() {
 							</div>
 						)}
 						{search.data?.result && (
-							<div className='max-h-[60vh] space-y-2 overflow-y-auto pr-1'>
+							<div className='max-h-80 space-y-2 overflow-y-auto pr-1'>
 								{search.data.result.map((r: SearchResult, idx) => (
 									<div
 										className='flex items-center justify-between rounded-md border p-2'

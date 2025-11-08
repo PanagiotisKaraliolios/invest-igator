@@ -303,7 +303,7 @@ function ApiKeyDialog({ mode, open, onOpenChange, onSuccess, apiKey }: ApiKeyDia
 
 	return (
 		<Dialog onOpenChange={handleDialogOpenChange} open={open}>
-			<DialogContent className='sm:max-w-[600px] lg:max-w-[700px] max-h-[90vh] overflow-y-auto'>
+			<DialogContent className='sm:max-w-[600px] lg:max-w-[700px] overflow-y-auto'>
 				<DialogHeader>
 					<DialogTitle>{mode === 'create' ? 'Create API Key' : 'Edit API Key'}</DialogTitle>
 					<DialogDescription>
