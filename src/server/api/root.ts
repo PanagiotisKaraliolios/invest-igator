@@ -5,6 +5,7 @@ import { createCallerFactory, createTRPCRouter } from '@/server/api/trpc';
 import { adminRouter } from './routers/admin';
 import { apiKeysRouter } from './routers/api-keys';
 import { currencyProcedures } from './routers/currency';
+import { financialDataRouter } from './routers/financial-data';
 import { fxRouter } from './routers/fx';
 import { goalsRouter } from './routers/goals';
 import { portfolioRouter } from './routers/portfolio';
@@ -142,6 +143,7 @@ export const appRouter = createTRPCRouter({
 	apiKeys: apiKeysRouter,
 	auth: authRouter,
 	currency: currencyProcedures,
+	financialData: financialDataRouter,
 	fx: fxRouter,
 	goals: goalsRouter,
 	portfolio: portfolioRouter,

@@ -81,12 +81,14 @@ export function AppSidebar({
 					isActive: isNavItemActive([
 						{ url: '/admin/analytics' },
 						{ url: '/admin/users' },
-						{ url: '/admin/audit-logs' }
+						{ url: '/admin/audit-logs' },
+						{ url: '/admin/financial-data' }
 					]),
 					items: [
 						{ title: 'Analytics', url: '/admin/analytics' },
 						{ title: 'Users', url: '/admin/users' },
-						{ title: 'Audit Logs', url: '/admin/audit-logs' }
+						{ title: 'Audit Logs', url: '/admin/audit-logs' },
+						{ title: 'Financial Data', url: '/admin/financial-data' }
 					],
 					title: 'Admin'
 				}
