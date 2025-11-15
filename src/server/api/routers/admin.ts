@@ -1,6 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { headers } from 'next/headers';
 import { z } from 'zod';
+import { env } from '@/env';
 import { auth } from '@/lib/auth';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
 
@@ -145,6 +146,257 @@ export const adminRouter = createTRPCRouter({
 			}
 
 			return { success: true };
+		}),
+
+	/**
+	 * Get analytics data for the admin dashboard
+	 */
+	getAnalytics: adminProcedure
+		.input(
+			z.object({
+				endDate: z.date().optional(),
+				period: z.enum(['daily', 'weekly', 'monthly']).default('daily'),
+				startDate: z.date().optional()
+			})
+		)
+		.query(async ({ input, ctx }) => {
+			const { period, startDate, endDate } = input;
+
+			// Default to last 30 days if no date range specified
+			const end = endDate ?? new Date();
+			const start =
+				startDate ??
+				new Date(
+					end.getTime() - (period === 'monthly' ? 365 : period === 'weekly' ? 90 : 30) * 24 * 60 * 60 * 1000
+				);
+
+			// Helper function to group data by time period
+			const groupByPeriod = <T extends { createdAt: Date }>(
+				data: T[],
+				periodType: 'daily' | 'weekly' | 'monthly'
+			): Array<{ count: number; period: Date }> => {
+				const grouped = new Map<string, { count: number; period: Date }>();
+
+				for (const item of data) {
+					const date = new Date(item.createdAt);
+					let key: string;
+					let periodDate: Date;
+
+					if (periodType === 'daily') {
+						periodDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+						key = periodDate.toISOString();
+					} else if (periodType === 'weekly') {
+						// Get start of week (Sunday)
+						const dayOfWeek = date.getDay();
+						periodDate = new Date(date);
+						periodDate.setDate(date.getDate() - dayOfWeek);
+						periodDate.setHours(0, 0, 0, 0);
+						key = periodDate.toISOString();
+					} else {
+						// monthly
+						periodDate = new Date(date.getFullYear(), date.getMonth(), 1);
+						key = periodDate.toISOString();
+					}
+
+					const existing = grouped.get(key);
+					if (existing) {
+						existing.count++;
+					} else {
+						grouped.set(key, { count: 1, period: periodDate });
+					}
+				}
+
+				return Array.from(grouped.values()).sort((a, b) => a.period.getTime() - b.period.getTime());
+			};
+
+			// User Growth - signups over time
+			const users = await ctx.db.user.findMany({
+				select: { createdAt: true },
+				where: {
+					createdAt: { gte: start, lte: end }
+				}
+			});
+			const userGrowth = groupByPeriod(users, period);
+
+			// Active Sessions over time
+			const sessions = await ctx.db.session.findMany({
+				select: { createdAt: true, userId: true },
+				where: {
+					createdAt: { gte: start, lte: end }
+				}
+			});
+
+			// Group sessions by period and count unique users
+			const sessionActivity = (() => {
+				const grouped = new Map<string, { count: number; period: Date; userIds: Set<string> }>();
+
+				for (const session of sessions) {
+					const date = new Date(session.createdAt);
+					let key: string;
+					let periodDate: Date;
+
+					if (period === 'daily') {
+						periodDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+						key = periodDate.toISOString();
+					} else if (period === 'weekly') {
+						const dayOfWeek = date.getDay();
+						periodDate = new Date(date);
+						periodDate.setDate(date.getDate() - dayOfWeek);
+						periodDate.setHours(0, 0, 0, 0);
+						key = periodDate.toISOString();
+					} else {
+						periodDate = new Date(date.getFullYear(), date.getMonth(), 1);
+						key = periodDate.toISOString();
+					}
+
+					const existing = grouped.get(key);
+					if (existing) {
+						existing.userIds.add(session.userId);
+					} else {
+						grouped.set(key, {
+							count: 0,
+							period: periodDate,
+							userIds: new Set([session.userId])
+						});
+					}
+				}
+
+				return Array.from(grouped.values())
+					.map((g) => ({
+						count: g.userIds.size,
+						period: g.period
+					}))
+					.sort((a, b) => a.period.getTime() - b.period.getTime());
+			})(); // Geographic Distribution
+			const geoDistribution = await ctx.db.session.groupBy({
+				_count: { location: true },
+				by: ['location'],
+				orderBy: { _count: { location: 'desc' } },
+				take: 10,
+				where: {
+					createdAt: { gte: start, lte: end },
+					location: { not: null }
+				}
+			});
+
+			// Most Viewed Symbols
+			const popularSymbols = await ctx.db.watchlistItem.groupBy({
+				_count: { symbol: true },
+				by: ['symbol', 'displaySymbol'],
+				orderBy: { _count: { symbol: 'desc' } },
+				take: 10
+			});
+
+			// Transaction Volume over time
+			const transactions = await ctx.db.transaction.findMany({
+				select: { date: true, price: true, quantity: true },
+				where: {
+					date: { gte: start, lte: end }
+				}
+			});
+
+			const transactionVolume = (() => {
+				const grouped = new Map<string, { count: number; period: Date; totalValue: number }>();
+
+				for (const tx of transactions) {
+					const date = new Date(tx.date);
+					let key: string;
+					let periodDate: Date;
+
+					if (period === 'daily') {
+						periodDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+						key = periodDate.toISOString();
+					} else if (period === 'weekly') {
+						const dayOfWeek = date.getDay();
+						periodDate = new Date(date);
+						periodDate.setDate(date.getDate() - dayOfWeek);
+						periodDate.setHours(0, 0, 0, 0);
+						key = periodDate.toISOString();
+					} else {
+						periodDate = new Date(date.getFullYear(), date.getMonth(), 1);
+						key = periodDate.toISOString();
+					}
+
+					const value = tx.quantity * tx.price;
+					const existing = grouped.get(key);
+					if (existing) {
+						existing.count++;
+						existing.totalValue += value;
+					} else {
+						grouped.set(key, {
+							count: 1,
+							period: periodDate,
+							totalValue: value
+						});
+					}
+				}
+
+				return Array.from(grouped.values()).sort((a, b) => a.period.getTime() - b.period.getTime());
+			})(); // API Usage Statistics
+			const apiUsage = await ctx.db.apiKey.aggregate({
+				_avg: { requestCount: true },
+				_count: { id: true },
+				_sum: { requestCount: true },
+				where: {
+					enabled: true,
+					lastRequest: { gte: start, lte: end }
+				}
+			});
+
+			// Device Distribution
+			const deviceDistribution = await ctx.db.session.groupBy({
+				_count: { device: true },
+				by: ['device'],
+				orderBy: { _count: { device: 'desc' } },
+				where: {
+					createdAt: { gte: start, lte: end },
+					device: { not: null }
+				}
+			});
+
+			// Average session duration calculation
+			const sessionDurations = await ctx.db.session.findMany({
+				select: { createdAt: true, expiresAt: true },
+				where: {
+					createdAt: { gte: start, lte: end }
+				}
+			});
+
+			const avgDurationMinutes =
+				sessionDurations.length > 0
+					? sessionDurations.reduce((sum, s) => {
+							const duration = (s.expiresAt.getTime() - s.createdAt.getTime()) / (1000 * 60);
+							return sum + duration;
+						}, 0) / sessionDurations.length
+					: 0;
+
+			return {
+				apiUsage: {
+					activeKeys: apiUsage._count.id,
+					avgRequestsPerKey: apiUsage._avg.requestCount ?? 0,
+					totalRequests: apiUsage._sum.requestCount ?? 0
+				},
+				deviceDistribution: deviceDistribution.map((d) => ({
+					count: d._count.device,
+					device: d.device ?? 'Unknown'
+				})),
+				geoDistribution: geoDistribution.map((g) => ({
+					count: g._count.location,
+					location: g.location ?? 'Unknown'
+				})),
+				period,
+				popularSymbols: popularSymbols.map((s) => ({
+					count: s._count.symbol,
+					displaySymbol: s.displaySymbol ?? s.symbol,
+					symbol: s.symbol
+				})),
+				sessionActivity,
+				sessionStats: {
+					avgDurationMinutes
+				},
+				transactionVolume,
+				userGrowth
+			};
 		}),
 
 	/**

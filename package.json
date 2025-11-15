@@ -78,6 +78,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.3.3",
+		"@faker-js/faker": "^10.1.0",
 		"@playwright/test": "^1.56.1",
 		"@tailwindcss/postcss": "^4.1.16",
 		"@tanstack/react-query-devtools": "^5.90.2",
@@ -106,6 +107,7 @@
 		"check:write": "biome check --write ./src",
 		"db:generate": "prisma migrate dev",
 		"db:migrate": "prisma migrate deploy",
+		"db:mock": "bun prisma/mock.ts",
 		"db:push": "prisma db push",
 		"db:seed": "bun prisma/seed.ts",
 		"db:studio": "prisma studio --port 5000",
