@@ -10,7 +10,7 @@ async function fetchRate(base: Currency, quote: Currency): Promise<number | null
 	// Prefer Alpha Vantage FX_DAILY compact latest or CURRENCY_EXCHANGE_RATE endpoint
 	const apiKey = env.ALPHAVANTAGE_API_KEY;
 	try {
-		const url = new URL('https://www.alphavantage.co/query');
+		const url = new URL(env.ALPHAVANTAGE_API_URL.replace(/\/$/, ''));
 		url.searchParams.set('function', 'CURRENCY_EXCHANGE_RATE');
 		url.searchParams.set('from_currency', base);
 		url.searchParams.set('to_currency', quote);
