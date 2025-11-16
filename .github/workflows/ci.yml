@@ -113,19 +113,17 @@ jobs:
       - name: Install Playwright browsers
         run: bun run test:e2e:install
 
-      - name: Create minimal .env for docker-compose
-        run: |
-          cat > .env << EOF
-          POSTGRES_USER=postgres
-          POSTGRES_PASSWORD=postgres
-          POSTGRES_DB=investigator
-          EOF
-
       - name: Start PostgreSQL
         run: |
-          docker compose up -d db
+          docker run -d \
+            --name postgres \
+            -e POSTGRES_USER=postgres \
+            -e POSTGRES_PASSWORD=postgres \
+            -e POSTGRES_DB=investigator \
+            -p 5432:5432 \
+            postgres:16-alpine
           # Wait for PostgreSQL to be ready
-          timeout 30 bash -c 'until docker compose exec -T db pg_isready -U postgres; do sleep 1; done'
+          timeout 30 bash -c 'until docker exec postgres pg_isready -U postgres; do sleep 1; done'
 
       - name: Run Prisma migrations
         run: bun run db:push
@@ -152,7 +150,7 @@ jobs:
 
       - name: Stop PostgreSQL
         if: always()
-        run: docker compose down
+        run: docker stop postgres && docker rm postgres
 
   migration-check:
     name: Migration Check
@@ -173,18 +171,17 @@ jobs:
       - name: Generate Prisma Client
         run: bun run postinstall
 
-      - name: Create minimal .env for docker-compose
-        run: |
-          cat > .env << EOF
-          POSTGRES_USER=postgres
-          POSTGRES_PASSWORD=postgres
-          POSTGRES_DB=investigator
-          EOF
-
       - name: Start PostgreSQL
         run: |
-          docker compose up -d db
-          timeout 30 bash -c 'until docker compose exec -T db pg_isready -U postgres; do sleep 1; done'
+          docker run -d \
+            --name postgres \
+            -e POSTGRES_USER=postgres \
+            -e POSTGRES_PASSWORD=postgres \
+            -e POSTGRES_DB=investigator \
+            -p 5432:5432 \
+            postgres:16-alpine
+          # Wait for PostgreSQL to be ready
+          timeout 30 bash -c 'until docker exec postgres pg_isready -U postgres; do sleep 1; done'
 
       - name: Apply migrations
         run: bun run db:migrate
@@ -198,7 +195,7 @@ jobs:
 
       - name: Stop PostgreSQL
         if: always()
-        run: docker compose down
+        run: docker stop postgres && docker rm postgres
 
   all-checks:
     name: All Checks Passed
