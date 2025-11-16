@@ -86,8 +86,8 @@ export async function fetchYahooDaily(
 	capitalGains: CapitalGainEvent[];
 	currency?: string;
 }> {
-	const base = env.YAHOO_CHART_API_URL.replace(/\/$/, '');
-	const url = new URL(`${base}/${encodeURIComponent(symbol)}`);
+	const base = env.YAHOO_API_URL.replace(/\/$/, '');
+	const url = new URL(`${base}/chart/${encodeURIComponent(symbol)}`);
 	url.searchParams.set('interval', options?.interval ?? '1d');
 	url.searchParams.set('includePrePost', String(options?.includePrePost ?? true));
 	url.searchParams.set('formatted', 'true');

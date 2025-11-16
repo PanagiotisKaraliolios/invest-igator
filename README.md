@@ -184,7 +184,7 @@ Validated in `src/env.js` via `@t3-oss/env-nextjs`. Server-side vars are require
 - `FINNHUB_API_KEY` (required for search and symbol validation)
 - `ALPHAVANTAGE_API_URL` (default <https://www.alphavantage.co/query>)
 - `ALPHAVANTAGE_API_KEY` (required for FX ingestion)
-- `YAHOO_CHART_API_URL` (default <https://query2.finance.yahoo.com/v8/finance/chart>)
+- `YAHOO_API_URL` (default <https://query2.finance.yahoo.com/v8/finance/chart>)
 - `POLYGON_API_URL`, `POLYGON_API_KEY` (present in schema; not currently required by code paths)
 
 </details>

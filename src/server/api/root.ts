@@ -122,7 +122,7 @@ import { transactionsRouter } from './routers/transactions';
  * - `add` - Add symbol to watchlist
  * - `list` - Get all watchlist items
  * - `remove` - Remove symbol from watchlist
- * - `search` - Search for symbols via Finnhub
+ * - `search` - Search for symbols via Yahoo Finance
  * - `history` - Get historical price data
  * - `events` - Get corporate events (dividends, splits)
  * - `toggleStar` - Star/unstar symbols (max 5)

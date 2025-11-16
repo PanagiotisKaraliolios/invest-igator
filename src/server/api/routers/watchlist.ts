@@ -13,7 +13,7 @@ import { ingestYahooSymbol } from '@/server/jobs/yahoo-lib';
  * - Add/remove symbols from watchlist
  * - Retrieve historical price data from InfluxDB
  * - Corporate events (dividends, splits, capital gains)
- * - Symbol search via Finnhub API
+ * - Symbol search via Yahoo Finance API
  * - Star/favorite symbols (max 5)
  *
  * @example
@@ -361,13 +361,13 @@ export const watchlistRouter = createTRPCRouter({
 		}),
 
 	/**
-	 * Searches for symbols using Finnhub API.
+	 * Searches for symbols using Yahoo Finance API.
 	 *
 	 * @input q - Search query (min 1 character)
 	 *
 	 * @returns Search results with count and result array containing symbol, displaySymbol, description, type
 	 *
-	 * @throws {Error} If Finnhub API fails
+	 * @throws {Error} If Yahoo Finance search fails
 	 *
 	 * @example
 	 * const results = await api.watchlist.search.query({ q: 'apple' });
@@ -376,26 +376,52 @@ export const watchlistRouter = createTRPCRouter({
 	search: withPermissions('watchlist', 'read')
 		.input(z.object({ q: z.string().min(1) }))
 		.query(async ({ input }) => {
-			const url = new URL(`${env.FINNHUB_API_URL}/search`);
+			const url = new URL('https://query1.finance.yahoo.com/v1/finance/search');
 			url.searchParams.set('q', input.q);
-			url.searchParams.set('token', env.FINNHUB_API_KEY);
+			url.searchParams.set('lang', 'en-US');
+			url.searchParams.set('region', 'US');
+			url.searchParams.set('newsCount', '0');
+			url.searchParams.set('enableLogoUrl', 'true');
 
-			const res = await fetch(url.toString());
+			const res = await fetch(url.toString(), {
+				headers: {
+					Accept: 'application/json, text/plain, */*',
+					'User-Agent': 'Mozilla/5.0 (compatible; invest-igator/1.0)'
+				}
+			});
 			if (!res.ok) {
-				throw new Error(`Finnhub search failed: ${res.status}`);
+				const errorText = await res.text().catch(() => 'Unknown error');
+				throw new Error(`Yahoo Finance search failed: ${res.status} - ${errorText}`);
 			}
-			const data = (await res.json()) as {
+			const yahooData = (await res.json()) as {
 				count: number;
-				result: Array<{
-					description: string;
-					displaySymbol: string;
+				quotes: Array<{
+					exchange: string;
+					shortname: string;
+					quoteType: string;
 					symbol: string;
-					type: string;
+					typeDisp: string;
+					longname?: string;
+					exchDisp: string;
+					logoUrl?: string;
+					sector?: string;
+					industry?: string;
 				}>;
 			};
 
+			// Transform Yahoo Finance response to match expected format
+			const data = {
+				count: yahooData.count,
+				result: yahooData.quotes.map((quote) => ({
+					description: quote.longname || quote.shortname,
+					displaySymbol: quote.symbol,
+					symbol: quote.symbol,
+					type: quote.typeDisp
+				}))
+			};
+
 			if (process.env.NODE_ENV !== 'production') {
-				console.log('[watchlist.search] Finnhub response', data);
+				console.log('[watchlist.search] Yahoo Finance response', data);
 			}
 
 			return data;

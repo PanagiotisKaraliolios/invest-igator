@@ -22,7 +22,7 @@ ENV SKIP_ENV_VALIDATION=1 \
 	INFLUXDB_BUCKET=dummy \
 	DATABASE_URL=postgres://user:pass@localhost:5432/db \
 	FINNHUB_API_URL=https://finnhub.io/api/v1 \
-	YAHOO_CHART_API_URL=https://query2.finance.yahoo.com/v8/finance/chart
+	YAHOO_API_URL=https://query2.finance.yahoo.com/v8/finance
 WORKDIR /app
 
 # Generate Prisma client
