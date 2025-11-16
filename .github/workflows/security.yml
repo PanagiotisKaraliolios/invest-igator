@@ -1,0 +1,122 @@
+name: Security Scanning
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 2 * * *' # daily at 02:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  security-events: write
+  id-token: write
+
+jobs:
+  codeql:
+    name: CodeQL analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: javascript,typescript
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v2
+
+      - name: Run CodeQL analysis
+        uses: github/codeql-action/analyze@v2
+        with:
+          output: codeql-results.sarif
+
+  secret-scan:
+    name: Secret scanning (gitleaks)
+    runs-on: ubuntu-latest
+    needs: codeql
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run gitleaks (fast scan)
+        uses: zricethezav/gitleaks-action@v2.8.0
+        with:
+          args: --verbose --no-git -r gitleaks-report.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload gitleaks report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitleaks-report
+          path: gitleaks-report.json
+
+  dependency-review:
+    name: Dependency review
+    runs-on: ubuntu-latest
+    needs: [codeql, secret-scan]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Dependency Review Action
+        uses: github/dependency-review-action@v2
+        with:
+          # Fail the job if high severity vulnerabilities are introduced in a PR.
+          # For pushes, this will still produce a report.
+          fail-on-severity: high
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload dependency review SARIF (if present)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-review
+          path: dependency-review.report.json
+
+  summary:
+    name: Post summary comment (PRs)
+    runs-on: ubuntu-latest
+    needs: [codeql, secret-scan, dependency-review]
+    if: ${{ github.event_name == 'pull_request' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create results comment
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { context, github } = require('@actions/github');
+            const pr = context.payload.pull_request;
+            if (!pr) {
+              console.log('Not a PR run, skipping comment');
+              return;
+            }
+            const body = [
+              '### Security scan summary',
+              '- CodeQL analysis: completed',
+              '- Secret scan (gitleaks): completed',
+              '- Dependency review: completed',
+              '\nIf you need details, check the uploaded artifacts or the Security tab in GitHub.'
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              body,
+            });
+
+
+# Notes:
+# - CodeQL results are also uploaded automatically to the Code scanning tab (no extra SARIF step needed here).
+# - gitleaks finds potential secrets in the repo history; configure rules or ignore files as needed.
+# - For Dependabot-style automated dependency updates, consider adding `.github/dependabot.yml` instead of relying solely on this workflow.
