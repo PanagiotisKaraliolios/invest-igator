@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
@@ -41,7 +41,7 @@ jobs:
     needs: codeql
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Run gitleaks (fast scan)
         uses: zricethezav/gitleaks-action@v2.8.0
@@ -63,7 +63,7 @@ jobs:
     needs: [codeql, secret-scan]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Run Dependency Review Action
         uses: github/dependency-review-action@v2
@@ -88,7 +88,7 @@ jobs:
     if: ${{ github.event_name == 'pull_request' }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Create results comment
         uses: actions/github-script@v6
