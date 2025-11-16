@@ -42,17 +42,21 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
 			const apiKey = opts.headers.get('x-api-key');
 
 			if (apiKey) {
-				// Extract identifying info for lookup, e.g., start/prefix
-				// Match the logic in generateApiKey: start = 6 + (prefix?.length ?? 0)
-				// If prefix is used, assume it's separated by '_' (e.g., 'PREFIX_')
-				const underscorePos = apiKey.indexOf('_');
-				const prefixLength = underscorePos >= 0 ? underscorePos + 1 : 0;
-				const START_LENGTH = 6 + prefixLength;
-				const keyStart = apiKey.slice(0, START_LENGTH);
-
+				// Query for candidate API keys by matching the 'start' field.
+				// The 'start' field stores the first N characters where N = 6 + prefix.length.
+				// Since we don't know the prefix length in advance, we try multiple possible
+				// lengths (6 to 20 chars) and find keys where the stored 'start' equals one
+				// of these candidate prefixes extracted from the provided apiKey.
 				const candidateApiKeys = await db.apiKey.findMany({
 					include: { user: true },
-					where: { start: keyStart }
+					where: {
+						start: {
+							// Find keys where the stored 'start' field matches one of the possible prefixes of the provided apiKey
+							// Since 'start' = key.slice(0, 6 + prefix.length), we try multiple possible lengths
+							in: Array.from(new Set(Array.from({ length: 15 }, (_, i) => apiKey.slice(0, 6 + i))))
+								.filter(s => s.length >= 6) // unique & min length
+						}
+					}
 				});
 
 				// Try to find one whose hash matches.
