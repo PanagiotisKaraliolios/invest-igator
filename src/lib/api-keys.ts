@@ -7,14 +7,14 @@ import bcrypt from 'bcryptjs';
  * @param prefix - Optional prefix for the key (e.g., "proj_")
  * @returns Object containing the plain key and the hashed key
  */
-export function generateApiKey(
+export async function generateApiKey(
 	length = 64,
 	prefix?: string
-): {
+): Promise<{
 	key: string;
 	hashedKey: string;
 	start: string;
-} {
+}> {
 	// Generate random bytes
 	const randomPart = randomBytes(Math.ceil(length / 2))
 		.toString('hex')
@@ -24,7 +24,7 @@ export function generateApiKey(
 	const key = prefix ? `${prefix}${randomPart}` : randomPart;
 
 	// Hash the key for storage
-	const hashedKey = hashApiKey(key);
+	const hashedKey = await hashApiKey(key);
 
 	// Store first 6 characters (or prefix + 6) for identification
 	const start = key.slice(0, 6 + (prefix?.length ?? 0));
@@ -37,9 +37,9 @@ export function generateApiKey(
  * @param key - The plain API key
  * @returns The hashed key
  */
-export function hashApiKey(key: string): string {
+export async function hashApiKey(key: string): Promise<string> {
 	// Using cost factor 12 for reasonable security/cost balance
-	return bcrypt.hashSync(key, 12);
+	return bcrypt.hash(key, 12);
 }
 
 /**
