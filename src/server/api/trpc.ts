@@ -42,17 +42,30 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
 			const apiKey = opts.headers.get('x-api-key');
 
 			if (apiKey) {
-				// Extract identifying info for lookup, e.g., start/prefix
-				// Match the logic in generateApiKey: start = 6 + (prefix?.length ?? 0)
-				// If prefix is used, assume it's separated by '_' (e.g., 'PREFIX_')
-				const underscorePos = apiKey.indexOf('_');
-				const prefixLength = underscorePos >= 0 ? underscorePos + 1 : 0;
-				const START_LENGTH = 6 + prefixLength;
-				const keyStart = apiKey.slice(0, START_LENGTH);
-
+				// Query for candidate API keys by matching the 'start' field
+				// The 'start' field stores the first 6+ characters (6 + prefix length)
+				// We query for any key whose 'start' matches the beginning of the provided key
+				// Since we don't know the prefix length, we'll query for keys where
+				// the provided apiKey starts with their 'start' value
 				const candidateApiKeys = await db.apiKey.findMany({
 					include: { user: true },
-					where: { start: keyStart }
+					where: {
+						start: {
+							// Find keys where the apiKey starts with the stored 'start' value
+							// This works because 'start' is always a prefix of the full key
+							in: [
+								apiKey.slice(0, 6),   // No prefix case
+								apiKey.slice(0, 7),   // 1-char prefix
+								apiKey.slice(0, 8),   // 2-char prefix
+								apiKey.slice(0, 9),   // 3-char prefix
+								apiKey.slice(0, 10),  // 4-char prefix
+								apiKey.slice(0, 11),  // 5-char prefix
+								apiKey.slice(0, 12),  // 6-char prefix
+								apiKey.slice(0, 15),  // Longer prefixes (up to 9 chars)
+								apiKey.slice(0, 20),  // Very long prefixes (up to 14 chars)
+							].filter((s, i, arr) => arr.indexOf(s) === i && s.length >= 6) // unique & min length
+						}
+					}
 				});
 
 				// Try to find one whose hash matches.

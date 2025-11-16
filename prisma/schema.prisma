@@ -270,5 +270,6 @@ model ApiKey {
   @@index([userId])
   @@index([expiresAt])
   @@index([enabled])
+  @@index([start])
   @@map("apiKey")
 }
