@@ -66,7 +66,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Run Dependency Review Action
-        uses: github/dependency-review-action@v2
+        uses: actions/dependency-review-action
         with:
           # Fail the job if high severity vulnerabilities are introduced in a PR.
           # For pushes, this will still produce a report.
