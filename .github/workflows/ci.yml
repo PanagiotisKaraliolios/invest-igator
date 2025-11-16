@@ -71,8 +71,25 @@ jobs:
       - name: Build
         run: bun run build
         env:
-          # Bypass env validation for build-time only
-          SKIP_ENV_VALIDATION: true
+          # Required for build-time data collection
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/investigator
+          BETTER_AUTH_SECRET: test-secret-key-for-ci-only-min-32-chars-required
+          BETTER_AUTH_URL: http://localhost:3000
+          PASSWORD_PEPPER: test-pepper-for-ci-only
+          EMAIL_SERVER: smtp://fake:fake@localhost:25
+          EMAIL_FROM: noreply@test.local
+          ALPHAVANTAGE_API_KEY: test-key
+          AUTH_DISCORD_ID: test-id
+          AUTH_DISCORD_SECRET: test-secret
+          CLOUDFLARE_ACCESS_KEY_ID: test-key-id
+          CLOUDFLARE_ACCOUNT_ID: test-account-id
+          CLOUDFLARE_BUCKET_NAME: test-bucket
+          CLOUDFLARE_SECRET_ACCESS_KEY: test-secret-key
+          INFLUXDB_BUCKET: test-bucket
+          INFLUXDB_ORG: test-org
+          INFLUXDB_TOKEN: test-token
+          INFLUXDB_URL: http://localhost:8086
+          POLYGON_API_KEY: test-key
 
   e2e:
     name: E2E Tests
@@ -96,11 +113,19 @@ jobs:
       - name: Install Playwright browsers
         run: bun run test:e2e:install
 
+      - name: Create minimal .env for docker-compose
+        run: |
+          cat > .env << EOF
+          POSTGRES_USER=postgres
+          POSTGRES_PASSWORD=postgres
+          POSTGRES_DB=investigator
+          EOF
+
       - name: Start PostgreSQL
         run: |
-          docker compose up -d postgres
+          docker compose up -d db
           # Wait for PostgreSQL to be ready
-          timeout 30 bash -c 'until docker compose exec -T postgres pg_isready -U postgres; do sleep 1; done'
+          timeout 30 bash -c 'until docker compose exec -T db pg_isready -U postgres; do sleep 1; done'
 
       - name: Run Prisma migrations
         run: bun run db:push
@@ -148,10 +173,18 @@ jobs:
       - name: Generate Prisma Client
         run: bun run postinstall
 
+      - name: Create minimal .env for docker-compose
+        run: |
+          cat > .env << EOF
+          POSTGRES_USER=postgres
+          POSTGRES_PASSWORD=postgres
+          POSTGRES_DB=investigator
+          EOF
+
       - name: Start PostgreSQL
         run: |
-          docker compose up -d postgres
-          timeout 30 bash -c 'until docker compose exec -T postgres pg_isready -U postgres; do sleep 1; done'
+          docker compose up -d db
+          timeout 30 bash -c 'until docker compose exec -T db pg_isready -U postgres; do sleep 1; done'
 
       - name: Apply migrations
         run: bun run db:migrate
