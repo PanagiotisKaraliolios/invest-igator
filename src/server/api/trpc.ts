@@ -53,8 +53,8 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
 						start: {
 							// Find keys where the stored 'start' field matches one of the possible prefixes of the provided apiKey
 							// Since 'start' = key.slice(0, 6 + prefix.length), we try multiple possible lengths
-							in: Array.from({ length: 15 }, (_, i) => apiKey.slice(0, 6 + i))
-								.filter((s, i, arr) => arr.indexOf(s) === i && s.length >= 6) // unique & min length
+							in: Array.from(new Set(Array.from({ length: 15 }, (_, i) => apiKey.slice(0, 6 + i))))
+								.filter(s => s.length >= 6) // unique & min length
 						}
 					}
 				});
