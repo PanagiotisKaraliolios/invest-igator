@@ -96,7 +96,6 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const { context, github } = require('@actions/github');
             const pr = context.payload.pull_request;
             if (!pr) {
               console.log('Not a PR run, skipping comment');
