@@ -445,29 +445,6 @@ export const apiKeysRouter = createTRPCRouter({
 				}
 			}
 
-			// Check remaining requests
-			if (apiKey.remaining !== null) {
-				// Check if refill is due
-				if (isRefillDue(apiKey.lastRefillAt, apiKey.refillInterval)) {
-					const newRemaining = apiKey.remaining + (apiKey.refillAmount ?? 0);
-					await ctx.db.apiKey.update({
-						data: {
-							lastRefillAt: new Date(),
-							remaining: newRemaining
-						},
-						where: { id: apiKey.id }
-					});
-				}
-
-				if (apiKey.remaining <= 0) {
-					return {
-						error: { code: 'NO_REMAINING', message: 'API key has no remaining requests' },
-						key: null,
-						valid: false
-					};
-				}
-			}
-
 			// Check permissions if required
 			if (input.permissions) {
 				const keyPermissions = apiKey.permissions ? JSON.parse(apiKey.permissions) : null;
@@ -484,7 +461,7 @@ export const apiKeysRouter = createTRPCRouter({
 				}
 			}
 
-			// Update usage statistics
+			// Update usage statistics atomically
 			const now = new Date();
 			const shouldResetRateLimit =
 				apiKey.rateLimitEnabled &&
@@ -492,16 +469,48 @@ export const apiKeysRouter = createTRPCRouter({
 				apiKey.rateLimitTimeWindow &&
 				now.getTime() - apiKey.lastRequest.getTime() >= apiKey.rateLimitTimeWindow;
 
-			await ctx.db.apiKey.update({
+			// Check if refill is due (single check)
+			const shouldRefill = apiKey.remaining !== null && isRefillDue(apiKey.lastRefillAt, apiKey.refillInterval);
+
+			// Calculate new remaining count
+			let newRemaining: number | null = null;
+			if (apiKey.remaining !== null) {
+				if (shouldRefill) {
+					// Refill and then consume this request
+					newRemaining = apiKey.remaining + (apiKey.refillAmount ?? 0) - 1;
+				} else {
+					// Just consume this request
+					newRemaining = apiKey.remaining - 1;
+				}
+
+				// Check if we have enough remaining (before update)
+				// newRemaining is already decremented by 1 for this request
+				// So if it's < 0, we don't have enough for this request
+				if (newRemaining < 0) {
+					return {
+						error: { code: 'NO_REMAINING', message: 'API key has no remaining requests' },
+						key: null,
+						valid: false
+					};
+				}
+			}
+
+			const updatedKey = await ctx.db.apiKey.update({
 				data: {
+					...(shouldRefill && { lastRefillAt: now }),
 					lastRequest: now,
-					remaining: apiKey.remaining !== null ? apiKey.remaining - 1 : null,
+					remaining: newRemaining,
 					requestCount: shouldResetRateLimit ? 1 : apiKey.requestCount + 1
+				},
+				select: {
+					lastRefillAt: true,
+					remaining: true,
+					requestCount: true
 				},
 				where: { id: apiKey.id }
 			});
 
-			// Return valid response
+			// Return valid response with updated values
 			return {
 				error: null,
 				key: {
@@ -509,7 +518,7 @@ export const apiKeysRouter = createTRPCRouter({
 					enabled: apiKey.enabled,
 					expiresAt: apiKey.expiresAt,
 					id: apiKey.id,
-					lastRefillAt: apiKey.lastRefillAt,
+					lastRefillAt: updatedKey.lastRefillAt,
 					lastRequest: now,
 					metadata: apiKey.metadata ? JSON.parse(apiKey.metadata) : null,
 					name: apiKey.name,
@@ -520,8 +529,8 @@ export const apiKeysRouter = createTRPCRouter({
 					rateLimitTimeWindow: apiKey.rateLimitTimeWindow,
 					refillAmount: apiKey.refillAmount,
 					refillInterval: apiKey.refillInterval,
-					remaining: apiKey.remaining !== null ? apiKey.remaining - 1 : null,
-					requestCount: shouldResetRateLimit ? 1 : apiKey.requestCount + 1,
+					remaining: updatedKey.remaining,
+					requestCount: updatedKey.requestCount,
 					start: apiKey.start,
 					updatedAt: apiKey.updatedAt,
 					userId: apiKey.userId
