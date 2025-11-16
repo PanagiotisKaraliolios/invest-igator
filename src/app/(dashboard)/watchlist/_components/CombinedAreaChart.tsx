@@ -132,7 +132,7 @@ export default function CombinedAreaChart(props: Props) {
 								);
 							}}
 							indicator='dot'
-							labelFormatter={(_: any, pl: any[]) => {
+							labelFormatter={(_: any, pl: readonly any[]) => {
 								const iso = (pl?.[0]?.payload as any)?.iso as string | undefined;
 								if (!iso) return (pl?.[0]?.payload as any)?.date ?? '';
 								const d = new Date(iso);
