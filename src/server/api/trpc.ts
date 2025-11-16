@@ -45,7 +45,7 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
 				// Extract identifying info for lookup, e.g., start/prefix
 				// Match the logic in generateApiKey: start = 6 + (prefix?.length ?? 0)
 				// If prefix is used, assume it's separated by '_' (e.g., 'PREFIX_')
-				const prefixMatch = apiKey.match(/^([A-Z0-9]+_)/);
+				const prefixMatch = apiKey.match(/^([A-Za-z0-9_]+_)/);
 				const prefixLength = prefixMatch ? prefixMatch[1].length : 0;
 				const START_LENGTH = 6 + prefixLength;
 				const keyStart = apiKey.slice(0, START_LENGTH);
