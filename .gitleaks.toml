@@ -7,8 +7,8 @@ title = "Gitleaks config for invest-igator"
 # Use the default Gitleaks rules
 useDefault = true
 
-# Additional allowlists for example API keys in documentation
-[[allowlist]]
+# Allowlist for example API keys in documentation
+[allowlist]
 description = "Example API keys in documentation files"
 paths = [
   '''postman/\.postman-examples\.md''',

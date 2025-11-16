@@ -42,20 +42,20 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
-
-      - name: Run gitleaks (fast scan)
-        uses: zricethezav/gitleaks-action@v2.3.9
         with:
-          args: --verbose --no-git -r gitleaks-report.json
+          fetch-depth: 0 # Full history for gitleaks
+
+      - name: Run gitleaks
+        uses: zricethezav/gitleaks-action@v2.3.9
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload gitleaks report
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@v5
         with:
-          name: gitleaks-report
-          path: gitleaks-report.json
+          name: gitleaks-sarif
+          path: results.sarif
 
   dependency-review:
     name: Dependency review
