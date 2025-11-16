@@ -1,0 +1,185 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run Biome
+        run: bun run check
+
+  typecheck:
+    name: Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: bun run postinstall
+
+      - name: Type check
+        run: bun run typecheck
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: bun run postinstall
+
+      - name: Build
+        run: bun run build
+        env:
+          # Bypass env validation for build-time only
+          SKIP_ENV_VALIDATION: true
+
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: bun run postinstall
+
+      - name: Install Playwright browsers
+        run: bun run test:e2e:install
+
+      - name: Start PostgreSQL
+        run: |
+          docker compose up -d postgres
+          # Wait for PostgreSQL to be ready
+          timeout 30 bash -c 'until docker compose exec -T postgres pg_isready -U postgres; do sleep 1; done'
+
+      - name: Run Prisma migrations
+        run: bun run db:push
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/investigator
+
+      - name: Run E2E tests
+        run: bun run test:e2e
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/investigator
+          NEXTAUTH_SECRET: test-secret-key-for-ci-only-min-32-chars-required
+          NEXTAUTH_URL: http://localhost:3000
+          PASSWORD_PEPPER: test-pepper-for-ci-only
+          EMAIL_SERVER: smtp://fake:fake@localhost:25
+          EMAIL_FROM: noreply@test.local
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+      - name: Stop PostgreSQL
+        if: always()
+        run: docker compose down
+
+  migration-check:
+    name: Migration Check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: bun run postinstall
+
+      - name: Start PostgreSQL
+        run: |
+          docker compose up -d postgres
+          timeout 30 bash -c 'until docker compose exec -T postgres pg_isready -U postgres; do sleep 1; done'
+
+      - name: Apply migrations
+        run: bun run db:migrate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/investigator
+
+      - name: Check for schema drift
+        run: bunx prisma migrate diff --from-migrations ./prisma/migrations --to-schema-datamodel ./prisma/schema.prisma --exit-code
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/investigator
+
+      - name: Stop PostgreSQL
+        if: always()
+        run: docker compose down
+
+  all-checks:
+    name: All Checks Passed
+    if: always()
+    needs: [lint, typecheck, build, e2e]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check all job statuses
+        run: |
+          if [[ "${{ needs.lint.result }}" != "success" ]] || \
+             [[ "${{ needs.typecheck.result }}" != "success" ]] || \
+             [[ "${{ needs.build.result }}" != "success" ]] || \
+             [[ "${{ needs.e2e.result }}" != "success" ]]; then
+            echo "One or more checks failed"
+            exit 1
+          fi
+          echo "All checks passed!"
