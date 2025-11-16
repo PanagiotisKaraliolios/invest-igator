@@ -65,13 +65,15 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
 				// but execution time may vary depending on the number of candidate keys returned by the DB query
 				// (i.e., how many keys share the same prefix). The random delay below helps mitigate timing attacks.
 				// The timing variation is based on the number of candidates, not key correctness.
-				let apiKeyRecord = null;
+				let firstMatchRecord: typeof candidateApiKeys[0] | null = null;
 				for (const record of candidateApiKeys) {
 					const match = await bcrypt.compare(apiKey, record.key);
-					if (match && !apiKeyRecord) {
-						apiKeyRecord = record;
+					// Do not assign during the loop; just remember the first match
+					if (match && !firstMatchRecord) {
+						firstMatchRecord = record;
 					}
 				}
+				const apiKeyRecord = firstMatchRecord;
 				// Add a small random delay to normalize response time (50-150ms) only on failure
 				if (!apiKeyRecord) {
 					await new Promise((resolve) => setTimeout(resolve, 50 + Math.floor(Math.random() * 100)));
