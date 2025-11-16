@@ -50,8 +50,13 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
 					where: { start: keyStart }
 				});
 
-				// Try to find one whose hash matches
-				const apiKeyRecord = candidateApiKeys.find(record => bcrypt.compareSync(apiKey, record.key));
+				// Try to find one whose hash matches (async)
+				const apiKeyRecord = (await Promise.all(
+					candidateApiKeys.map(async record => {
+						const match = await bcrypt.compare(apiKey, record.key);
+						return match ? record : null;
+					})
+				)).find(record => record !== null);
 
 				// If valid, create a mock session and store permissions
 				if (apiKeyRecord && apiKeyRecord.enabled && !isApiKeyExpired(apiKeyRecord.expiresAt)) {
