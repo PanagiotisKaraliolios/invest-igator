@@ -188,6 +188,9 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/investigator
 
+      - name: Create shadow database
+        run: docker exec postgres psql -U postgres -c "CREATE DATABASE investigator_shadow;"
+
       - name: Check for schema drift
         run: bunx prisma migrate diff --from-migrations ./prisma/migrations --to-schema-datamodel ./prisma/schema.prisma --shadow-database-url postgresql://postgres:postgres@localhost:5432/investigator_shadow --exit-code
         env:
