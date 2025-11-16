@@ -10,7 +10,7 @@
 import { initTRPC, TRPCError } from '@trpc/server';
 import superjson from 'superjson';
 import { ZodError } from 'zod';
-import { hashApiKey, isApiKeyExpired, isRefillDue } from '@/lib/api-keys';
+import { isApiKeyExpired, isRefillDue } from '@/lib/api-keys';
 import bcrypt from 'bcryptjs';
 import { auth } from '@/lib/auth';
 import { db } from '@/server/db';
