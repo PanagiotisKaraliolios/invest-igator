@@ -61,8 +61,8 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
 								apiKey.slice(0, 10),  // 4-char prefix
 								apiKey.slice(0, 11),  // 5-char prefix
 								apiKey.slice(0, 12),  // 6-char prefix
-								apiKey.slice(0, 15),  // Longer prefixes (up to 9 chars)
-								apiKey.slice(0, 20),  // Very long prefixes (up to 14 chars)
+								apiKey.slice(0, 15),  // 9-char prefix
+								apiKey.slice(0, 20),  // 14-char prefix
 							].filter((s, i, arr) => arr.indexOf(s) === i && s.length >= 6) // unique & min length
 						}
 					}
