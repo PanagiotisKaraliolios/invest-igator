@@ -53,17 +53,8 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
 						start: {
 							// Find keys where the apiKey starts with the stored 'start' value
 							// This works because 'start' is always a prefix of the full key
-							in: [
-								apiKey.slice(0, 6),   // No prefix case
-								apiKey.slice(0, 7),   // 1-char prefix
-								apiKey.slice(0, 8),   // 2-char prefix
-								apiKey.slice(0, 9),   // 3-char prefix
-								apiKey.slice(0, 10),  // 4-char prefix
-								apiKey.slice(0, 11),  // 5-char prefix
-								apiKey.slice(0, 12),  // 6-char prefix
-								apiKey.slice(0, 15),  // 9-char prefix
-								apiKey.slice(0, 20),  // 14-char prefix
-							].filter((s, i, arr) => arr.indexOf(s) === i && s.length >= 6) // unique & min length
+							in: Array.from({ length: 15 }, (_, i) => apiKey.slice(0, 6 + i))
+								.filter((s, i, arr) => arr.indexOf(s) === i && s.length >= 6) // unique & min length
 						}
 					}
 				});
