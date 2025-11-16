@@ -100,7 +100,7 @@ export const apiKeysRouter = createTRPCRouter({
 			}
 
 			// Generate the API key
-			const { key, hashedKey, start } = generateApiKey(64, input.prefix);
+			const { key, hashedKey, start } = await generateApiKey(64, input.prefix);
 
 			// Calculate expiration if provided
 			const expiresAt = input.expiresIn ? calculateExpirationDate(input.expiresIn) : null;
@@ -388,7 +388,7 @@ export const apiKeysRouter = createTRPCRouter({
 			}
 
 			// Hash the provided key
-			const hashedKey = hashApiKey(input.key);
+			const hashedKey = await hashApiKey(input.key);
 
 			// Find the key in database
 			const apiKey = await ctx.db.apiKey.findUnique({
