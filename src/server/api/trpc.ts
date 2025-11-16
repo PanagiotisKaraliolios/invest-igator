@@ -67,8 +67,10 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
 						apiKeyRecord = record;
 					}
 				}
-				// Add a small random delay to normalize response time (50-150ms)
-				await new Promise((resolve) => setTimeout(resolve, 50 + Math.floor(Math.random() * 100)));
+				// Add a small random delay to normalize response time (50-150ms) only on failure
+				if (!apiKeyRecord) {
+					await new Promise((resolve) => setTimeout(resolve, 50 + Math.floor(Math.random() * 100)));
+				}
 
 				// If valid, create a mock session and store permissions
 				if (apiKeyRecord && apiKeyRecord.enabled && !isApiKeyExpired(apiKeyRecord.expiresAt)) {
