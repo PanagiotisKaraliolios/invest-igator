@@ -17,6 +17,9 @@
 			"tailwindDirectives": true
 		}
 	},
+	"files": {
+		"includes": ["**/*", "!.gitleaksignore", "!.gitleaks.toml"]
+	},
 	"formatter": {
 		"attributePosition": "auto",
 		"enabled": true,

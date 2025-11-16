@@ -1,0 +1,23 @@
+# Gitleaks configuration for invest-igator
+# https://github.com/gitleaks/gitleaks#configuration
+
+title = "Gitleaks config for invest-igator"
+
+[extend]
+# Use the default Gitleaks rules
+useDefault = true
+
+# Additional allowlists for example API keys in documentation
+[[allowlist]]
+description = "Example API keys in documentation files"
+paths = [
+  '''postman/\.postman-examples\.md''',
+  '''docs/api-key-usage\.md''',
+  '''README\.md'''
+]
+regexes = [
+  '''your_api_key_here''',
+  '''sk_live_abc123''',
+  '''api_key_id''',
+  '''key_id_here'''
+]

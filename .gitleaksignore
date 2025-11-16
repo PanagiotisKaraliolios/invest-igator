@@ -1,0 +1,11 @@
+# Gitleaks ignore file - suppress false positives for example API keys in documentation
+# Format: <file-path>:<secret-hash> or use wildcards
+
+# Example API keys in Postman documentation
+postman/.postman-examples.md:generic-api-key:*
+
+# Example API keys in API usage documentation  
+docs/api-key-usage.md:curl-auth-header:*
+
+# Example API keys in README
+README.md:curl-auth-header:*
