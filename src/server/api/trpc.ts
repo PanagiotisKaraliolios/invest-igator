@@ -55,7 +55,11 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
 					where: { start: keyStart }
 				});
 
-				// Try to find one whose hash matches (constant-time, no short-circuiting)
+				// Try to find one whose hash matches.
+				// Note: This loop does not short-circuit (bcrypt.compare is called for all candidates),
+				// but execution time may vary depending on the number of candidate keys returned by the DB query
+				// (i.e., how many keys share the same prefix). The random delay below helps mitigate timing attacks.
+				// The timing variation is based on the number of candidates, not key correctness.
 				let apiKeyRecord = null;
 				for (const record of candidateApiKeys) {
 					const match = await bcrypt.compare(apiKey, record.key);
