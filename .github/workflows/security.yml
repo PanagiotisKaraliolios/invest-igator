@@ -52,7 +52,7 @@ jobs:
 
       - name: Upload gitleaks report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: gitleaks-report
           path: gitleaks-report.json
@@ -76,7 +76,7 @@ jobs:
 
       - name: Upload dependency review SARIF (if present)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: dependency-review
           path: dependency-review.report.json
