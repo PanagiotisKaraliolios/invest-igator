@@ -180,8 +180,6 @@ Validated in `src/env.js` via `@t3-oss/env-nextjs`. Server-side vars are require
 <details>
 <summary><b>🌐 External APIs</b></summary>
 
-- `FINNHUB_API_URL` (default <https://finnhub.io/api/v1>)
-- `FINNHUB_API_KEY` (required for search and symbol validation)
 - `ALPHAVANTAGE_API_URL` (default <https://www.alphavantage.co/query>)
 - `ALPHAVANTAGE_API_KEY` (required for FX ingestion)
 - `YAHOO_API_URL` (default <https://query2.finance.yahoo.com/v8/finance/chart>)
@@ -339,7 +337,6 @@ docker run --rm -p 3000:3000 \
   -e PASSWORD_PEPPER=change-me \
   -e EMAIL_SERVER=smtp://user:pass@mail:587 \
   -e EMAIL_FROM=no-reply@example.com \
-  -e FINNHUB_API_KEY=... \
   -e ALPHAVANTAGE_API_KEY=... \
   -e INFLUXDB_URL=http://influx:8086 \
   -e INFLUXDB_ORG=... \
@@ -360,7 +357,7 @@ This repo includes a Compose file that runs:
 
 ```sh
 cp .env.example .env  # if you have one; otherwise create .env from the vars above
-# Fill DATABASE_URL, BETTER_AUTH_SECRET, PASSWORD_PEPPER, INFLUXDB_*, FINNHUB/ALPHAVANTAGE, EMAIL_*
+# Fill DATABASE_URL, BETTER_AUTH_SECRET, PASSWORD_PEPPER, INFLUXDB_*, ALPHAVANTAGE, EMAIL_*
 docker compose up -d
 ```
 

@@ -15,7 +15,7 @@ Next.js App Router (T3-ish) with tRPC v11, Prisma/PostgreSQL, NextAuth, shadcn/u
 - DB (Postgres): `./start-database.sh`, then `bun run db:generate` (dev) or `bun run db:migrate` (deploy); schema-only: `bun run db:push`; Studio: `bun run db:studio`.
 - Lint/type: `bun run check` (biome), `bun run typecheck` (tsc).
 - Ingestion (Alpha → Influx): `bun run ingest:alpha` (requires `ALPHAVANTAGE_*` and `INFLUXDB_*` env). Job skips symbols already present and backs off for free-tier limits.
-- Env: validated in `src/env.js`. Required (server): `DATABASE_URL`, `AUTH_*`, `EMAIL_*`, `PASSWORD_PEPPER`, `FINNHUB_API_KEY`, `ALPHAVANTAGE_API_KEY`, `INFLUXDB_*` (URL/org/bucket/token), optional `POLYGON_*`.
+- Env: validated in `src/env.js`. Required (server): `DATABASE_URL`, `AUTH_*`, `EMAIL_*`, `PASSWORD_PEPPER`, `ALPHAVANTAGE_API_KEY`, `INFLUXDB_*` (URL/org/bucket/token), optional `POLYGON_*`.
 
 ## API Patterns
 - Define routers in `src/server/api/routers/*` and register in `src/server/api/root.ts`.
@@ -51,7 +51,7 @@ Next.js App Router (T3-ish) with tRPC v11, Prisma/PostgreSQL, NextAuth, shadcn/u
 - Date filtering: Use `DateRangePicker` with `strictMaxDate={true}` to prevent future date selection. Watchlist charts use yesterday as max date with custom presets.
 
 ## External Calls
-- Keep fetches server-side inside tRPC procedures; read base URLs/keys from `env` (e.g., `FINNHUB_*`, `ALPHAVANTAGE_*`, `POLYGON_*`). Never expose secrets client-side.
+- Keep fetches server-side inside tRPC procedures; read base URLs/keys from `env` (e.g., `ALPHAVANTAGE_*`, `POLYGON_*`). Never expose secrets client-side.
 
 ## Pointers
 - Layout/shell: `src/app/(dashboard)/layout.tsx`; global providers: `src/app/layout.tsx`.

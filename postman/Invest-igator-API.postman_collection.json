@@ -637,7 +637,7 @@
 							"mode": "raw",
 							"raw": "{\n  \"0\": {\n    \"json\": {\n      \"query\": \"AAPL\"\n    }\n  }\n}"
 						},
-						"description": "Search for symbols via Finnhub API.\n\nRequired:\n- query: Search query string\n\nReturns: Array of search results\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
+						"description": "Search for symbols via Yahoo Finance API.\n\nRequired:\n- query: Search query string\n\nReturns: Array of search results\n\nBody format: {\"0\": {\"json\": <input>}}\nQuery param: batch=1",
 						"header": [
 							{
 								"key": "Content-Type",

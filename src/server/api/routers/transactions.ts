@@ -96,7 +96,7 @@ export const transactionsRouter = createTRPCRouter({
 
 	/**
 	 * Creates a new transaction record.
-	 * Validates symbol via Finnhub if not already on user's watchlist.
+	 * Validates symbol via Yahoo Finance if not already on user's watchlist.
 	 * Automatically adds symbol to watchlist.
 	 *
 	 * @input symbol - Stock symbol (required)
@@ -141,7 +141,7 @@ export const transactionsRouter = createTRPCRouter({
 		.mutation(async ({ ctx, input }) => {
 			const userId = ctx.session.user.id;
 			const symbol = input.symbol.trim().toUpperCase();
-			// Fast-path: accept if symbol already on user's watchlist; else validate via Finnhub
+			// Fast-path: accept if symbol already on user's watchlist; else validate via Yahoo Finance
 			const exists = await ctx.db.watchlistItem.findUnique({
 				select: { symbol: true },
 				where: { userId_symbol: { symbol, userId } }
