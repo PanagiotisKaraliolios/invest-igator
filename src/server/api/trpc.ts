@@ -55,15 +55,16 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
 					where: { start: keyStart }
 				});
 
-				// Try to find one whose hash matches (sequential, short-circuiting)
+				// Try to find one whose hash matches (constant-time, no short-circuiting)
 				let apiKeyRecord = null;
 				for (const record of candidateApiKeys) {
 					const match = await bcrypt.compare(apiKey, record.key);
-					if (match) {
+					if (match && !apiKeyRecord) {
 						apiKeyRecord = record;
-						break;
 					}
 				}
+				// Add a small random delay to normalize response time (50-150ms)
+				await new Promise((resolve) => setTimeout(resolve, 50 + Math.floor(Math.random() * 100)));
 
 				// If valid, create a mock session and store permissions
 				if (apiKeyRecord && apiKeyRecord.enabled && !isApiKeyExpired(apiKeyRecord.expiresAt)) {
