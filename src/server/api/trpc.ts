@@ -66,11 +66,24 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
 				// (i.e., how many keys share the same prefix). The random delay below helps mitigate timing attacks.
 				// The timing variation is based on the number of candidates, not key correctness.
 				let firstMatchRecord: (typeof candidateApiKeys)[0] | null = null;
-				for (const record of candidateApiKeys) {
-					const match = await bcrypt.compare(apiKey, record.key);
-					// Do not assign during the loop; just remember the first match
-					if (match && !firstMatchRecord) {
-						firstMatchRecord = record;
+				const MAX_CANDIDATES = 15;
+				// Generate a dummy hash for padding (bcrypt hash of a random string)
+				const dummyHash = await bcrypt.hash('dummy_string_for_padding', 10);
+				// Prepare the array of comparisons: real candidates first, then dummy comparisons
+				const comparePromises = [];
+				for (let i = 0; i < MAX_CANDIDATES; i++) {
+					if (i < candidateApiKeys.length) {
+						comparePromises.push(bcrypt.compare(apiKey, candidateApiKeys[i].key));
+					} else {
+						// Pad with dummy comparisons
+						comparePromises.push(bcrypt.compare(apiKey, dummyHash));
+					}
+				}
+				const compareResults = await Promise.all(comparePromises);
+				// Find the first matching record among the real candidates
+				for (let i = 0; i < candidateApiKeys.length; i++) {
+					if (compareResults[i] && !firstMatchRecord) {
+						firstMatchRecord = candidateApiKeys[i];
 					}
 				}
 				const apiKeyRecord = firstMatchRecord;
