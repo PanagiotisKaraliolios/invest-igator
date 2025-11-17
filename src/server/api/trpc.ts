@@ -73,7 +73,12 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
 				const comparePromises = [];
 				for (let i = 0; i < MAX_CANDIDATES; i++) {
 					if (i < candidateApiKeys.length) {
-						comparePromises.push(bcrypt.compare(apiKey, candidateApiKeys[i].key));
+						const candidate = candidateApiKeys[i];
+						if (candidate) {
+							comparePromises.push(bcrypt.compare(apiKey, candidate.key));
+						} else {
+							comparePromises.push(bcrypt.compare(apiKey, dummyHash));
+						}
 					} else {
 						// Pad with dummy comparisons
 						comparePromises.push(bcrypt.compare(apiKey, dummyHash));
@@ -82,8 +87,9 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
 				const compareResults = await Promise.all(comparePromises);
 				// Find the first matching record among the real candidates
 				for (let i = 0; i < candidateApiKeys.length; i++) {
-					if (compareResults[i] && !firstMatchRecord) {
-						firstMatchRecord = candidateApiKeys[i];
+					const candidate = candidateApiKeys[i];
+					if (compareResults[i] && !firstMatchRecord && candidate) {
+						firstMatchRecord = candidate;
 					}
 				}
 				const apiKeyRecord = firstMatchRecord;
