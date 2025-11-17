@@ -394,7 +394,7 @@ export const apiKeysRouter = createTRPCRouter({
 			// Validate key format and minimum length
 			if (!validateApiKeyFormat(input.key)) {
 				return {
-					error: { code: 'INVALID_FORMAT', message: 'Invalid API key format or too short' },
+					error: { code: 'INVALID_FORMAT', message: 'Invalid API key format' },
 					key: null,
 					valid: false
 				};
