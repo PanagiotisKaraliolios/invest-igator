@@ -415,9 +415,8 @@ export const apiKeysRouter = createTRPCRouter({
 			let matchedKey: (typeof candidateKeys)[0] | null = null;
 			for (const candidate of candidateKeys) {
 				const isMatch = await verifyApiKey(input.key, candidate.key);
-				if (isMatch) {
+				if (isMatch && !matchedKey) {
 					matchedKey = candidate;
-					break;
 				}
 			}
 
