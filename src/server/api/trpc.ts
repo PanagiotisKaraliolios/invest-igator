@@ -64,7 +64,8 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
 				// Note: This loop does not short-circuit (bcrypt.compare is called for all candidates),
 				// but execution time may vary depending on the number of candidate keys returned by the DB query
 				// (i.e., how many keys share the same prefix). The random delay below helps mitigate timing attacks.
-				// The timing variation is based on the number of candidates, not key correctness.
+				// The timing variation is based solely on the number of *database* candidates returned by the query (uncontrollable),
+				// not on whether a match was found (which would be a security issue).
 				let firstMatchRecord: (typeof candidateApiKeys)[0] | null = null;
 				const MAX_CANDIDATES = 15;
 				// Generate a dummy hash for padding (bcrypt hash of a random string)
