@@ -177,3 +177,13 @@ export function hasPermissions(
 export function calculateExpirationDate(expiresIn: number): Date {
 	return new Date(Date.now() + expiresIn * 1000);
 }
+
+/**
+ * Verifies a plain API key against a stored bcrypt hash
+ * @param plainKey - The plain API key to verify
+ * @param hashedKey - The stored bcrypt hash
+ * @returns True if the key matches the hash
+ */
+export async function verifyApiKey(plainKey: string, hashedKey: string): Promise<boolean> {
+	return bcrypt.compare(plainKey, hashedKey);
+}

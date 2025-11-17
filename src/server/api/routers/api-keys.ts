@@ -9,9 +9,19 @@ import {
 	isApiKeyExpired,
 	isRefillDue,
 	validateApiKeyFormat,
-	validatePermissions
+	validatePermissions,
+	verifyApiKey
 } from '@/lib/api-keys';
 import { createTRPCRouter, protectedProcedure, withPermissions } from '@/server/api/trpc';
+
+// Prefix length for API key start comparison
+const API_KEY_PREFIX_LENGTH = 10;
+
+// Minimum API key length for validation
+const MIN_API_KEY_LENGTH = 32;
+
+// Maximum number of candidate keys to check for API key verification
+const MAX_CANDIDATE_KEYS = 20;
 
 // Validation schemas
 const permissionsSchema = z.record(z.string(), z.array(z.string())).nullable();
@@ -62,6 +72,9 @@ const verifyApiKeySchema = z.object({
 	key: z.string().min(32, 'Invalid API key'),
 	permissions: z.record(z.string(), z.array(z.string())).optional()
 });
+
+// This is used to efficiently narrow down candidate API keys before bcrypt comparison.
+// Must be >= 6 for reasonable collision avoidance, but not so long as to leak too much key entropy.
 
 export const apiKeysRouter = createTRPCRouter({
 	/**
@@ -378,25 +391,37 @@ export const apiKeysRouter = createTRPCRouter({
 	verify: withPermissions('apiKeys', 'read')
 		.input(verifyApiKeySchema)
 		.mutation(async ({ ctx, input }) => {
-			// Validate key format
+			// Validate key format and minimum length
 			if (!validateApiKeyFormat(input.key)) {
 				return {
-					error: { code: 'INVALID_FORMAT', message: 'Invalid API key format' },
+					error: { code: 'INVALID_FORMAT', message: 'Invalid API key format or too short' },
 					key: null,
 					valid: false
 				};
 			}
 
-			// Hash the provided key
-			const hashedKey = await hashApiKey(input.key);
-
-			// Find the key in database
-			const apiKey = await ctx.db.apiKey.findUnique({
+			// Find candidate keys by exact start match for efficient lookup
+			// Limit the number of candidates to prevent DoS via excessive bcrypt comparisons
+			const candidateKeys = await ctx.db.apiKey.findMany({
 				include: { user: true },
-				where: { key: hashedKey }
+				take: MAX_CANDIDATE_KEYS,
+				where: {
+					start: input.key.slice(0, API_KEY_PREFIX_LENGTH)
+				}
 			});
 
-			if (!apiKey) {
+			// Sequentially compare candidate keys using bcrypt.compare.
+			// This is intentional: bcrypt is CPU-intensive and parallelizing could exhaust server resources.
+			let matchedKey: (typeof candidateKeys)[0] | null = null;
+			for (const candidate of candidateKeys) {
+				const isMatch = await verifyApiKey(input.key, candidate.key);
+				if (isMatch) {
+					matchedKey = candidate;
+					break;
+				}
+			}
+
+			if (!matchedKey) {
 				return {
 					error: { code: 'NOT_FOUND', message: 'API key not found' },
 					key: null,
@@ -405,7 +430,7 @@ export const apiKeysRouter = createTRPCRouter({
 			}
 
 			// Check if key is enabled
-			if (!apiKey.enabled) {
+			if (!matchedKey.enabled) {
 				return {
 					error: { code: 'DISABLED', message: 'API key is disabled' },
 					key: null,
@@ -414,9 +439,9 @@ export const apiKeysRouter = createTRPCRouter({
 			}
 
 			// Check if expired
-			if (isApiKeyExpired(apiKey.expiresAt)) {
+			if (isApiKeyExpired(matchedKey.expiresAt)) {
 				// Delete expired key
-				await ctx.db.apiKey.delete({ where: { id: apiKey.id } });
+				await ctx.db.apiKey.delete({ where: { id: matchedKey.id } });
 				return {
 					error: { code: 'EXPIRED', message: 'API key has expired' },
 					key: null,
@@ -425,12 +450,12 @@ export const apiKeysRouter = createTRPCRouter({
 			}
 
 			// Check rate limit
-			if (apiKey.rateLimitEnabled) {
+			if (matchedKey.rateLimitEnabled) {
 				const { exceeded, resetAt } = checkRateLimit(
-					apiKey.requestCount,
-					apiKey.rateLimitMax,
-					apiKey.lastRequest,
-					apiKey.rateLimitTimeWindow
+					matchedKey.requestCount,
+					matchedKey.rateLimitMax,
+					matchedKey.lastRequest,
+					matchedKey.rateLimitTimeWindow
 				);
 
 				if (exceeded) {
@@ -446,20 +471,20 @@ export const apiKeysRouter = createTRPCRouter({
 			}
 
 			// Check remaining requests
-			if (apiKey.remaining !== null) {
+			if (matchedKey.remaining !== null) {
 				// Check if refill is due
-				if (isRefillDue(apiKey.lastRefillAt, apiKey.refillInterval)) {
-					const newRemaining = apiKey.remaining + (apiKey.refillAmount ?? 0);
+				if (isRefillDue(matchedKey.lastRefillAt, matchedKey.refillInterval)) {
+					const newRemaining = matchedKey.remaining + (matchedKey.refillAmount ?? 0);
 					await ctx.db.apiKey.update({
 						data: {
 							lastRefillAt: new Date(),
 							remaining: newRemaining
 						},
-						where: { id: apiKey.id }
+						where: { id: matchedKey.id }
 					});
 				}
 
-				if (apiKey.remaining <= 0) {
+				if (matchedKey.remaining <= 0) {
 					return {
 						error: { code: 'NO_REMAINING', message: 'API key has no remaining requests' },
 						key: null,
@@ -470,7 +495,7 @@ export const apiKeysRouter = createTRPCRouter({
 
 			// Check permissions if required
 			if (input.permissions) {
-				const keyPermissions = apiKey.permissions ? JSON.parse(apiKey.permissions) : null;
+				const keyPermissions = matchedKey.permissions ? JSON.parse(matchedKey.permissions) : null;
 
 				if (!hasPermissions(keyPermissions, input.permissions)) {
 					return {
@@ -487,44 +512,44 @@ export const apiKeysRouter = createTRPCRouter({
 			// Update usage statistics
 			const now = new Date();
 			const shouldResetRateLimit =
-				apiKey.rateLimitEnabled &&
-				apiKey.lastRequest &&
-				apiKey.rateLimitTimeWindow &&
-				now.getTime() - apiKey.lastRequest.getTime() >= apiKey.rateLimitTimeWindow;
+				matchedKey.rateLimitEnabled &&
+				matchedKey.lastRequest &&
+				matchedKey.rateLimitTimeWindow &&
+				now.getTime() - matchedKey.lastRequest.getTime() >= matchedKey.rateLimitTimeWindow;
 
 			await ctx.db.apiKey.update({
 				data: {
 					lastRequest: now,
-					remaining: apiKey.remaining !== null ? apiKey.remaining - 1 : null,
-					requestCount: shouldResetRateLimit ? 1 : apiKey.requestCount + 1
+					remaining: matchedKey.remaining !== null ? matchedKey.remaining - 1 : null,
+					requestCount: shouldResetRateLimit ? 1 : matchedKey.requestCount + 1
 				},
-				where: { id: apiKey.id }
+				where: { id: matchedKey.id }
 			});
 
 			// Return valid response
 			return {
 				error: null,
 				key: {
-					createdAt: apiKey.createdAt,
-					enabled: apiKey.enabled,
-					expiresAt: apiKey.expiresAt,
-					id: apiKey.id,
-					lastRefillAt: apiKey.lastRefillAt,
+					createdAt: matchedKey.createdAt,
+					enabled: matchedKey.enabled,
+					expiresAt: matchedKey.expiresAt,
+					id: matchedKey.id,
+					lastRefillAt: matchedKey.lastRefillAt,
 					lastRequest: now,
-					metadata: apiKey.metadata ? JSON.parse(apiKey.metadata) : null,
-					name: apiKey.name,
-					permissions: apiKey.permissions ? JSON.parse(apiKey.permissions) : null,
-					prefix: apiKey.prefix,
-					rateLimitEnabled: apiKey.rateLimitEnabled,
-					rateLimitMax: apiKey.rateLimitMax,
-					rateLimitTimeWindow: apiKey.rateLimitTimeWindow,
-					refillAmount: apiKey.refillAmount,
-					refillInterval: apiKey.refillInterval,
-					remaining: apiKey.remaining !== null ? apiKey.remaining - 1 : null,
-					requestCount: shouldResetRateLimit ? 1 : apiKey.requestCount + 1,
-					start: apiKey.start,
-					updatedAt: apiKey.updatedAt,
-					userId: apiKey.userId
+					metadata: matchedKey.metadata ? JSON.parse(matchedKey.metadata) : null,
+					name: matchedKey.name,
+					permissions: matchedKey.permissions ? JSON.parse(matchedKey.permissions) : null,
+					prefix: matchedKey.prefix,
+					rateLimitEnabled: matchedKey.rateLimitEnabled,
+					rateLimitMax: matchedKey.rateLimitMax,
+					rateLimitTimeWindow: matchedKey.rateLimitTimeWindow,
+					refillAmount: matchedKey.refillAmount,
+					refillInterval: matchedKey.refillInterval,
+					remaining: matchedKey.remaining !== null ? matchedKey.remaining - 1 : null,
+					requestCount: shouldResetRateLimit ? 1 : matchedKey.requestCount + 1,
+					start: matchedKey.start,
+					updatedAt: matchedKey.updatedAt,
+					userId: matchedKey.userId
 				},
 				valid: true
 			};
