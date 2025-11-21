@@ -175,9 +175,18 @@ export function EditProfilePictureDialog({
 		const trimmedUrl = urlInput.trim();
 
 		// Validate URL format if not empty
-		if (trimmedUrl && !trimmedUrl.startsWith('http')) {
-			toast.error('Please enter a valid URL');
-			return;
+		if (trimmedUrl) {
+			try {
+				const url = new URL(trimmedUrl);
+				// Only allow http and https protocols to prevent javascript: and data: URIs
+				if (!['http:', 'https:'].includes(url.protocol)) {
+					toast.error('Only HTTP and HTTPS URLs are allowed');
+					return;
+				}
+			} catch {
+				toast.error('Please enter a valid URL');
+				return;
+			}
 		}
 
 		toast.loading('Saving profile picture...', { id: 'profile-picture-loading' });
