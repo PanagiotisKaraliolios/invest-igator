@@ -8,10 +8,10 @@
  */
 
 import { initTRPC, TRPCError } from '@trpc/server';
+import bcrypt from 'bcryptjs';
 import superjson from 'superjson';
 import { ZodError } from 'zod';
-import { hashApiKey, isApiKeyExpired, isRefillDue } from '@/lib/api-keys';
-import bcrypt from 'bcryptjs';
+import {isApiKeyExpired, isRefillDue } from '@/lib/api-keys';
 import { auth } from '@/lib/auth';
 import { db } from '@/server/db';
 
@@ -51,7 +51,7 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
 				});
 
 				// Try to find one whose hash matches
-				const apiKeyRecord = candidateApiKeys.find(record => bcrypt.compareSync(apiKey, record.key));
+				const apiKeyRecord = candidateApiKeys.find((record) => bcrypt.compareSync(apiKey, record.key));
 
 				// If valid, create a mock session and store permissions
 				if (apiKeyRecord && apiKeyRecord.enabled && !isApiKeyExpired(apiKeyRecord.expiresAt)) {
