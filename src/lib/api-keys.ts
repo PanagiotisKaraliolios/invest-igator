@@ -1,4 +1,5 @@
-import { createHash, randomBytes } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
+import bcrypt from 'bcryptjs';
 
 /**
  * Generates a cryptographically secure random API key
@@ -32,12 +33,13 @@ export function generateApiKey(
 }
 
 /**
- * Hashes an API key using SHA-256
+ * Hashes an API key using bcrypt
  * @param key - The plain API key
  * @returns The hashed key
  */
 export function hashApiKey(key: string): string {
-	return createHash('sha256').update(key).digest('hex');
+	// Using cost factor 12 for reasonable security/cost balance
+	return bcrypt.hashSync(key, 12);
 }
 
 /**

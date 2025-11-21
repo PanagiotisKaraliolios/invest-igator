@@ -11,6 +11,7 @@ import { initTRPC, TRPCError } from '@trpc/server';
 import superjson from 'superjson';
 import { ZodError } from 'zod';
 import { hashApiKey, isApiKeyExpired, isRefillDue } from '@/lib/api-keys';
+import bcrypt from 'bcryptjs';
 import { auth } from '@/lib/auth';
 import { db } from '@/server/db';
 
@@ -41,13 +42,16 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
 			const apiKey = opts.headers.get('x-api-key');
 
 			if (apiKey) {
-				const hashedKey = hashApiKey(apiKey);
+				// Extract identifying info for lookup, e.g., start/prefix
+				const keyStart = apiKey.slice(0, 6); // or include prefix length if required
 
-				// Look up the API key in the database
-				const apiKeyRecord = await db.apiKey.findUnique({
+				const candidateApiKeys = await db.apiKey.findMany({
 					include: { user: true },
-					where: { key: hashedKey }
+					where: { start: keyStart }
 				});
+
+				// Try to find one whose hash matches
+				const apiKeyRecord = candidateApiKeys.find(record => bcrypt.compareSync(apiKey, record.key));
 
 				// If valid, create a mock session and store permissions
 				if (apiKeyRecord && apiKeyRecord.enabled && !isApiKeyExpired(apiKeyRecord.expiresAt)) {
