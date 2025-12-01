@@ -1,12 +1,16 @@
 'use client';
 
+import { BookOpenCheck, PlayCircle, Server } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useGsap, useGsapStagger } from '@/hooks/use-gsap';
-import { BookOpenCheck, PlayCircle, Server } from 'lucide-react';
 
-const hostedSteps = ['Sign up and create your first watchlist', 'Import transactions or add a few manual buys', 'Preview performance and allocations instantly'];
+const hostedSteps = [
+	'Sign up and create your first watchlist',
+	'Import transactions or add a few manual buys',
+	'Preview performance and allocations instantly'
+];
 
 const selfHostCommands = `bun install
 ./start-database.sh
@@ -20,12 +24,13 @@ export function QuickstartSection() {
 	return (
 		<section className='container mx-auto px-6 py-16 md:py-20' data-testid='landing-quickstart' id='quickstart'>
 			<div className='mx-auto mb-12 max-w-3xl text-center' ref={headerRef}>
-				<Badge variant='outline' className='mb-3'>
+				<Badge className='mb-3' variant='outline'>
 					Up and running
 				</Badge>
 				<h2 className='text-3xl font-semibold md:text-4xl'>Start in minutes</h2>
 				<p className='text-muted-foreground mt-3 text-balance'>
-					Choose the path that fits you today—hosted onboarding for instant insight or self-host for full control.
+					Choose the path that fits you today—hosted onboarding for instant insight or self-host for full
+					control.
 				</p>
 			</div>
 
@@ -37,7 +42,9 @@ export function QuickstartSection() {
 					<CardHeader className='flex flex-row items-center justify-between'>
 						<div>
 							<CardTitle className='text-lg'>Hosted onboarding</CardTitle>
-							<p className='text-sm text-muted-foreground'>Best for getting a portfolio live right now.</p>
+							<p className='text-sm text-muted-foreground'>
+								Best for getting a portfolio live right now.
+							</p>
 						</div>
 						<span className='grid size-10 place-items-center rounded-full bg-primary/10 text-primary'>
 							<PlayCircle className='size-5' />
@@ -55,10 +62,15 @@ export function QuickstartSection() {
 							))}
 						</ol>
 						<div className='mt-4 flex flex-wrap gap-3'>
-							<Button asChild size='sm' className='transition-transform hover:scale-105'>
+							<Button asChild className='transition-transform hover:scale-105' size='sm'>
 								<a href='/signup'>Create account</a>
 							</Button>
-							<Button asChild size='sm' variant='outline' className='transition-transform hover:scale-105'>
+							<Button
+								asChild
+								className='transition-transform hover:scale-105'
+								size='sm'
+								variant='outline'
+							>
 								<a href='/login'>Log in</a>
 							</Button>
 						</div>
@@ -87,8 +99,12 @@ export function QuickstartSection() {
 							<span className='rounded-full bg-primary/10 px-2 py-1 text-primary'>Docker-friendly</span>
 							<span className='rounded-full bg-primary/10 px-2 py-1 text-primary'>tRPC v11</span>
 						</div>
-						<Button asChild size='sm' variant='secondary' className='w-full'>
-							<a href='https://github.com/PanagiotisKaraliolios/invest-igator' target='_blank' rel='noopener noreferrer'>
+						<Button asChild className='w-full' size='sm' variant='secondary'>
+							<a
+								href='https://github.com/PanagiotisKaraliolios/invest-igator'
+								rel='noopener noreferrer'
+								target='_blank'
+							>
 								<BookOpenCheck className='mr-2 size-4' />
 								View README
 							</a>

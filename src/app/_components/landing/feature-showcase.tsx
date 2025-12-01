@@ -110,7 +110,10 @@ export function FeatureShowcaseSection() {
 								<ul className='space-y-2'>
 									{item.points.map((point) => (
 										<li className='flex items-center gap-2' key={point}>
-											<span aria-hidden className='mt-0.5 h-1.5 w-1.5 rounded-full bg-primary/70' />
+											<span
+												aria-hidden
+												className='mt-0.5 h-1.5 w-1.5 rounded-full bg-primary/70'
+											/>
 											<span className='leading-relaxed'>{point}</span>
 										</li>
 									))}

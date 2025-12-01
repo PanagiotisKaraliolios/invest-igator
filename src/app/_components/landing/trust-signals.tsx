@@ -1,10 +1,10 @@
 'use client';
 
+import { GitBranch, KeyRound, LockKeyhole, ShieldCheck, ShieldQuestion, Vault } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useGsap, useGsapStagger } from '@/hooks/use-gsap';
-import { GitBranch, KeyRound, LockKeyhole, ShieldCheck, ShieldQuestion, Vault } from 'lucide-react';
 
 const trustSignals = [
 	{
@@ -52,13 +52,13 @@ export function TrustSignalsSection() {
 	return (
 		<section className='container mx-auto px-6 py-16 md:py-20' data-testid='landing-trust' id='trust'>
 			<div className='mx-auto mb-12 max-w-3xl text-center' ref={headerRef}>
-				<Badge variant='outline' className='mb-3'>
+				<Badge className='mb-3' variant='outline'>
 					Trust & control
 				</Badge>
 				<h2 className='text-3xl font-semibold md:text-4xl'>Run it with confidence</h2>
 				<p className='text-muted-foreground mt-3 text-balance'>
-					Security defaults, transparent code, and operational guardrails so teams and solo investors can self-host
-					or use the hosted app without hesitation.
+					Security defaults, transparent code, and operational guardrails so teams and solo investors can
+					self-host or use the hosted app without hesitation.
 				</p>
 			</div>
 
@@ -80,7 +80,9 @@ export function TrustSignalsSection() {
 								</div>
 								<CardTitle className='text-lg leading-tight'>{item.title}</CardTitle>
 							</CardHeader>
-							<CardContent className='text-sm leading-relaxed text-muted-foreground'>{item.body}</CardContent>
+							<CardContent className='text-sm leading-relaxed text-muted-foreground'>
+								{item.body}
+							</CardContent>
 						</Card>
 					);
 				})}
@@ -88,15 +90,15 @@ export function TrustSignalsSection() {
 
 			<div className='mt-10 flex flex-wrap items-center justify-center gap-3'>
 				<Button asChild size='sm' variant='default'>
-					<a href='/docs' target='_blank' rel='noopener noreferrer'>
+					<a href='/docs' rel='noopener noreferrer' target='_blank'>
 						Read the docs
 					</a>
 				</Button>
 				<Button asChild size='sm' variant='outline'>
 					<a
 						href='https://github.com/PanagiotisKaraliolios/invest-igator'
-						target='_blank'
 						rel='noopener noreferrer'
+						target='_blank'
 					>
 						View the repo
 					</a>

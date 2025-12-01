@@ -55,7 +55,7 @@ function AnimatedBeam() {
 		<div className='pointer-events-none absolute bottom-12 left-4 right-4 hidden h-8 overflow-hidden sm:left-6 sm:right-6 md:block md:left-8 md:right-8'>
 			{/* Track line - the path the beam follows */}
 			<div className='absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-gradient-to-r from-primary/20 via-primary/40 to-primary/20' />
-			
+
 			{/* Track glow background */}
 			<div className='absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-primary/10 blur-sm' />
 
@@ -126,7 +126,10 @@ export function DataPipelineSection() {
 				</p>
 			</div>
 
-			<div className='relative overflow-hidden rounded-2xl border bg-card/60 p-4 pb-16 sm:p-6 sm:pb-20 md:p-8 md:pb-24' ref={pipelineRef}>
+			<div
+				className='relative overflow-hidden rounded-2xl border bg-card/60 p-4 pb-16 sm:p-6 sm:pb-20 md:p-8 md:pb-24'
+				ref={pipelineRef}
+			>
 				{/* Animated beam showing data flow */}
 				<AnimatedBeam />
 
