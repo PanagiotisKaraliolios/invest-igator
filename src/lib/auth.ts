@@ -46,7 +46,7 @@ export const auth = betterAuth({
 		requireEmailVerification: false,
 		sendResetPassword: async ({ user, url }) => {
 			// Better Auth generates reset URLs with token in query params
-			// The client should call forgetPassword({ email, redirectTo }) to trigger this
+			// The client should call requestPasswordReset({ email, redirectTo }) to trigger this
 			// After clicking the link, use resetPassword({ newPassword, token }) to complete reset
 			await sendPasswordResetEmail(user.email, url);
 		}
@@ -76,8 +76,6 @@ export const auth = betterAuth({
 
 			// Get the newly created session
 			const newSession = ctx.context.newSession;
-
-			console.log('🚀 ~ auth.ts:80 ~ newSession:', newSession);
 
 			if (!newSession?.session?.id) {
 				return;

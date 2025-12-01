@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
-import { forgetPassword } from '@/lib/auth-client';
+import { requestPasswordReset } from '@/lib/auth-client';
 
 const schema = z.object({
 	email: z.string().email('Enter a valid email')
@@ -33,16 +33,19 @@ function ForgotPasswordRequestForm() {
 	async function onSubmit(values: FormValues) {
 		setIsLoading(true);
 		try {
-			await forgetPassword({
+			const result = await requestPasswordReset({
 				email: values.email,
 				redirectTo: '/forgot-password/reset'
 			});
+			if (result.error?.message) {
+				toast.error(result.error.message);
+				return;
+			}
 			setSubmitted(true);
-			toast.success("If an account exists, we've sent a reset link.");
+			toast.success(result.data?.message ?? "If an account exists, we've sent a reset link.");
 			reset();
 		} catch (error) {
-			setSubmitted(true);
-			toast.success("If an account exists, we've sent a reset link.");
+			toast.error(`Something went wrong. Please try again. ${error instanceof Error ? error.message : ''}`);
 		} finally {
 			setIsLoading(false);
 		}
