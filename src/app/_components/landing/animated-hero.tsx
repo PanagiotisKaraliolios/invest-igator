@@ -22,7 +22,7 @@ export function AnimatedHero({ appName, isSignedIn, chartComponent }: AnimatedHe
 	const glowRef = useGsapParallax<HTMLDivElement>(0.3);
 
 	return (
-		<section className='container mx-auto grid gap-8 xl:gap-32 2xl:gap-56 px-6 py-10 md:grid-cols-2 md:items-center md:py-20'>
+		<section className='container mx-auto grid gap-8 xl:gap-32 2xl:gap-56 px-6 py-16 md:grid-cols-2 md:items-center md:py-24'>
 			<div className='flex flex-col gap-6'>
 				<div ref={badgeRef}>
 					<Badge className='w-fit' variant='secondary'>

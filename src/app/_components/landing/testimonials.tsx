@@ -38,7 +38,7 @@ export function TestimonialsSection() {
 	const marqueeRef = useGsap<HTMLDivElement>({ delay: 0.2, duration: 0.8, type: 'fadeUp' });
 
 	return (
-		<section className='container mx-auto px-6 py-16' data-testid='landing-testimonials' id='testimonials'>
+		<section className='container mx-auto px-6 py-16 md:py-20' data-testid='landing-testimonials' id='testimonials'>
 			<div className='mx-auto mb-12 max-w-2xl text-center' ref={headerRef}>
 				<h2 className='text-3xl font-semibold md:text-4xl'>What users say</h2>
 				<p className='text-muted-foreground mt-3'>

@@ -50,7 +50,7 @@ export function TrustSignalsSection() {
 	const cardsRef = useGsapStagger<HTMLDivElement>({ duration: 0.6, stagger: 0.08, type: 'scaleUp' });
 
 	return (
-		<section className='container mx-auto px-6 py-16' data-testid='landing-trust' id='trust'>
+		<section className='container mx-auto px-6 py-16 md:py-20' data-testid='landing-trust' id='trust'>
 			<div className='mx-auto mb-12 max-w-3xl text-center' ref={headerRef}>
 				<Badge variant='outline' className='mb-3'>
 					Trust & control

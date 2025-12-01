@@ -65,7 +65,7 @@ export function PartnersRow() {
 		return (
 			<section
 				aria-label='Technology stack logos'
-				className='container mx-auto px-6 pt-4 pb-10'
+				className='container mx-auto px-6 py-12 md:py-14'
 				data-testid='landing-partners'
 			>
 				<div className='flex flex-wrap items-center justify-center gap-10 opacity-40'>
@@ -80,7 +80,7 @@ export function PartnersRow() {
 	return (
 		<section
 			aria-label='Technology stack logos'
-			className='container mx-auto px-6 pt-4 pb-10'
+			className='container mx-auto px-6 py-12 md:py-14'
 			data-testid='landing-partners'
 		>
 			<div className='flex flex-wrap items-center justify-center gap-10 opacity-80' ref={logosRef}>

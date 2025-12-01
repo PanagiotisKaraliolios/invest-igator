@@ -36,7 +36,7 @@ export function BenefitsSection() {
 	const cardsRef = useGsapStagger<HTMLDivElement>({ duration: 0.6, stagger: 0.08, type: 'scaleUp' });
 
 	return (
-		<section className='container mx-auto px-6 py-16' data-testid='landing-benefits'>
+		<section className='container mx-auto px-6 py-16 md:py-20' data-testid='landing-benefits'>
 			<div className='mx-auto mb-10 max-w-2xl text-center' ref={headerRef}>
 				<h2 className='text-3xl font-semibold md:text-4xl'>Benefits that compound</h2>
 				<p className='text-muted-foreground mt-3 text-balance'>

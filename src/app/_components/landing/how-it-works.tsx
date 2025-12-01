@@ -14,7 +14,7 @@ export function HowItWorksSection() {
 	const stepsRef = useGsapStagger<HTMLDivElement>({ duration: 0.7, stagger: 0.15, type: 'fadeLeft' });
 
 	return (
-		<section className='container mx-auto px-6 py-16' data-testid='landing-how'>
+		<section className='container mx-auto px-6 py-16 md:py-20' data-testid='landing-how'>
 			<div className='mx-auto mb-10 max-w-2xl text-center' ref={headerRef}>
 				<h2 className='text-3xl font-semibold md:text-4xl'>How it works</h2>
 				<p className='text-muted-foreground mt-3'>Three simple steps from raw data to clarity.</p>

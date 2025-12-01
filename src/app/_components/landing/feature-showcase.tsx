@@ -75,7 +75,7 @@ export function FeatureShowcaseSection() {
 	const cardsRef = useGsapStagger<HTMLDivElement>({ duration: 0.6, stagger: 0.08, type: 'fadeUp' });
 
 	return (
-		<section className='container mx-auto px-6 py-16' data-testid='landing-feature-showcase' id='features'>
+		<section className='container mx-auto px-6 py-16 md:py-20' data-testid='landing-feature-showcase' id='features'>
 			<div className='mx-auto mb-12 max-w-3xl text-center' ref={headerRef}>
 				<Badge className='mb-3' variant='outline'>
 					Product tour
@@ -109,11 +109,8 @@ export function FeatureShowcaseSection() {
 								<p>{item.body}</p>
 								<ul className='space-y-2'>
 									{item.points.map((point) => (
-										<li className='flex gap-2 items-center' key={point}>
-											<span
-												aria-hidden
-												className='mt-0.5 h-1.5 w-1.5 rounded-full bg-primary/70'
-											/>
+										<li className='flex items-center gap-2' key={point}>
+											<span aria-hidden className='mt-0.5 h-1.5 w-1.5 rounded-full bg-primary/70' />
 											<span className='leading-relaxed'>{point}</span>
 										</li>
 									))}

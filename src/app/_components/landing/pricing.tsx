@@ -41,7 +41,7 @@ export function PricingSection({ signedIn }: { signedIn: boolean }) {
 	const cardsRef = useGsapStagger<HTMLDivElement>({ duration: 0.7, stagger: 0.12, type: 'fadeUp' });
 
 	return (
-		<section className='container mx-auto px-6 py-16' data-testid='landing-pricing' id='pricing'>
+		<section className='container mx-auto px-6 py-16 md:py-20' data-testid='landing-pricing' id='pricing'>
 			<div className='mx-auto mb-12 max-w-2xl text-center' ref={headerRef}>
 				<h2 className='text-3xl font-semibold md:text-4xl'>Pricing</h2>
 				<p className='text-muted-foreground mt-3'>Simple plans – upgrade only if you need more.</p>

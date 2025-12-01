@@ -41,7 +41,7 @@ export function DataPipelineSection() {
 	const pipelineRef = useGsapStagger<HTMLDivElement>({ duration: 0.6, stagger: 0.1, type: 'fadeUp' });
 
 	return (
-		<section className='container mx-auto px-6 py-16' data-testid='landing-data-pipeline'>
+		<section className='container mx-auto px-6 py-16 md:py-20' data-testid='landing-data-pipeline'>
 			<div className='mx-auto mb-12 max-w-3xl text-center' ref={headerRef}>
 				<Badge variant='outline' className='mb-3'>
 					Under the hood

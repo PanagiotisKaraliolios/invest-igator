@@ -31,7 +31,7 @@ export function FAQSection() {
 	const accordionRef = useGsapStagger<HTMLDivElement>({ duration: 0.6, stagger: 0.1, type: 'fadeRight' });
 
 	return (
-		<section className='container mx-auto px-6 py-16' data-testid='landing-faq' id='faq'>
+		<section className='container mx-auto px-6 py-16 md:py-20' data-testid='landing-faq' id='faq'>
 			<div className='mx-auto mb-12 max-w-2xl text-center' ref={headerRef}>
 				<h2 className='text-3xl font-semibold md:text-4xl'>FAQ</h2>
 				<p className='text-muted-foreground mt-3'>Answers to common questions about the platform.</p>
