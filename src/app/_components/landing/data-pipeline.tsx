@@ -1,9 +1,83 @@
 'use client';
 
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { ArrowRight, Database, Gauge, ShieldCheck, Workflow } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useGsap, useGsapStagger } from '@/hooks/use-gsap';
-import { ArrowRight, Database, Gauge, ShieldCheck, Workflow } from 'lucide-react';
+
+gsap.registerPlugin(ScrollTrigger);
+
+function AnimatedBeam() {
+	const beamRef = useRef<HTMLDivElement>(null);
+	const glowRef = useRef<HTMLDivElement>(null);
+
+	useEffect(() => {
+		if (!beamRef.current || !glowRef.current) return;
+
+		const ctx = gsap.context(() => {
+			// Main beam animation - travels across the pipeline
+			gsap.fromTo(
+				beamRef.current,
+				{ left: '-80px', opacity: 0 },
+				{
+					duration: 2.5,
+					ease: 'power1.inOut',
+					left: 'calc(100% + 80px)',
+					opacity: 1,
+					repeat: -1,
+					repeatDelay: 1.5,
+					scrollTrigger: {
+						start: 'top 80%',
+						toggleActions: 'play pause resume pause',
+						trigger: beamRef.current?.parentElement
+					}
+				}
+			);
+
+			// Glow pulse effect
+			gsap.to(glowRef.current, {
+				duration: 0.8,
+				ease: 'power2.inOut',
+				opacity: 0.8,
+				repeat: -1,
+				scale: 1.3,
+				yoyo: true
+			});
+		});
+
+		return () => ctx.revert();
+	}, []);
+
+	return (
+		<div className='pointer-events-none absolute bottom-12 left-4 right-4 hidden h-8 overflow-hidden sm:left-6 sm:right-6 md:block md:left-8 md:right-8'>
+			{/* Track line - the path the beam follows */}
+			<div className='absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-gradient-to-r from-primary/20 via-primary/40 to-primary/20' />
+			
+			{/* Track glow background */}
+			<div className='absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-primary/10 blur-sm' />
+
+			{/* Animated beam */}
+			<div className='absolute top-1/2 -translate-y-1/2' ref={beamRef} style={{ width: '100px' }}>
+				{/* Large glow effect */}
+				<div
+					className='absolute left-1/2 top-1/2 size-8 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/30 blur-xl'
+					ref={glowRef}
+				/>
+				{/* Medium glow */}
+				<div className='absolute left-1/2 top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/50 blur-md' />
+				{/* Beam trail gradient */}
+				<div className='h-0.5 w-full rounded-full bg-gradient-to-r from-transparent via-primary to-primary' />
+				{/* Leading dot with glow */}
+				<div className='absolute right-0 top-1/2 size-2.5 -translate-y-1/2 translate-x-1/2 rounded-full bg-primary shadow-[0_0_12px_3px] shadow-primary/60' />
+				{/* Inner bright core */}
+				<div className='absolute right-0 top-1/2 size-1.5 -translate-y-1/2 translate-x-1/2 rounded-full bg-white' />
+			</div>
+		</div>
+	);
+}
 
 const pipeline = [
 	{
@@ -43,7 +117,7 @@ export function DataPipelineSection() {
 	return (
 		<section className='container mx-auto px-6 py-16 md:py-20' data-testid='landing-data-pipeline'>
 			<div className='mx-auto mb-12 max-w-3xl text-center' ref={headerRef}>
-				<Badge variant='outline' className='mb-3'>
+				<Badge className='mb-3' variant='outline'>
 					Under the hood
 				</Badge>
 				<h2 className='text-3xl font-semibold md:text-4xl'>A pipeline built for accuracy</h2>
@@ -52,8 +126,10 @@ export function DataPipelineSection() {
 				</p>
 			</div>
 
-			<div className='relative rounded-2xl border bg-card/60 p-4 sm:p-6 md:p-8' ref={pipelineRef}>
-				<div className='pointer-events-none absolute inset-x-6 top-14 hidden h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent md:block' />
+			<div className='relative overflow-hidden rounded-2xl border bg-card/60 p-4 pb-16 sm:p-6 sm:pb-20 md:p-8 md:pb-24' ref={pipelineRef}>
+				{/* Animated beam showing data flow */}
+				<AnimatedBeam />
+
 				<div className='grid gap-4 md:grid-cols-4'>
 					{pipeline.map((step, index) => {
 						const Icon = step.icon;
