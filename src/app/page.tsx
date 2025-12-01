@@ -6,11 +6,15 @@ import HeroCharts from './_components/hero-charts';
 import { AnimatedFooter } from './_components/landing/animated-footer';
 import { AnimatedCta, AnimatedHeader, AnimatedHero } from './_components/landing/animated-hero';
 import { BenefitsSection } from './_components/landing/benefits';
+import { DataPipelineSection } from './_components/landing/data-pipeline';
+import { FeatureShowcaseSection } from './_components/landing/feature-showcase';
 import { FAQSection } from './_components/landing/faq';
 import { HowItWorksSection } from './_components/landing/how-it-works';
 import { PartnersRow } from './_components/landing/partners';
 import { PricingSection } from './_components/landing/pricing';
+import { QuickstartSection } from './_components/landing/quickstart';
 import { TestimonialsSection } from './_components/landing/testimonials';
+import { TrustSignalsSection } from './_components/landing/trust-signals';
 import ThemeSwitch from './(dashboard)/_components/theme-switch';
 
 export const revalidate = 60;
@@ -39,11 +43,23 @@ export default async function Home() {
 			{/* Partners / stack logos */}
 			<PartnersRow />
 
+			{/* Feature deep-dive */}
+			<FeatureShowcaseSection />
+
 			{/* Benefits grid */}
 			<BenefitsSection />
 
 			{/* How it works */}
 			<HowItWorksSection />
+
+			{/* Data pipeline */}
+			<DataPipelineSection />
+
+			{/* Quickstart */}
+			<QuickstartSection />
+
+			{/* Trust */}
+			<TrustSignalsSection />
 
 			{/* Pricing */}
 			<PricingSection signedIn={Boolean(session?.user)} />
