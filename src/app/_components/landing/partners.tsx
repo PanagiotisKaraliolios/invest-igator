@@ -11,6 +11,7 @@ import { Prisma } from '@/components/ui/svgs/prisma';
 import { PrismaDark } from '@/components/ui/svgs/prismaDark';
 import { TrpcWordmarkDark } from '@/components/ui/svgs/trpcWordmarkDark';
 import { TrpcWordmarkLight } from '@/components/ui/svgs/trpcWordmarkLight';
+import { useGsapStagger } from '@/hooks/use-gsap';
 
 interface PartnerDef {
 	name: string;
@@ -56,6 +57,7 @@ const partners: PartnerDef[] = [
 
 export function PartnersRow() {
 	const { isLight, mounted } = useTheme();
+	const logosRef = useGsapStagger<HTMLDivElement>({ duration: 0.5, stagger: 0.08, type: 'fadeUp' });
 
 	// Avoid hydration mismatch: render nothing until mounted so theme is consistent client/server
 	if (!mounted) {
@@ -81,13 +83,14 @@ export function PartnersRow() {
 			className='container mx-auto px-6 pt-4 pb-10'
 			data-testid='landing-partners'
 		>
-			<div className='flex flex-wrap items-center justify-center gap-10 opacity-80'>
+			<div className='flex flex-wrap items-center justify-center gap-10 opacity-80' ref={logosRef}>
 				{partners.map((p) => {
 					const Logo = isLight ? p.light : p.dark;
 					return (
 						<div
 							aria-label={p.label}
-							className='h-8 flex items-center gap-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground'
+							className='h-8 flex items-center gap-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground transition-opacity hover:opacity-100'
+							data-gsap-item
 							data-testid={`landing-partner-${p.name}`}
 							key={p.name}
 							role='img'

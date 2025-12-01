@@ -1,6 +1,9 @@
+'use client';
+
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Marquee } from '@/components/ui/marquee';
+import { useGsap } from '@/hooks/use-gsap';
 
 interface Testimonial {
 	quote: string;
@@ -31,18 +34,24 @@ const testimonials: Testimonial[] = [
 ];
 
 export function TestimonialsSection() {
+	const headerRef = useGsap<HTMLDivElement>({ duration: 0.7, type: 'fadeUp' });
+	const marqueeRef = useGsap<HTMLDivElement>({ delay: 0.2, duration: 0.8, type: 'fadeUp' });
+
 	return (
 		<section className='container mx-auto px-6 py-16' data-testid='landing-testimonials' id='testimonials'>
-			<div className='mx-auto mb-12 max-w-2xl text-center'>
+			<div className='mx-auto mb-12 max-w-2xl text-center' ref={headerRef}>
 				<h2 className='text-3xl font-semibold md:text-4xl'>What users say</h2>
 				<p className='text-muted-foreground mt-3'>
 					Early adopters already rely on Invest-igator for daily insight.
 				</p>
 			</div>
-			<div className='relative'>
+			<div className='relative' ref={marqueeRef}>
 				<Marquee ariaLabel='Testimonials carousel' className='[--duration:32s] [--gap:1.5rem]' pauseOnHover>
 					{testimonials.map((t) => (
-						<Card className='w-[280px] shrink-0 border-border/50 bg-card/80 backdrop-blur' key={t.name}>
+						<Card
+							className='w-[280px] shrink-0 border-border/50 bg-card/80 backdrop-blur transition-transform hover:scale-[1.02]'
+							key={t.name}
+						>
 							<CardHeader className='pb-0'>
 								<div className='flex items-center gap-3'>
 									<Avatar className='h-10 w-10'>
@@ -55,7 +64,7 @@ export function TestimonialsSection() {
 								</div>
 							</CardHeader>
 							<CardContent className='pt-4'>
-								<p className='text-sm italic leading-relaxed'>“{t.quote}”</p>
+								<p className='text-sm italic leading-relaxed'>"{t.quote}"</p>
 							</CardContent>
 						</Card>
 					))}

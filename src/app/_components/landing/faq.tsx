@@ -1,4 +1,7 @@
+'use client';
+
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { useGsap, useGsapStagger } from '@/hooks/use-gsap';
 
 const faqs = [
 	{
@@ -24,22 +27,27 @@ const faqs = [
 ];
 
 export function FAQSection() {
+	const headerRef = useGsap<HTMLDivElement>({ duration: 0.7, type: 'fadeUp' });
+	const accordionRef = useGsapStagger<HTMLDivElement>({ duration: 0.6, stagger: 0.1, type: 'fadeRight' });
+
 	return (
 		<section className='container mx-auto px-6 py-16' data-testid='landing-faq' id='faq'>
-			<div className='mx-auto mb-12 max-w-2xl text-center'>
+			<div className='mx-auto mb-12 max-w-2xl text-center' ref={headerRef}>
 				<h2 className='text-3xl font-semibold md:text-4xl'>FAQ</h2>
 				<p className='text-muted-foreground mt-3'>Answers to common questions about the platform.</p>
 			</div>
-			<Accordion className='mx-auto max-w-3xl' collapsible type='single'>
-				{faqs.map((f, i) => (
-					<AccordionItem key={f.q} value={`item-${i}`}>
-						<AccordionTrigger className='text-left'>{f.q}</AccordionTrigger>
-						<AccordionContent className='text-sm leading-relaxed text-muted-foreground'>
-							{f.a}
-						</AccordionContent>
-					</AccordionItem>
-				))}
-			</Accordion>
+			<div ref={accordionRef}>
+				<Accordion className='mx-auto max-w-3xl' collapsible type='single'>
+					{faqs.map((f, i) => (
+						<AccordionItem data-gsap-item key={f.q} value={`item-${i}`}>
+							<AccordionTrigger className='text-left'>{f.q}</AccordionTrigger>
+							<AccordionContent className='text-sm leading-relaxed text-muted-foreground'>
+								{f.a}
+							</AccordionContent>
+						</AccordionItem>
+					))}
+				</Accordion>
+			</div>
 		</section>
 	);
 }

@@ -1,7 +1,10 @@
+'use client';
+
 import { Check } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { useGsap, useGsapStagger } from '@/hooks/use-gsap';
 
 // Simple static pricing; adapt to env flags if needed.
 const tiers = [
@@ -34,23 +37,27 @@ const tiers = [
 ];
 
 export function PricingSection({ signedIn }: { signedIn: boolean }) {
+	const headerRef = useGsap<HTMLDivElement>({ duration: 0.7, type: 'fadeUp' });
+	const cardsRef = useGsapStagger<HTMLDivElement>({ duration: 0.7, stagger: 0.12, type: 'fadeUp' });
+
 	return (
 		<section className='container mx-auto px-6 py-16' data-testid='landing-pricing' id='pricing'>
-			<div className='mx-auto mb-12 max-w-2xl text-center'>
+			<div className='mx-auto mb-12 max-w-2xl text-center' ref={headerRef}>
 				<h2 className='text-3xl font-semibold md:text-4xl'>Pricing</h2>
 				<p className='text-muted-foreground mt-3'>Simple plans – upgrade only if you need more.</p>
 			</div>
-			<div className='grid gap-6 md:grid-cols-3'>
+			<div className='grid gap-6 md:grid-cols-3' ref={cardsRef}>
 				{tiers.map((t) => (
 					<Card
-						className={t.highlight ? 'border-primary/60 shadow-lg shadow-primary/10' : 'md:my-6'}
+						className={`transition-all hover:-translate-y-1 hover:shadow-xl ${t.highlight ? 'border-primary/60 shadow-lg shadow-primary/10' : 'md:my-6'}`}
+						data-gsap-item
 						key={t.name}
 					>
 						<CardHeader>
 							<CardTitle className='flex items-center justify-between text-xl'>
 								{t.name}
 								{t.highlight && (
-									<span className='rounded bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary'>
+									<span className='rounded bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary animate-pulse'>
 										Popular
 									</span>
 								)}
