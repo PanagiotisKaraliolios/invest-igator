@@ -1,6 +1,7 @@
 name: Docker Hub
 
 on:
+  workflow_dispatch:
   workflow_run:
     workflows: ["CI"]
     types:
@@ -12,8 +13,8 @@ on:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    # Only run if CI passed or if triggered by tag
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'push' }}
+    # Only run if CI passed, triggered by tag, or manually triggered
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
     permissions:
       contents: read
 
