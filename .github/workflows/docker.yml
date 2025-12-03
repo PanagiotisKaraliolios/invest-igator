@@ -49,3 +49,6 @@ jobs:
           file: ./Dockerfile
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          secrets: |
+            DATABASE_URL=postgres://dummy:dummy@localhost:5432/dummy
+            BETTER_AUTH_SECRET=build-time-dummy-secret-min-32-chars-required

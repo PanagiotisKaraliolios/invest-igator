@@ -14,23 +14,40 @@ COPY prisma ./prisma
 RUN bun install --frozen-lockfile
 
 FROM deps AS builder
-ENV SKIP_ENV_VALIDATION=1 \
-	EMAIL_FROM=dummy \
-	EMAIL_SERVER=dummy \
-	INFLUXDB_URL=http://localhost:8086 \
-	INFLUXDB_ORG=dummy \
-	INFLUXDB_BUCKET=dummy \
-	DATABASE_URL=postgres://user:pass@localhost:5432/db \
-	YAHOO_API_URL=https://query2.finance.yahoo.com/v8/finance
 WORKDIR /app
 
 # Generate Prisma client
 COPY prisma ./prisma
-RUN bunx prisma generate
+COPY prisma.config.ts ./prisma.config.ts
+RUN --mount=type=secret,id=DATABASE_URL \
+	DATABASE_URL=$(cat /run/secrets/DATABASE_URL) \
+	bunx prisma generate
 
 # Copy source and build Next.js
 COPY . .
-RUN bun run build
+RUN --mount=type=secret,id=DATABASE_URL \
+	--mount=type=secret,id=BETTER_AUTH_SECRET \
+	SKIP_ENV_VALIDATION=1 \
+	DATABASE_URL=$(cat /run/secrets/DATABASE_URL) \
+	BETTER_AUTH_SECRET=$(cat /run/secrets/BETTER_AUTH_SECRET) \
+	BETTER_AUTH_URL=http://localhost:3000 \
+	PASSWORD_PEPPER=build-time-dummy-pepper \
+	EMAIL_FROM=dummy@localhost \
+	EMAIL_SERVER=smtp://localhost:25 \
+	INFLUXDB_URL=http://localhost:8086 \
+	INFLUXDB_ORG=dummy \
+	INFLUXDB_BUCKET=dummy \
+	INFLUXDB_TOKEN=dummy-token \
+	YAHOO_API_URL=https://query2.finance.yahoo.com/v8/finance \
+	ALPHAVANTAGE_API_KEY=dummy \
+	POLYGON_API_KEY=dummy \
+	AUTH_DISCORD_ID=dummy \
+	AUTH_DISCORD_SECRET=dummy \
+	CLOUDFLARE_ACCESS_KEY_ID=dummy \
+	CLOUDFLARE_ACCOUNT_ID=dummy \
+	CLOUDFLARE_BUCKET_NAME=dummy \
+	CLOUDFLARE_SECRET_ACCESS_KEY=dummy \
+	bun run build
 
 FROM oven/bun:1.3-debian AS runner
 ENV NODE_ENV=production
