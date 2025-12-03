@@ -14,6 +14,8 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/investigator
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -32,6 +34,8 @@ jobs:
   typecheck:
     name: Type Check
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/investigator
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -64,9 +68,13 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/investigator
 
       - name: Generate Prisma Client
         run: bun run postinstall
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/investigator
 
       - name: Build
         run: bun run build
@@ -95,6 +103,8 @@ jobs:
     name: E2E Tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/investigator
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -127,13 +137,10 @@ jobs:
 
       - name: Run Prisma migrations
         run: bun run db:push
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/investigator
 
       - name: Run E2E tests
         run: bun run test:e2e
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/investigator
           NEXTAUTH_SECRET: test-secret-key-for-ci-only-min-32-chars-required
           NEXTAUTH_URL: http://localhost:3000
           PASSWORD_PEPPER: test-pepper-for-ci-only
@@ -156,6 +163,8 @@ jobs:
     name: Migration Check
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/investigator
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -185,16 +194,12 @@ jobs:
 
       - name: Apply migrations
         run: bun run db:migrate
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/investigator
 
       - name: Create shadow database
         run: docker exec postgres psql -U postgres -c "CREATE DATABASE investigator_shadow;"
 
       - name: Check for schema drift
         run: bunx prisma migrate diff --from-migrations ./prisma/migrations --to-schema-datamodel ./prisma/schema.prisma --shadow-database-url postgresql://postgres:postgres@localhost:5432/investigator_shadow --exit-code
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/investigator
 
       - name: Stop PostgreSQL
         if: always()
