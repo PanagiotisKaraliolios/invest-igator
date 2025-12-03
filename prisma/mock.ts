@@ -24,10 +24,13 @@
  *   - MOCK_GOALS_MIN/MAX: Range for goals per user (default: 1-4)
  */
 import { faker } from '@faker-js/faker';
-import type { Currency, TransactionSide } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
 import * as bcrypt from 'bcryptjs';
 import { env } from '../src/env';
-import { db } from '../src/server/db';
+import { type Currency, PrismaClient, type TransactionSide } from './generated/client';
+
+const adapter = new PrismaPg({ connectionString: env.DATABASE_URL });
+const db = new PrismaClient({ adapter });
 
 // --- Configuration ---
 const MOCK_USERS = Number.parseInt(process.env.MOCK_USERS || '50', 10);

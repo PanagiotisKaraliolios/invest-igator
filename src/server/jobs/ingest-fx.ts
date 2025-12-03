@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import type { Currency } from '@prisma/client';
+import type { Currency } from '@prisma/generated';
 import { env } from '@/env';
 import { db } from '@/server/db';
 

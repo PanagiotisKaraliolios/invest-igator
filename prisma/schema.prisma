@@ -2,16 +2,12 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "./generated"
 }
 
 datasource db {
   provider = "postgresql"
-  // NOTE: When using mysql or sqlserver, uncomment the @db.Text annotations in model Account below
-  // Further reading:
-  // https://www.better-auth.com/docs/adapters/prisma
-  // https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#string
-  url      = env("DATABASE_URL")
 }
 
 enum TransactionSide {
@@ -270,5 +266,6 @@ model ApiKey {
   @@index([userId])
   @@index([expiresAt])
   @@index([enabled])
+  @@index([start])
   @@map("apiKey")
 }

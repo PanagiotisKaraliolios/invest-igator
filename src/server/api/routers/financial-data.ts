@@ -1,4 +1,4 @@
-import type { Currency } from '@prisma/client';
+import type { Currency } from '@prisma/generated';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { env } from '@/env';

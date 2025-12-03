@@ -1,4 +1,4 @@
-import type { Currency } from '@prisma/client';
+import type { Currency } from '@prisma/generated';
 import { db } from '@/server/db';
 
 export type FxMatrix = Record<Currency, Record<Currency, number>>;

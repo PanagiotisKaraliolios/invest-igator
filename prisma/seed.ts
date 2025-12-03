@@ -10,9 +10,13 @@
  *   ADMIN_EMAIL, ADMIN_PASSWORD (optional), ADMIN_NAME (optional)
  */
 
+import { PrismaPg } from '@prisma/adapter-pg';
 import * as bcrypt from 'bcryptjs';
 import { env } from '../src/env';
-import { db } from '../src/server/db';
+import { PrismaClient } from './generated/client';
+
+const adapter = new PrismaPg({ connectionString: env.DATABASE_URL });
+const db = new PrismaClient({ adapter });
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;

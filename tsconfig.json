@@ -1,8 +1,6 @@
 {
   "compilerOptions": {
     "allowJs": true,
-    /* Path Aliases */
-    "baseUrl": ".",
     "checkJs": true,
     /* Base Options: */
     "esModuleInterop": true,
@@ -23,6 +21,9 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@prisma/generated": [
+        "./prisma/generated/client.ts"
       ]
     },
     "plugins": [
@@ -34,7 +35,7 @@
     "skipLibCheck": true,
     /* Strictness */
     "strict": true,
-    "target": "es2022",
+    "target": "es2023",
     "types": [
       "@playwright/test"
     ],
