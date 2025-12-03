@@ -31,6 +31,7 @@ RUN --mount=type=secret,id=DATABASE_URL \
 	DATABASE_URL=$(cat /run/secrets/DATABASE_URL) \
 	BETTER_AUTH_SECRET=$(cat /run/secrets/BETTER_AUTH_SECRET) \
 	BETTER_AUTH_URL=http://localhost:3000 \
+	NEXT_PUBLIC_SITE_URL=http://localhost:3000 \
 	PASSWORD_PEPPER=build-time-dummy-pepper \
 	EMAIL_FROM=dummy@localhost \
 	EMAIL_SERVER=smtp://localhost:25 \
