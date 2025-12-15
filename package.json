@@ -82,7 +82,7 @@
 		"@faker-js/faker": "^10.1.0",
 		"@playwright/test": "^1.57.0",
 		"@prisma/adapter-pg": "^7.1.0",
-		"@tailwindcss/postcss": "^4.1.17",
+		"@tailwindcss/postcss": "^4.1.18",
 		"@tanstack/react-query-devtools": "^5.91.1",
 		"@types/node": "^24.10.1",
 		"@types/react": "19.2.7",
