@@ -121,9 +121,8 @@ export default function PortfolioReturnsPage() {
 						<ToggleGroup
 							aria-label='Return mode'
 							data-testid='mode-toggle'
-							onValueChange={(v) => v && setMode(v as Mode)}
-							type='single'
-							value={mode}
+							onValueChange={(v) => v[0] && setMode(v[0] as Mode)}
+							value={[mode]}
 						>
 							<ToggleGroupItem aria-label='MWR' value='MWR'>
 								MWR
@@ -136,8 +135,8 @@ export default function PortfolioReturnsPage() {
 						<ToggleGroup
 							aria-label='Series shown'
 							data-testid='series-toggle'
+							multiple
 							onValueChange={(v) => v.length && setSeriesShown(v)}
-							type='multiple'
 							value={seriesShown}
 						>
 							<ToggleGroupItem aria-label='Yield' value='yield'>
