@@ -177,9 +177,7 @@ export function EnabledTwoFactorSection({
 			) : null}
 			<div className='flex flex-wrap gap-2'>
 				<Dialog onOpenChange={setRegenOpen} open={regenOpen}>
-					<DialogTrigger asChild>
-						<Button variant='outline'>Regenerate recovery codes</Button>
-					</DialogTrigger>
+					<DialogTrigger render={<Button variant='outline'>Regenerate recovery codes</Button>} />
 					<DialogContent>
 						<DialogHeader>
 							<DialogTitle>Regenerate recovery codes</DialogTitle>
@@ -218,9 +216,7 @@ export function EnabledTwoFactorSection({
 					</DialogContent>
 				</Dialog>
 				<Dialog onOpenChange={setDisableOpen} open={disableOpen}>
-					<DialogTrigger asChild>
-						<Button variant='destructive'>Disable two-factor</Button>
-					</DialogTrigger>
+					<DialogTrigger render={<Button variant='destructive'>Disable two-factor</Button>} />
 					<DialogContent>
 						<DialogHeader>
 							<DialogTitle>Disable two-factor authentication</DialogTitle>

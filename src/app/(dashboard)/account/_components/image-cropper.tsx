@@ -93,8 +93,8 @@ export function ImageCropper({ open, onOpenChange, imageUrl, onCropComplete }: I
 	}
 
 	return (
-		<Dialog modal={true} onOpenChange={onOpenChange} open={open}>
-			<DialogContent className='p-0 gap-0 max-w-2xl' onInteractOutside={(e) => e.preventDefault()}>
+		<Dialog disablePointerDismissal modal={true} onOpenChange={onOpenChange} open={open}>
+			<DialogContent className='p-0 gap-0 max-w-2xl'>
 				<DialogHeader className='p-6 pb-0'>
 					<DialogTitle>Crop Profile Picture</DialogTitle>
 				</DialogHeader>
