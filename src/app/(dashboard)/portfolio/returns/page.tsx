@@ -149,6 +149,7 @@ export default function PortfolioReturnsPage() {
 
 						<Select
 							data-testid='period-select'
+							items={{ custom: 'Custom…', month: 'Month', year: 'Past year', ytd: 'Year-to-date' }}
 							onValueChange={(v) => setPreset(v as PeriodPreset)}
 							value={preset}
 						>

@@ -325,6 +325,10 @@ export function TransactionForm(props: {
 											name='feeCurrency'
 											render={({ field: curField }) => (
 												<Select
+													items={{
+														SAME: 'Same',
+														...Object.fromEntries(supportedCurrencies.map((c) => [c, c]))
+													}}
 													onValueChange={(v) =>
 														curField.onChange(v === 'SAME' ? undefined : v)
 													}

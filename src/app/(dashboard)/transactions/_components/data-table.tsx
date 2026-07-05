@@ -369,7 +369,11 @@ export function DataTable<TData extends { id?: string }, TValue>({ columns }: Da
 					/>
 				</div>
 
-				<Select onValueChange={(v) => setSide(v as any)} value={side}>
+				<Select
+					items={{ ALL: 'All Sides', BUY: 'BUY', SELL: 'SELL' }}
+					onValueChange={(v) => setSide(v as any)}
+					value={side}
+				>
 					<SelectTrigger className='h-9 w-[150px]' data-testid='transactions-side-filter'>
 						<SelectValue placeholder='All Sides' />
 					</SelectTrigger>
@@ -502,7 +506,11 @@ export function DataTable<TData extends { id?: string }, TValue>({ columns }: Da
 					row(s) selected
 				</div>
 				<div className='flex items-center gap-2'>
-					<Select onValueChange={(v) => table.setPageSize(Number(v))} value={String(pageSize)}>
+					<Select
+						items={{ '10': '10 / page', '20': '20 / page', '50': '50 / page', '100': '100 / page' }}
+						onValueChange={(v) => table.setPageSize(Number(v))}
+						value={String(pageSize)}
+					>
 						<SelectTrigger className='h-8 w-[110px]'>
 							<SelectValue placeholder='Rows' />
 						</SelectTrigger>
