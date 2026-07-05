@@ -303,21 +303,23 @@ export default function GoalsView() {
 										<FormItem>
 											<FormLabel>Target Date</FormLabel>
 											<Popover>
-												<PopoverTrigger asChild>
-													<FormControl>
-														<Button
-															className={cn(
-																'justify-start text-left font-normal',
-																!field.value && 'text-muted-foreground'
-															)}
-															type='button'
-															variant='outline'
-														>
-															<CalendarIcon className='mr-2 size-4' />
-															{field.value ? field.value : <span>Pick a date</span>}
-														</Button>
-													</FormControl>
-												</PopoverTrigger>
+												<PopoverTrigger
+													render={
+														<FormControl>
+															<Button
+																className={cn(
+																	'justify-start text-left font-normal',
+																	!field.value && 'text-muted-foreground'
+																)}
+																type='button'
+																variant='outline'
+															>
+																<CalendarIcon className='mr-2 size-4' />
+																{field.value ? field.value : <span>Pick a date</span>}
+															</Button>
+														</FormControl>
+													}
+												/>
 												<PopoverContent align='start' className='w-auto p-0'>
 													<Calendar
 														captionLayout='dropdown'
@@ -487,21 +489,23 @@ export default function GoalsView() {
 										<FormItem>
 											<FormLabel>Target Date</FormLabel>
 											<Popover>
-												<PopoverTrigger asChild>
-													<FormControl>
-														<Button
-															className={cn(
-																'justify-start text-left font-normal',
-																!field.value && 'text-muted-foreground'
-															)}
-															type='button'
-															variant='outline'
-														>
-															<CalendarIcon className='mr-2 size-4' />
-															{field.value ? field.value : <span>Pick a date</span>}
-														</Button>
-													</FormControl>
-												</PopoverTrigger>
+												<PopoverTrigger
+													render={
+														<FormControl>
+															<Button
+																className={cn(
+																	'justify-start text-left font-normal',
+																	!field.value && 'text-muted-foreground'
+																)}
+																type='button'
+																variant='outline'
+															>
+																<CalendarIcon className='mr-2 size-4' />
+																{field.value ? field.value : <span>Pick a date</span>}
+															</Button>
+														</FormControl>
+													}
+												/>
 												<PopoverContent align='start' className='w-auto p-0'>
 													<Calendar
 														captionLayout='dropdown'

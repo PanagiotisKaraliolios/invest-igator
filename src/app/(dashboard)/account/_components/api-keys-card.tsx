@@ -145,14 +145,20 @@ export function ApiKeysCard() {
 											)}
 											{key.permissions && (
 												<Popover>
-													<PopoverTrigger asChild>
-														<Button className='h-6 gap-1 px-2' size='sm' variant='outline'>
-															<Shield className='h-3 w-3' />
-															<span className='text-xs'>
-																{formatPermissions(key.permissions)}
-															</span>
-														</Button>
-													</PopoverTrigger>
+													<PopoverTrigger
+														render={
+															<Button
+																className='h-6 gap-1 px-2'
+																size='sm'
+																variant='outline'
+															>
+																<Shield className='h-3 w-3' />
+																<span className='text-xs'>
+																	{formatPermissions(key.permissions)}
+																</span>
+															</Button>
+														}
+													/>
 													<PopoverContent align='start' className='w-80'>
 														<div className='space-y-2'>
 															<h4 className='font-medium text-sm'>Permissions</h4>

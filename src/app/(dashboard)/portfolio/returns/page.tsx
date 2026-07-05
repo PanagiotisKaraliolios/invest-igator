@@ -164,21 +164,23 @@ export default function PortfolioReturnsPage() {
 						</Select>
 
 						<Popover>
-							<PopoverTrigger asChild>
-								<Button
-									aria-label='Period selection'
-									className={cn(
-										'w-[220px] justify-start',
-										preset !== 'custom' && 'text-muted-foreground'
-									)}
-									data-testid='period-picker-button'
-									variant='outline'
-								>
-									{preset === 'custom' && range.from && range.to
-										? `${range.from.toLocaleDateString()} – ${range.to.toLocaleDateString()}`
-										: 'Period selection'}
-								</Button>
-							</PopoverTrigger>
+							<PopoverTrigger
+								render={
+									<Button
+										aria-label='Period selection'
+										className={cn(
+											'w-[220px] justify-start',
+											preset !== 'custom' && 'text-muted-foreground'
+										)}
+										data-testid='period-picker-button'
+										variant='outline'
+									>
+										{preset === 'custom' && range.from && range.to
+											? `${range.from.toLocaleDateString()} – ${range.to.toLocaleDateString()}`
+											: 'Period selection'}
+									</Button>
+								}
+							/>
 							<PopoverContent align='end' className='w-auto p-0'>
 								<Calendar
 									autoFocus
