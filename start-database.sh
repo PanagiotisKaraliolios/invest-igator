@@ -37,6 +37,17 @@ if ! $DOCKER_CMD info > /dev/null 2>&1; then
   exit 1
 fi
 
+if [ "$("$DOCKER_CMD" ps -q -f "name=^${DB_CONTAINER_NAME}$")" ]; then
+  echo "Database container '$DB_CONTAINER_NAME' already running"
+  exit 0
+fi
+
+if [ "$("$DOCKER_CMD" ps -q -a -f "name=^${DB_CONTAINER_NAME}$")" ]; then
+  $DOCKER_CMD start "$DB_CONTAINER_NAME"
+  echo "Existing database container '$DB_CONTAINER_NAME' started"
+  exit 0
+fi
+
 if command -v nc >/dev/null 2>&1; then
   if nc -z localhost "$DB_PORT" 2>/dev/null; then
     echo "Port $DB_PORT is already in use."
@@ -49,17 +60,6 @@ else
     echo "Aborting."
     exit 1
   fi
-fi
-
-if [ "$($DOCKER_CMD ps -q -f name=$DB_CONTAINER_NAME)" ]; then
-  echo "Database container '$DB_CONTAINER_NAME' already running"
-  exit 0
-fi
-
-if [ "$($DOCKER_CMD ps -q -a -f name=$DB_CONTAINER_NAME)" ]; then
-  $DOCKER_CMD start "$DB_CONTAINER_NAME"
-  echo "Existing database container '$DB_CONTAINER_NAME' started"
-  exit 0
 fi
 
 if [ "$DB_PASSWORD" = "password" ]; then
@@ -75,7 +75,7 @@ if [ "$DB_PASSWORD" = "password" ]; then
 fi
 
 $DOCKER_CMD run -d \
-  --name $DB_CONTAINER_NAME \
+  --name "$DB_CONTAINER_NAME" \
   -e POSTGRES_USER="postgres" \
   -e POSTGRES_PASSWORD="$DB_PASSWORD" \
   -e POSTGRES_DB="$DB_NAME" \

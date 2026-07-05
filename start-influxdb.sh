@@ -57,6 +57,17 @@ if ! $DOCKER_CMD info > /dev/null 2>&1; then
   exit 1
 fi
 
+if [ "$("$DOCKER_CMD" ps -q -f "name=^${INFLUX_CONTAINER_NAME}$")" ]; then
+  echo "InfluxDB container '$INFLUX_CONTAINER_NAME' already running"
+  exit 0
+fi
+
+if [ "$("$DOCKER_CMD" ps -q -a -f "name=^${INFLUX_CONTAINER_NAME}$")" ]; then
+  $DOCKER_CMD start "$INFLUX_CONTAINER_NAME"
+  echo "Existing InfluxDB container '$INFLUX_CONTAINER_NAME' started"
+  exit 0
+fi
+
 if command -v nc >/dev/null 2>&1; then
   if nc -z localhost "$INFLUX_PORT" 2>/dev/null; then
     echo "Port $INFLUX_PORT is already in use."
@@ -71,19 +82,8 @@ else
   fi
 fi
 
-if [ "$($DOCKER_CMD ps -q -f name=$INFLUX_CONTAINER_NAME)" ]; then
-  echo "InfluxDB container '$INFLUX_CONTAINER_NAME' already running"
-  exit 0
-fi
-
-if [ "$($DOCKER_CMD ps -q -a -f name=$INFLUX_CONTAINER_NAME)" ]; then
-  $DOCKER_CMD start "$INFLUX_CONTAINER_NAME"
-  echo "Existing InfluxDB container '$INFLUX_CONTAINER_NAME' started"
-  exit 0
-fi
-
 $DOCKER_CMD run -d \
-  --name $INFLUX_CONTAINER_NAME \
+  --name "$INFLUX_CONTAINER_NAME" \
   -e DOCKER_INFLUXDB_INIT_MODE="setup" \
   -e DOCKER_INFLUXDB_INIT_USERNAME="$INFLUX_INIT_USERNAME" \
   -e DOCKER_INFLUXDB_INIT_PASSWORD="$INFLUX_INIT_PASSWORD" \
