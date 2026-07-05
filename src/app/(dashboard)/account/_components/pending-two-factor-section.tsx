@@ -97,23 +97,25 @@ export function PendingTwoFactorSection({ initialSetup, onSetupChange, onRefetch
 						<div className='flex items-center gap-2'>
 							<p className='font-medium'>Setup key</p>
 							<Tooltip>
-								<TooltipTrigger asChild>
-									<Button
-										className='size-8'
-										onClick={async () => {
-											try {
-												await navigator.clipboard.writeText(generated.secret);
-												toast.success('Setup key copied');
-											} catch {
-												toast.error('Failed to copy setup key');
-											}
-										}}
-										size='icon'
-										variant='outline'
-									>
-										<CopyIcon className='size-3' />
-									</Button>
-								</TooltipTrigger>
+								<TooltipTrigger
+									render={
+										<Button
+											className='size-8'
+											onClick={async () => {
+												try {
+													await navigator.clipboard.writeText(generated.secret);
+													toast.success('Setup key copied');
+												} catch {
+													toast.error('Failed to copy setup key');
+												}
+											}}
+											size='icon'
+											variant='outline'
+										>
+											<CopyIcon className='size-3' />
+										</Button>
+									}
+								/>
 								<TooltipContent>Copy setup key</TooltipContent>
 							</Tooltip>
 						</div>
@@ -126,23 +128,25 @@ export function PendingTwoFactorSection({ initialSetup, onSetupChange, onRefetch
 					<div className='flex items-center gap-2'>
 						<p className='font-medium'>Recovery codes</p>
 						<Tooltip>
-							<TooltipTrigger asChild>
-								<Button
-									className='size-8'
-									onClick={async () => {
-										try {
-											await navigator.clipboard.writeText(generated.recoveryCodes.join('\n'));
-											toast.success('Recovery codes copied');
-										} catch {
-											toast.error('Failed to copy recovery codes');
-										}
-									}}
-									size='icon'
-									variant='outline'
-								>
-									<CopyIcon className='size-3' />
-								</Button>
-							</TooltipTrigger>
+							<TooltipTrigger
+								render={
+									<Button
+										className='size-8'
+										onClick={async () => {
+											try {
+												await navigator.clipboard.writeText(generated.recoveryCodes.join('\n'));
+												toast.success('Recovery codes copied');
+											} catch {
+												toast.error('Failed to copy recovery codes');
+											}
+										}}
+										size='icon'
+										variant='outline'
+									>
+										<CopyIcon className='size-3' />
+									</Button>
+								}
+							/>
 							<TooltipContent>Copy recovery codes</TooltipContent>
 						</Tooltip>
 					</div>

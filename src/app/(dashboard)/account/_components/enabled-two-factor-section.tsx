@@ -138,23 +138,25 @@ export function EnabledTwoFactorSection({
 					<div className='flex items-center justify-between'>
 						<p className='font-medium'>Your new recovery codes</p>
 						<Tooltip>
-							<TooltipTrigger asChild>
-								<Button
-									className='size-8'
-									onClick={async () => {
-										try {
-											await navigator.clipboard.writeText(regenCodes.join('\n'));
-											toast.success('Recovery codes copied');
-										} catch {
-											toast.error('Failed to copy recovery codes');
-										}
-									}}
-									size='icon'
-									variant='outline'
-								>
-									<CopyIcon className='size-3' />
-								</Button>
-							</TooltipTrigger>
+							<TooltipTrigger
+								render={
+									<Button
+										className='size-8'
+										onClick={async () => {
+											try {
+												await navigator.clipboard.writeText(regenCodes.join('\n'));
+												toast.success('Recovery codes copied');
+											} catch {
+												toast.error('Failed to copy recovery codes');
+											}
+										}}
+										size='icon'
+										variant='outline'
+									>
+										<CopyIcon className='size-3' />
+									</Button>
+								}
+							/>
 							<TooltipContent>Copy new recovery codes</TooltipContent>
 						</Tooltip>
 					</div>
