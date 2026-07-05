@@ -312,7 +312,7 @@ export async function ingestYahooSymbol(symbol: string, options?: { userId?: str
 		includePrePost: false,
 		interval: '1d',
 		period1: 1,
-		period2: Date.now()
+		period2: Math.floor(Date.now() / 1000)
 	});
 
 	// Update watchlist item with currency if userId is provided
