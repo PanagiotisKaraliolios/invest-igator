@@ -265,11 +265,13 @@ export function AuditLogsTable() {
 
 				<div className='ml-auto'>
 					<DropdownMenu>
-						<DropdownMenuTrigger asChild>
-							<Button size='sm' variant='outline'>
-								Columns <ChevronDown className='ml-2 size-4' />
-							</Button>
-						</DropdownMenuTrigger>
+						<DropdownMenuTrigger
+							render={
+								<Button size='sm' variant='outline'>
+									Columns <ChevronDown className='ml-2 size-4' />
+								</Button>
+							}
+						/>
 						<DropdownMenuContent align='end'>
 							{table
 								.getAllColumns()

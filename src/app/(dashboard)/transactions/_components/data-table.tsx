@@ -319,11 +319,13 @@ export function DataTable<TData extends { id?: string }, TValue>({ columns }: Da
 				</Button>
 				<div className='ml-auto flex items-center gap-2'>
 					<DropdownMenu>
-						<DropdownMenuTrigger asChild>
-							<Button className='w-auto' size='sm' variant='ghost'>
-								Columns <ChevronDownIcon className='ml-2 size-4' />
-							</Button>
-						</DropdownMenuTrigger>
+						<DropdownMenuTrigger
+							render={
+								<Button className='w-auto' size='sm' variant='ghost'>
+									Columns <ChevronDownIcon className='ml-2 size-4' />
+								</Button>
+							}
+						/>
 						<DropdownMenuContent align='end'>
 							{table
 								.getAllColumns()

@@ -46,12 +46,14 @@ export function UserActionsDropdown({
 
 	return (
 		<DropdownMenu>
-			<DropdownMenuTrigger asChild>
-				<Button size='icon' variant='ghost'>
-					<MoreHorizontal className='size-4' />
-					<span className='sr-only'>Actions</span>
-				</Button>
-			</DropdownMenuTrigger>
+			<DropdownMenuTrigger
+				render={
+					<Button size='icon' variant='ghost'>
+						<MoreHorizontal className='size-4' />
+						<span className='sr-only'>Actions</span>
+					</Button>
+				}
+			/>
 			<DropdownMenuContent align='end'>
 				<DropdownMenuLabel>Actions</DropdownMenuLabel>
 

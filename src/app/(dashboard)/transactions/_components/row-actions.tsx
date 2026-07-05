@@ -68,11 +68,13 @@ export function RowActions({ row }: { row: RowData }) {
 	return (
 		<div className='flex justify-end'>
 			<DropdownMenu>
-				<DropdownMenuTrigger asChild>
-					<Button size='icon' variant='ghost'>
-						<MoreHorizontal className='size-4' />
-					</Button>
-				</DropdownMenuTrigger>
+				<DropdownMenuTrigger
+					render={
+						<Button size='icon' variant='ghost'>
+							<MoreHorizontal className='size-4' />
+						</Button>
+					}
+				/>
 				<DropdownMenuContent align='end'>
 					<DropdownMenuItem onClick={() => setEditOpen(true)}>Edit</DropdownMenuItem>
 					<DropdownMenuItem onClick={() => setDuplicateOpen(true)}>Duplicate</DropdownMenuItem>

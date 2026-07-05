@@ -272,16 +272,18 @@ export function ApiKeysCard() {
 											/>
 										</div>
 										<DropdownMenu>
-											<DropdownMenuTrigger asChild>
-												<Button
-													data-testid={`api-key-menu-${key.id}`}
-													size='sm'
-													variant='ghost'
-												>
-													<MoreVertical className='h-4 w-4' />
-													<span className='sr-only'>Open menu</span>
-												</Button>
-											</DropdownMenuTrigger>
+											<DropdownMenuTrigger
+												render={
+													<Button
+														data-testid={`api-key-menu-${key.id}`}
+														size='sm'
+														variant='ghost'
+													>
+														<MoreVertical className='h-4 w-4' />
+														<span className='sr-only'>Open menu</span>
+													</Button>
+												}
+											/>
 											<DropdownMenuContent align='end'>
 												<DropdownMenuItem
 													data-testid='edit-api-key-button'
