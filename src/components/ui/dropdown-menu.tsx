@@ -134,11 +134,13 @@ function DropdownMenuLabel({
 	className,
 	inset,
 	...props
-}: React.ComponentProps<typeof MenuPrimitive.GroupLabel> & {
+}: React.ComponentProps<'div'> & {
 	inset?: boolean;
 }) {
+	// Radix's Label floated freely; Base UI's Menu.GroupLabel throws outside a
+	// Menu.Group. shadcn uses this as a standalone header, so render a plain div.
 	return (
-		<MenuPrimitive.GroupLabel
+		<div
 			className={cn('px-2 py-1.5 text-sm font-medium data-[inset]:pl-8', className)}
 			data-inset={inset}
 			data-slot='dropdown-menu-label'
