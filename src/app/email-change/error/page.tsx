@@ -20,12 +20,10 @@ export default async function EmailChangeErrorPage({ searchParams }: { searchPar
 				<CardContent className='space-y-4'>
 					<p className='text-sm text-muted-foreground'>{reason}</p>
 					<div className='flex gap-2'>
-						<Button asChild variant='secondary'>
-							<Link href='/account?tab=profile'>Back to Account</Link>
+						<Button render={<Link href='/account?tab=profile' />} variant='secondary'>
+							Back to Account
 						</Button>
-						<Button asChild>
-							<Link href='/'>Go Home</Link>
-						</Button>
+						<Button render={<Link href='/' />}>Go Home</Button>
 					</div>
 				</CardContent>
 			</Card>

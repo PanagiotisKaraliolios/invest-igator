@@ -17,9 +17,7 @@ export default function EmailChangeConfirmedPage() {
 				</CardHeader>
 				<CardContent className='space-y-4'>
 					<p>You can safely close this tab or head back to your account settings.</p>
-					<Button asChild>
-						<Link href='/account'>Back to Account</Link>
-					</Button>
+					<Button render={<Link href='/account' />}>Back to Account</Button>
 				</CardContent>
 			</Card>
 		</div>

@@ -41,21 +41,25 @@ export function AnimatedHero({ appName, isSignedIn, chartComponent }: AnimatedHe
 				</p>
 				<div className='flex flex-wrap items-center gap-3' ref={buttonsRef}>
 					{isSignedIn ? (
-						<Button asChild size='lg'>
-							<Link href='/portfolio'>Go to Portfolio</Link>
+						<Button render={<Link href='/portfolio' />} size='lg'>
+							Go to Portfolio
 						</Button>
 					) : (
 						<>
-							<Button asChild className='transition-transform hover:scale-105' size='lg'>
-								<Link href='/signup'>Create your account</Link>
+							<Button
+								className='transition-transform hover:scale-105'
+								render={<Link href='/signup' />}
+								size='lg'
+							>
+								Create your account
 							</Button>
 							<Button
-								asChild
 								className='transition-transform hover:scale-105'
+								render={<Link href='/login' />}
 								size='lg'
 								variant='outline'
 							>
-								<Link href='/login'>I already have an account</Link>
+								I already have an account
 							</Button>
 						</>
 					)}
@@ -120,21 +124,29 @@ export function AnimatedCta({ isSignedIn }: { isSignedIn: boolean }) {
 					</div>
 					<div className='flex flex-wrap gap-3'>
 						{isSignedIn ? (
-							<Button asChild className='transition-transform hover:scale-105' size='lg'>
-								<Link href='/portfolio'>Open Portfolio</Link>
+							<Button
+								className='transition-transform hover:scale-105'
+								render={<Link href='/portfolio' />}
+								size='lg'
+							>
+								Open Portfolio
 							</Button>
 						) : (
 							<>
-								<Button asChild className='transition-transform hover:scale-105' size='lg'>
-									<Link href='/signup'>Get started free</Link>
+								<Button
+									className='transition-transform hover:scale-105'
+									render={<Link href='/signup' />}
+									size='lg'
+								>
+									Get started free
 								</Button>
 								<Button
-									asChild
 									className='transition-transform hover:scale-105'
+									render={<Link href='/login' />}
 									size='lg'
 									variant='outline'
 								>
-									<Link href='/login'>Log in</Link>
+									Log in
 								</Button>
 							</>
 						)}

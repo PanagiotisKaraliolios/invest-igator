@@ -54,11 +54,9 @@ export default async function AuthErrorPage({ searchParams }: Props) {
 					) : null}
 				</CardContent>
 				<CardFooter className='flex gap-3'>
-					<Button asChild>
-						<Link href='/login'>Back to sign in</Link>
-					</Button>
-					<Button asChild variant='outline'>
-						<Link href='/'>Home</Link>
+					<Button render={<Link href='/login' />}>Back to sign in</Button>
+					<Button render={<Link href='/' />} variant='outline'>
+						Home
 					</Button>
 				</CardFooter>
 			</Card>

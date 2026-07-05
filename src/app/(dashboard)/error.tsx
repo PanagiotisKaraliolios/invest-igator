@@ -58,14 +58,12 @@ export default function DashboardError({ error, reset }: { error: Error & { dige
 					<RotateCw className='mr-2 size-4' />
 					Try Again
 				</Button>
-				<Button asChild size='lg' variant='outline'>
-					<Link href='/portfolio'>Go to Portfolio</Link>
+				<Button render={<Link href='/portfolio' />} size='lg' variant='outline'>
+					Go to Portfolio
 				</Button>
-				<Button asChild size='lg' variant='ghost'>
-					<Link href='/'>
-						<Home className='mr-2 size-4' />
-						Back to Home
-					</Link>
+				<Button render={<Link href='/' />} size='lg' variant='ghost'>
+					<Home className='mr-2 size-4' />
+					Back to Home
 				</Button>
 			</div>
 		</div>

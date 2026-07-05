@@ -75,14 +75,18 @@ export function PricingSection({ signedIn }: { signedIn: boolean }) {
 							</ul>
 						</CardContent>
 						<CardFooter>
-							<Button asChild size='sm' variant={t.highlight ? 'default' : 'outline'}>
-								<Link
-									href={t.href}
-									rel={t.external ? 'noopener noreferrer' : undefined}
-									target={t.external ? '_blank' : undefined}
-								>
-									{signedIn ? 'Manage' : t.cta}
-								</Link>
+							<Button
+								render={
+									<Link
+										href={t.href}
+										rel={t.external ? 'noopener noreferrer' : undefined}
+										target={t.external ? '_blank' : undefined}
+									/>
+								}
+								size='sm'
+								variant={t.highlight ? 'default' : 'outline'}
+							>
+								{signedIn ? 'Manage' : t.cta}
 							</Button>
 						</CardFooter>
 					</Card>
