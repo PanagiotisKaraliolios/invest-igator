@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
+import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '@/lib/validation';
 
 /**
  * Generate OpenAPI path items for tRPC procedures.
@@ -141,13 +142,13 @@ function generateTRPCPaths() {
 		}),
 		'/api/trpc/account.changePassword': postOp({
 			description: 'Change the current user password (credential accounts only).',
-			requestSchema: {
-				properties: {
-					currentPassword: { minLength: 1, type: 'string' },
-					newPassword: { maxLength: 200, minLength: 8, type: 'string' }
-				},
-				required: ['currentPassword', 'newPassword'],
-				type: 'object'
+				requestSchema: {
+					properties: {
+						currentPassword: { minLength: 1, type: 'string' },
+						newPassword: { maxLength: PASSWORD_MAX_LENGTH, minLength: PASSWORD_MIN_LENGTH, type: 'string' }
+					},
+					required: ['currentPassword', 'newPassword'],
+					type: 'object'
 			},
 			responseSchema: okResponse,
 			summary: 'Change password'
@@ -250,13 +251,15 @@ function generateTRPCPaths() {
 			responseSchema: okResponse,
 			summary: 'Request email verification (deprecated)'
 		}),
-		'/api/trpc/account.setPassword': postOp({
-			description: 'Set a password for an account that does not yet have one (e.g., OAuth-only users).',
-			requestSchema: {
-				properties: { newPassword: { maxLength: 200, minLength: 8, type: 'string' } },
-				required: ['newPassword'],
-				type: 'object'
-			},
+			'/api/trpc/account.setPassword': postOp({
+				description: 'Set a password for an account that does not yet have one (e.g., OAuth-only users).',
+				requestSchema: {
+					properties: {
+						newPassword: { maxLength: PASSWORD_MAX_LENGTH, minLength: PASSWORD_MIN_LENGTH, type: 'string' }
+					},
+					required: ['newPassword'],
+					type: 'object'
+				},
 			responseSchema: okResponse,
 			summary: 'Set password (OAuth users)'
 		}),
@@ -299,62 +302,6 @@ function generateTRPCPaths() {
 		})
 	};
 
-	// Auth router endpoints (public)
-	const authPaths: Record<string, any> = {
-		'/api/trpc/auth.checkEmail': postOp({
-			description: 'Check whether a user with the given email exists (always safe to call).',
-			requestSchema: { format: 'email', type: 'string' },
-			responseSchema: {
-				properties: { exists: { type: 'boolean' } },
-				required: ['exists'],
-				type: 'object'
-			},
-			summary: 'Check if email exists',
-			tags: ['Auth']
-		}),
-		'/api/trpc/auth.requestPasswordReset': postOp({
-			description: 'Send a password reset email if the account exists. Always returns ok to prevent enumeration.',
-			requestSchema: {
-				properties: { email: { format: 'email', type: 'string' } },
-				required: ['email'],
-				type: 'object'
-			},
-			responseSchema: okResponse,
-			summary: 'Request password reset',
-			tags: ['Auth']
-		}),
-		'/api/trpc/auth.resetPassword': postOp({
-			description: "Reset a user's password using a valid token. Validates token type and expiration.",
-			requestSchema: {
-				properties: {
-					password: { maxLength: 200, minLength: 8, type: 'string' },
-					token: { minLength: 10, type: 'string' }
-				},
-				required: ['token', 'password'],
-				type: 'object'
-			},
-			responseSchema: okResponse,
-			summary: 'Reset password',
-			tags: ['Auth']
-		}),
-		'/api/trpc/auth.signup': postOp({
-			description: 'Create a new user account with email and password. confirmPassword is accepted but ignored.',
-			requestSchema: {
-				properties: {
-					confirmPassword: { type: 'string' },
-					email: { format: 'email', type: 'string' },
-					name: { minLength: 1, type: 'string' },
-					password: { minLength: 1, type: 'string' }
-				},
-				required: ['email', 'name', 'password'],
-				type: 'object'
-			},
-			responseSchema: okResponse,
-			summary: 'Sign up',
-			tags: ['Auth']
-		})
-	};
-
 	// Currency router endpoints (protected)
 	const currencyEnum = ['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB'] as const;
 	const currencyPaths: Record<string, any> = {
@@ -381,7 +328,6 @@ function generateTRPCPaths() {
 
 	return {
 		...accountPaths,
-		...authPaths,
 		...currencyPaths
 	};
 }
@@ -427,7 +373,7 @@ export async function GET(request: NextRequest) {
 					name: 'Account'
 				},
 				{
-					description: 'Authentication - signup, login, password reset',
+					description: 'Authentication via Better Auth (sign-up, login, password reset)',
 					name: 'Auth'
 				},
 				{

@@ -12,6 +12,7 @@ import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
+import { passwordSchema } from '@/lib/validation';
 import { api } from '@/trpc/react';
 
 export default function PasswordCard() {
@@ -26,10 +27,7 @@ export default function PasswordCard() {
 				.object({
 					confirmPassword: z.string(),
 					currentPassword: z.string().optional(),
-					newPassword: z
-						.string()
-						.min(8, 'Password must be at least 8 characters')
-						.regex(/^(?=.*[A-Za-z])(?=.*\d).+$/, 'Use letters and numbers')
+					newPassword: passwordSchema
 				})
 				.superRefine((vals, ctx) => {
 					if (vals.newPassword !== vals.confirmPassword) {

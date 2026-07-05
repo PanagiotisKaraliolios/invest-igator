@@ -2,9 +2,10 @@ import type { Currency } from '@prisma/generated';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { env } from '@/env';
+import { isValidSymbol, normalizeSymbol, symbolSchema } from '@/lib/validation';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
 import { db } from '@/server/db';
-import { influxQueryApi, measurement } from '@/server/influx';
+import { fluxStringLiteral, influxQueryApi, measurement } from '@/server/influx';
 import { fetchYahooDaily, ingestYahooSymbol } from '@/server/jobs/yahoo-lib';
 
 /**
@@ -52,7 +53,7 @@ export const financialDataRouter = createTRPCRouter({
 				endDate: z.date().optional(),
 				limit: z.number().min(1).max(100).default(20),
 				startDate: z.date().optional(),
-				symbol: z.string().optional()
+				symbol: symbolSchema.optional()
 			})
 		)
 		.query(async ({ input, ctx }) => {
@@ -60,7 +61,7 @@ export const financialDataRouter = createTRPCRouter({
 
 			// Get distinct symbols to check
 			const symbolsToCheck = symbol
-				? [symbol]
+				? [normalizeSymbol(symbol)]
 				: (
 						await ctx.db.watchlistItem.findMany({
 							distinct: ['symbol'],
@@ -68,17 +69,20 @@ export const financialDataRouter = createTRPCRouter({
 							take: limit
 						})
 					).map((s) => s.symbol);
+			const normalizedSymbols = symbolsToCheck
+				.map((sym) => normalizeSymbol(sym))
+				.filter((sym) => isValidSymbol(sym));
 
 			const results = await Promise.all(
-				symbolsToCheck.map(async (sym) => {
+				normalizedSymbols.map(async (sym) => {
 					try {
 						// Build Flux query to check data availability
 						const start = startDate ? startDate.toISOString() : '-1y';
 						const end = endDate ? endDate.toISOString() : 'now()';
 
-						const flux = `from(bucket: "${env.INFLUXDB_BUCKET}")
+						const flux = `from(bucket: ${fluxStringLiteral(env.INFLUXDB_BUCKET)})
   |> range(start: ${typeof start === 'string' ? start : `time(v: "${start}")`}, stop: ${typeof end === 'string' ? end : `time(v: "${end}")`})
-  |> filter(fn: (r) => r._measurement == "${measurement}" and r._field == "close" and r.symbol == "${sym}")
+  |> filter(fn: (r) => r._measurement == ${fluxStringLiteral(measurement)} and r._field == ${fluxStringLiteral('close')} and r.symbol == ${fluxStringLiteral(sym)})
   |> keep(columns: ["_time", "_value"])
   |> limit(n: 1000)`;
 

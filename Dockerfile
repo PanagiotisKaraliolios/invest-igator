@@ -16,20 +16,21 @@ RUN bun install --frozen-lockfile
 FROM deps AS builder
 WORKDIR /app
 
+ARG BUILD_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/investigator
+# Better Auth rejects secrets shorter than 32 chars; this build-time dummy is
+# overridden by the real BETTER_AUTH_SECRET at runtime.
+ARG BUILD_BETTER_AUTH_SECRET=build-time-dummy-secret-not-for-production
+ENV DATABASE_URL=${BUILD_DATABASE_URL}
+ENV BETTER_AUTH_SECRET=${BUILD_BETTER_AUTH_SECRET}
+
 # Generate Prisma client
 COPY prisma ./prisma
 COPY prisma.config.ts ./prisma.config.ts
-RUN --mount=type=secret,id=DATABASE_URL \
-	DATABASE_URL=$(cat /run/secrets/DATABASE_URL) \
-	bunx prisma generate
+RUN bunx prisma generate
 
 # Copy source and build Next.js
 COPY . .
-RUN --mount=type=secret,id=DATABASE_URL \
-	--mount=type=secret,id=BETTER_AUTH_SECRET \
-	SKIP_ENV_VALIDATION=1 \
-	DATABASE_URL=$(cat /run/secrets/DATABASE_URL) \
-	BETTER_AUTH_SECRET=$(cat /run/secrets/BETTER_AUTH_SECRET) \
+RUN SKIP_ENV_VALIDATION=1 \
 	BETTER_AUTH_URL=http://localhost:3000 \
 	NEXT_PUBLIC_SITE_URL=http://localhost:3000 \
 	PASSWORD_PEPPER=build-time-dummy-pepper \

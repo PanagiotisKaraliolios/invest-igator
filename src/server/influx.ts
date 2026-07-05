@@ -1,5 +1,6 @@
 import { HttpError, InfluxDB, Point, type WriteOptions } from '@influxdata/influxdb-client';
 import { env } from '@/env';
+import { isValidSymbol, normalizeSymbol } from '@/lib/validation';
 
 // Influx client + helpers
 export const influx = new InfluxDB({ token: env.INFLUXDB_TOKEN, url: env.INFLUXDB_URL });
@@ -27,11 +28,18 @@ export type DailyBar = {
 
 export const measurement = 'daily_bars'; // measurement name in Influx
 
+export function fluxStringLiteral(value: string): string {
+	return JSON.stringify(value);
+}
+
 // Query if a symbol already has any data points
 export async function symbolHasAnyData(symbol: string): Promise<boolean> {
-	const flux = `from(bucket: "${env.INFLUXDB_BUCKET}")
+	const normalized = normalizeSymbol(symbol);
+	if (!isValidSymbol(normalized)) return false;
+
+	const flux = `from(bucket: ${fluxStringLiteral(env.INFLUXDB_BUCKET)})
   |> range(start: -50y)
-  |> filter(fn: (r) => r._measurement == "${measurement}" and r.symbol == "${symbol}" )
+  |> filter(fn: (r) => r._measurement == ${fluxStringLiteral(measurement)} and r.symbol == ${fluxStringLiteral(normalized)} )
   |> limit(n: 1)`;
 
 	let has = false;

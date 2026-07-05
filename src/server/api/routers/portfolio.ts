@@ -1,9 +1,10 @@
 import type { Currency } from '@prisma/generated';
 import { z } from 'zod';
 import { env } from '@/env';
+import { isValidSymbol, normalizeSymbol } from '@/lib/validation';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
 import { convertAmount, getFxMatrix } from '@/server/fx';
-import { influxQueryApi, measurement } from '@/server/influx';
+import { fluxStringLiteral, influxQueryApi, measurement } from '@/server/influx';
 
 type Holding = {
 	symbol: string;
@@ -15,18 +16,19 @@ type Holding = {
  * @internal
  */
 async function getLatestCloses(symbols: string[]): Promise<Record<string, number | null>> {
-	if (symbols.length === 0) return {};
+	const normalizedSymbols = symbols.map((sym) => normalizeSymbol(sym)).filter((sym) => isValidSymbol(sym));
+	if (normalizedSymbols.length === 0) return {};
 	// Build a single Flux query to fetch the latest close per symbol
-	const symbolFilter = symbols.map((s) => `r.symbol == "${s.replaceAll('"', '\\"')}"`).join(' or ');
+	const symbolFilter = normalizedSymbols.map((s) => `r.symbol == ${fluxStringLiteral(s)}`).join(' or ');
 
-	const flux = `from(bucket: "${env.INFLUXDB_BUCKET}")
+	const flux = `from(bucket: ${fluxStringLiteral(env.INFLUXDB_BUCKET)})
   |> range(start: -50y)
-  |> filter(fn: (r) => r._measurement == "${measurement}" and (${symbolFilter}))
-  |> filter(fn: (r) => r._field == "close")
+  |> filter(fn: (r) => r._measurement == ${fluxStringLiteral(measurement)} and (${symbolFilter}))
+  |> filter(fn: (r) => r._field == ${fluxStringLiteral('close')})
   |> group(columns: ["symbol"])
   |> last()`;
 
-	const out: Record<string, number | null> = Object.fromEntries(symbols.map((s) => [s, null]));
+	const out: Record<string, number | null> = Object.fromEntries(normalizedSymbols.map((s) => [s, null]));
 	const rows = await influxQueryApi.collectRows<{ symbol: string; _value: number | string }>(flux);
 	for (const r of rows) {
 		const symbol = String(r.symbol);
@@ -111,7 +113,9 @@ export const portfolioRouter = createTRPCRouter({
 			});
 
 			// Collect symbols involved
-			const symbols = Array.from(new Set(txs.map((t) => t.symbol.trim().toUpperCase())));
+			const symbols = Array.from(
+				new Set(txs.map((t) => normalizeSymbol(t.symbol)).filter((sym) => isValidSymbol(sym)))
+			);
 
 			// Determine inception date based on first transaction
 			let inceptionDate: Date | null = null;
@@ -132,16 +136,16 @@ export const portfolioRouter = createTRPCRouter({
 			// Build price map from Influx for date range with carry-forward per day.
 			let priceBySymbolDate = new Map<string, Map<string, number>>();
 			if (symbols.length > 0) {
-				const symbolFilter = symbols.map((s) => `r.symbol == "${s.replaceAll('"', '\\"')}"`).join(' or ');
+				const symbolFilter = symbols.map((s) => `r.symbol == ${fluxStringLiteral(s)}`).join(' or ');
 				// Query historical closes including a seed window before range to seed carry-forward
 				const seedStart = new Date(inceptionDate);
 				seedStart.setDate(seedStart.getDate() - 7); // 1 week back to find latest prior close
 				const stopDate = new Date(toDate);
 				stopDate.setDate(stopDate.getDate() + 1); // inclusive end safeguard
-				const flux = `from(bucket: "${env.INFLUXDB_BUCKET}")
+				const flux = `from(bucket: ${fluxStringLiteral(env.INFLUXDB_BUCKET)})
 	|> range(start: ${seedStart.toISOString()}, stop: ${stopDate.toISOString()})
-	|> filter(fn: (r) => r._measurement == "${measurement}" and (${symbolFilter}))
-	|> filter(fn: (r) => r._field == "close")
+	|> filter(fn: (r) => r._measurement == ${fluxStringLiteral(measurement)} and (${symbolFilter}))
+	|> filter(fn: (r) => r._field == ${fluxStringLiteral('close')})
 	|> group(columns: ["symbol"])`;
 				const rows = await influxQueryApi.collectRows<{
 					symbol: string;
@@ -151,7 +155,8 @@ export const portfolioRouter = createTRPCRouter({
 				// Raw map of symbol -> iso -> close
 				const raw = new Map<string, Map<string, number>>();
 				for (const r of rows) {
-					const s = String(r.symbol).trim().toUpperCase();
+					const s = normalizeSymbol(String(r.symbol));
+					if (!isValidSymbol(s)) continue;
 					const day = String(r._time).slice(0, 10);
 					const v = typeof r._value === 'number' ? r._value : Number(r._value);
 					if (!Number.isFinite(v)) continue;
@@ -170,7 +175,7 @@ export const portfolioRouter = createTRPCRouter({
 				// For each symbol: seed with last known close before fromDate, then forward-fill across range
 				priceBySymbolDate = new Map();
 				for (const s of symbols) {
-					const up = s.trim().toUpperCase();
+					const up = normalizeSymbol(s);
 					const src = raw.get(up) ?? new Map<string, number>();
 					// find seed: latest date < from in src
 					const isoFromKey = toIsoKey(fromDate);
@@ -215,7 +220,8 @@ export const portfolioRouter = createTRPCRouter({
 			// Track latest transaction currency per symbol for valuation conversion
 			const latestTxCurrencyBySymbol = new Map<string, { currency: Currency; date: Date }>();
 			for (const t of txs) {
-				const up = t.symbol.trim().toUpperCase();
+				const up = normalizeSymbol(t.symbol);
+				if (!isValidSymbol(up)) continue;
 				const transactionCurrency = (t.priceCurrency as Currency) ?? 'USD';
 				if (t.date) {
 					const prevCur = latestTxCurrencyBySymbol.get(up);
@@ -257,7 +263,8 @@ export const portfolioRouter = createTRPCRouter({
 				// Compute external cash flow in target currency for the day (negative for contributions/buys)
 				let flow = 0;
 				for (const t of dayTx) {
-					const up = t.symbol.trim().toUpperCase();
+					const up = normalizeSymbol(t.symbol);
+					if (!isValidSymbol(up)) continue;
 					const sign = t.side === 'BUY' ? 1 : -1;
 					const transactionValue = t.quantity * t.price; // in priceCurrency
 					const transactionCurrency = (t.priceCurrency as Currency) ?? 'USD';
@@ -376,7 +383,8 @@ export const portfolioRouter = createTRPCRouter({
 			const bySymbol = new Map<string, { symbol: string; quantity: number; totalCostInTarget: number }>();
 			const latestTxCurrencyBySymbol = new Map<string, { currency: Currency; date: Date }>();
 			for (const t of txs) {
-				const up = t.symbol.trim().toUpperCase();
+				const up = normalizeSymbol(t.symbol);
+				if (!isValidSymbol(up)) continue;
 				const sign = t.side === 'BUY' ? 1 : -1;
 				const prev = bySymbol.get(up) ?? { quantity: 0, symbol: up, totalCostInTarget: 0 };
 
@@ -430,7 +438,9 @@ export const portfolioRouter = createTRPCRouter({
 			const symbolCurrencies = new Map<string, Currency>();
 
 			for (const item of watchlistItems) {
-				symbolCurrencies.set(item.symbol.trim().toUpperCase(), item.currency);
+				const normalized = normalizeSymbol(item.symbol);
+				if (!isValidSymbol(normalized)) continue;
+				symbolCurrencies.set(normalized, item.currency);
 			}
 
 			const latest = await getLatestCloses(symbols);

@@ -12,14 +12,12 @@ import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group';
 import { resetPassword } from '@/lib/auth-client';
+import { passwordSchema } from '@/lib/validation';
 
 const schema = z
 	.object({
 		confirm: z.string(),
-		password: z
-			.string()
-			.min(8, 'At least 8 characters')
-			.regex(/^(?=.*[A-Za-z])(?=.*\d).+$/, 'Use letters and numbers')
+		password: passwordSchema
 	})
 	.refine((val) => val.password === val.confirm, {
 		message: "Passwords don't match",

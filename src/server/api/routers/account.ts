@@ -4,6 +4,7 @@ import { randomBytes } from 'crypto';
 import { z } from 'zod';
 import { env } from '@/env';
 import { auth } from '@/lib/auth';
+import { passwordSchema } from '@/lib/validation';
 import { createTRPCRouter, protectedProcedure, withPermissions } from '@/server/api/trpc';
 import { sendVerificationEmail } from '@/server/email';
 
@@ -68,7 +69,7 @@ export const accountRouter = createTRPCRouter({
 	 * Requires: account:write permission
 	 *
 	 * @input currentPassword - The user's current password
-	 * @input newPassword - The new password (min 8, max 200 characters)
+	 * @input newPassword - The new password (min 12, max 200 characters)
 	 *
 	 * @throws {TRPCError} BAD_REQUEST - If password change not available or new password same as current
 	 * @throws {TRPCError} UNAUTHORIZED - If current password is incorrect
@@ -84,7 +85,7 @@ export const accountRouter = createTRPCRouter({
 		.input(
 			z.object({
 				currentPassword: z.string().min(1),
-				newPassword: z.string().min(8).max(200)
+				newPassword: passwordSchema
 			})
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -528,7 +529,7 @@ export const accountRouter = createTRPCRouter({
 	 *
 	 * Requires: account:write permission
 	 *
-	 * @input newPassword - The password to set (min 8, max 200 characters)
+	 * @input newPassword - The password to set (min 12, max 200 characters)
 	 *
 	 * @throws {TRPCError} NOT_FOUND - If user not found
 	 * @throws {TRPCError} BAD_REQUEST - If password already set or email missing
@@ -540,7 +541,7 @@ export const accountRouter = createTRPCRouter({
 	setPassword: withPermissions('account', 'write')
 		.input(
 			z.object({
-				newPassword: z.string().min(8).max(200)
+				newPassword: passwordSchema
 			})
 		)
 		.mutation(async ({ ctx, input }) => {

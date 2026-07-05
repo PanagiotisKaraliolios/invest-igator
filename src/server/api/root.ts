@@ -1,5 +1,4 @@
 import { accountRouter } from '@/server/api/routers/account';
-import { authRouter } from '@/server/api/routers/auth';
 import { watchlistRouter } from '@/server/api/routers/watchlist';
 import { createCallerFactory, createTRPCRouter } from '@/server/api/trpc';
 import { adminRouter } from './routers/admin';
@@ -56,16 +55,6 @@ import { transactionsRouter } from './routers/transactions';
  * - `delete` - Delete an API key
  * - `verify` - Verify an API key and check permissions
  * - `deleteExpired` - Clean up expired API keys
- *
- * ### auth
- * Authentication operations for signup, login, and password reset.
- * All procedures are public.
- *
- * Key procedures:
- * - `signup` - Create new user account
- * - `checkEmail` - Check if email exists
- * - `requestPasswordReset` - Send password reset email
- * - `resetPassword` - Reset password with token
  *
  * ### currency
  * User currency preference management.
@@ -141,7 +130,6 @@ export const appRouter = createTRPCRouter({
 	account: accountRouter,
 	admin: adminRouter,
 	apiKeys: apiKeysRouter,
-	auth: authRouter,
 	currency: currencyProcedures,
 	financialData: financialDataRouter,
 	fx: fxRouter,

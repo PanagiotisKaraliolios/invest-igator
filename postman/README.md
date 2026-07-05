@@ -204,7 +204,6 @@ tRPC uses a batch format for HTTP requests. All inputs must be wrapped in the fo
 ```
 
 Examples:
-- `auth.checkEmail`: `{"0": {"json": "user@example.com"}}`
 - `currency.setCurrency`: `{"0": {"json": "USD"}}`
 - `theme.setTheme`: `{"0": {"json": "dark"}}`
 

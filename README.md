@@ -303,7 +303,7 @@ Comprehensive Postman collections are available in the `postman/` directory for 
 
 📚 **See [postman/README.md](./postman/README.md) for detailed usage instructions**
 
-All 59 endpoints are documented with:
+All endpoints are documented with:
 - ✅ Request/response examples
 - ✅ Input validation details
 - ✅ Authentication requirements
@@ -393,7 +393,7 @@ docker compose down -v
 │   │   │   ├── ingest-fx.ts     # 💱 FX rates ingestion job
 │   │   │   └── yahoo-lib.ts     # 🛠️  Yahoo data helpers
 │   │   ├── auth/
-│   │   │   └── config.ts      # 🔐 Better Auth configuration
+│   │   │   └── permissions.ts # 🔐 Better Auth permissions helpers
 │   │   ├── db.ts              # 🗃️  Prisma client singleton
 │   │   ├── influx.ts          # 📊 InfluxDB client & helpers
 │   │   ├── fx.ts              # 💰 FX rate conversion utilities
@@ -458,7 +458,7 @@ docker compose down -v
 
 ---
 
-## � API Keys
+## 🔑 API Keys
 
 Invest-igator supports programmatic API access via API keys with granular permission control.
 
@@ -505,7 +505,7 @@ curl https://your-app.com/api/trpc/watchlist.list \
 
 ---
 
-## �🐛 Troubleshooting
+## 🐛 Troubleshooting
 
 | Issue | Solution |
 |-------|----------|

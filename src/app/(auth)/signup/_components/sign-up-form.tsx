@@ -13,16 +13,14 @@ import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group';
 import { signUp } from '@/lib/auth-client';
+import { passwordSchema } from '@/lib/validation';
 
 const schema = z
 	.object({
 		confirmPassword: z.string(),
 		email: z.email(),
 		name: z.string().min(2, 'Name must be at least 2 characters'),
-		password: z
-			.string()
-			.min(8, 'Password must be at least 8 characters')
-			.regex(/^(?=.*[A-Za-z])(?=.*\d).+$/, 'Use letters and numbers')
+		password: passwordSchema
 	})
 	.refine((vals) => vals.password === vals.confirmPassword, {
 		message: 'Passwords do not match',

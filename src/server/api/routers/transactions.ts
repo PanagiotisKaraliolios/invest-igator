@@ -2,6 +2,7 @@ import type { Currency } from '@prisma/generated';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { env } from '@/env';
+import { isValidSymbol as isValidSymbolFormat, normalizeSymbol, symbolSchema } from '@/lib/validation';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
 
 const supportedCurrencies: Currency[] = ['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB'];
@@ -10,7 +11,7 @@ const supportedCurrencies: Currency[] = ['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB
  * Validates if a symbol exists using Yahoo Finance API.
  * @internal
  */
-async function isValidSymbol(symbol: string): Promise<boolean> {
+async function isValidSymbolViaYahoo(symbol: string): Promise<boolean> {
 	try {
 		const url = new URL(`${env.YAHOO_API_URL}/search`);
 		url.searchParams.set('q', symbol);
@@ -135,19 +136,19 @@ export const transactionsRouter = createTRPCRouter({
 				priceCurrency: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']).default('USD'),
 				quantity: z.number(),
 				side: z.enum(['BUY', 'SELL']),
-				symbol: z.string().min(1)
+				symbol: symbolSchema
 			})
 		)
 		.mutation(async ({ ctx, input }) => {
 			const userId = ctx.session.user.id;
-			const symbol = input.symbol.trim().toUpperCase();
+			const symbol = normalizeSymbol(input.symbol);
 			// Fast-path: accept if symbol already on user's watchlist; else validate via Yahoo Finance
 			const exists = await ctx.db.watchlistItem.findUnique({
 				select: { symbol: true },
 				where: { userId_symbol: { symbol, userId } }
 			});
 			if (!exists) {
-				const ok = await isValidSymbol(symbol);
+				const ok = await isValidSymbolViaYahoo(symbol);
 				if (!ok) {
 					throw new TRPCError({
 						code: 'BAD_REQUEST',
@@ -344,8 +345,11 @@ export const transactionsRouter = createTRPCRouter({
 				};
 
 				try {
-					const symbol = byColumn('symbol').trim().toUpperCase();
+					const symbol = normalizeSymbol(byColumn('symbol'));
 					if (!symbol) throw new Error('Symbol is required.');
+					if (!isValidSymbolFormat(symbol)) {
+						throw new Error('Symbol contains invalid characters.');
+					}
 
 					const sideRaw = byColumn('side').trim().toUpperCase();
 					if (sideRaw !== 'BUY' && sideRaw !== 'SELL') {
@@ -817,35 +821,41 @@ export const transactionsRouter = createTRPCRouter({
 					.transform((s) => new Date(s))
 					.optional(),
 				fee: z.number().nullable().optional(),
-				feeCurrency: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']).nullable().optional(),
-				id: z.string().min(1),
-				note: z.string().nullable().optional(),
-				price: z.number().optional(),
-				priceCurrency: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']).optional(),
-				quantity: z.number().optional(),
-				side: z.enum(['BUY', 'SELL']).optional(),
-				symbol: z.string().min(1).optional()
-			})
-		)
-		.mutation(async ({ ctx, input }) => {
+					feeCurrency: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']).nullable().optional(),
+					id: z.string().min(1),
+					note: z.string().nullable().optional(),
+					price: z.number().optional(),
+					priceCurrency: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']).optional(),
+					quantity: z.number().optional(),
+					side: z.enum(['BUY', 'SELL']).optional(),
+					symbol: symbolSchema.optional()
+				})
+			)
+			.mutation(async ({ ctx, input }) => {
 			const userId = ctx.session.user.id;
 			const current = await ctx.db.transaction.findUnique({ where: { id: input.id } });
 			if (!current || current.userId !== userId) {
 				throw new TRPCError({ code: 'NOT_FOUND', message: 'Transaction not found' });
 			}
 
-			let nextSymbol: string | undefined;
-			if (input.symbol) {
-				nextSymbol = input.symbol.trim().toUpperCase();
-				const exists = await ctx.db.watchlistItem.findUnique({
-					select: { symbol: true },
-					where: { userId_symbol: { symbol: nextSymbol, userId } }
-				});
-				if (!exists) {
-					const ok = await isValidSymbol(nextSymbol);
-					if (!ok) {
+				let nextSymbol: string | undefined;
+				if (input.symbol) {
+					nextSymbol = normalizeSymbol(input.symbol);
+					if (!isValidSymbolFormat(nextSymbol)) {
 						throw new TRPCError({
 							code: 'BAD_REQUEST',
+							message: 'Symbol contains invalid characters.'
+						});
+					}
+					const exists = await ctx.db.watchlistItem.findUnique({
+						select: { symbol: true },
+						where: { userId_symbol: { symbol: nextSymbol, userId } }
+					});
+					if (!exists) {
+						const ok = await isValidSymbolViaYahoo(nextSymbol);
+						if (!ok) {
+							throw new TRPCError({
+								code: 'BAD_REQUEST',
 							message: 'Unknown symbol. Please select from suggestions.'
 						});
 					}
