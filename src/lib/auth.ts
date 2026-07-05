@@ -5,8 +5,8 @@ import { APIError, createAuthMiddleware } from 'better-auth/api';
 import { nextCookies } from 'better-auth/next-js';
 import { admin, magicLink, openAPI, twoFactor } from 'better-auth/plugins';
 import { env } from '@/env';
-import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH, passwordSchema } from '@/lib/validation';
 import { formatDeviceInfo, getLocationFromIP } from '@/lib/session-utils';
+import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH, passwordSchema } from '@/lib/validation';
 import { ac, admin as adminRole, superadmin as superadminRole, user as userRole } from '@/server/auth/permissions';
 import { db } from '@/server/db';
 import { sendMagicLinkEmail, sendPasswordResetEmail, sendVerificationEmail } from '@/server/email';
@@ -54,19 +54,6 @@ export const auth = betterAuth({
 			await sendPasswordResetEmail(user.email, url);
 		}
 	},
-	rateLimit: {
-		enabled: true,
-		max: 100,
-		window: 60,
-		customRules: {
-			'/change-password': { max: 5, window: 300 },
-			'/request-password-reset': { max: 5, window: 300 },
-			'/reset-password': { max: 5, window: 300 },
-			'/set-password': { max: 5, window: 300 },
-			'/sign-in/email': { max: 10, window: 60 },
-			'/sign-up/email': { max: 5, window: 300 }
-		}
-	},
 	emailVerification: {
 		sendOnSignUp: true,
 		sendVerificationEmail: async ({ user, url, token }) => {
@@ -76,30 +63,6 @@ export const auth = betterAuth({
 		}
 	},
 	hooks: {
-		before: createAuthMiddleware(async (ctx) => {
-			const passwordUpdatePaths = ['/sign-up/email', '/reset-password', '/change-password', '/set-password'];
-			if (!passwordUpdatePaths.some((path) => ctx.path.startsWith(path))) {
-				return;
-			}
-
-			const candidate =
-				typeof ctx.body?.newPassword === 'string'
-					? ctx.body.newPassword
-					: typeof ctx.body?.password === 'string'
-						? ctx.body.password
-						: null;
-
-			if (!candidate) {
-				return;
-			}
-
-			const parsed = passwordSchema.safeParse(candidate);
-			if (!parsed.success) {
-				throw new APIError('BAD_REQUEST', {
-					message: parsed.error.issues[0]?.message ?? 'Password does not meet requirements'
-				});
-			}
-		}),
 		after: createAuthMiddleware(async (ctx) => {
 			// Only run for endpoints that create sessions
 			const sessionCreationPaths = [
@@ -158,6 +121,30 @@ export const auth = betterAuth({
 			} catch (error) {
 				console.error('Error in session enrichment hook:', error);
 			}
+		}),
+		before: createAuthMiddleware(async (ctx) => {
+			const passwordUpdatePaths = ['/sign-up/email', '/reset-password', '/change-password', '/set-password'];
+			if (!passwordUpdatePaths.some((path) => ctx.path.startsWith(path))) {
+				return;
+			}
+
+			const candidate =
+				typeof ctx.body?.newPassword === 'string'
+					? ctx.body.newPassword
+					: typeof ctx.body?.password === 'string'
+						? ctx.body.password
+						: null;
+
+			if (!candidate) {
+				return;
+			}
+
+			const parsed = passwordSchema.safeParse(candidate);
+			if (!parsed.success) {
+				throw new APIError('BAD_REQUEST', {
+					message: parsed.error.issues[0]?.message ?? 'Password does not meet requirements'
+				});
+			}
 		})
 	},
 	plugins: [
@@ -187,6 +174,19 @@ export const auth = betterAuth({
 		}),
 		nextCookies()
 	],
+	rateLimit: {
+		customRules: {
+			'/change-password': { max: 5, window: 300 },
+			'/request-password-reset': { max: 5, window: 300 },
+			'/reset-password': { max: 5, window: 300 },
+			'/set-password': { max: 5, window: 300 },
+			'/sign-in/email': { max: 10, window: 60 },
+			'/sign-up/email': { max: 5, window: 300 }
+		},
+		enabled: true,
+		max: 100,
+		window: 60
+	},
 	session: {
 		cookie: {
 			sameSite: 'lax', // Changed from 'strict' to work better with nginx proxy

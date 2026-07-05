@@ -821,41 +821,41 @@ export const transactionsRouter = createTRPCRouter({
 					.transform((s) => new Date(s))
 					.optional(),
 				fee: z.number().nullable().optional(),
-					feeCurrency: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']).nullable().optional(),
-					id: z.string().min(1),
-					note: z.string().nullable().optional(),
-					price: z.number().optional(),
-					priceCurrency: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']).optional(),
-					quantity: z.number().optional(),
-					side: z.enum(['BUY', 'SELL']).optional(),
-					symbol: symbolSchema.optional()
-				})
-			)
-			.mutation(async ({ ctx, input }) => {
+				feeCurrency: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']).nullable().optional(),
+				id: z.string().min(1),
+				note: z.string().nullable().optional(),
+				price: z.number().optional(),
+				priceCurrency: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']).optional(),
+				quantity: z.number().optional(),
+				side: z.enum(['BUY', 'SELL']).optional(),
+				symbol: symbolSchema.optional()
+			})
+		)
+		.mutation(async ({ ctx, input }) => {
 			const userId = ctx.session.user.id;
 			const current = await ctx.db.transaction.findUnique({ where: { id: input.id } });
 			if (!current || current.userId !== userId) {
 				throw new TRPCError({ code: 'NOT_FOUND', message: 'Transaction not found' });
 			}
 
-				let nextSymbol: string | undefined;
-				if (input.symbol) {
-					nextSymbol = normalizeSymbol(input.symbol);
-					if (!isValidSymbolFormat(nextSymbol)) {
+			let nextSymbol: string | undefined;
+			if (input.symbol) {
+				nextSymbol = normalizeSymbol(input.symbol);
+				if (!isValidSymbolFormat(nextSymbol)) {
+					throw new TRPCError({
+						code: 'BAD_REQUEST',
+						message: 'Symbol contains invalid characters.'
+					});
+				}
+				const exists = await ctx.db.watchlistItem.findUnique({
+					select: { symbol: true },
+					where: { userId_symbol: { symbol: nextSymbol, userId } }
+				});
+				if (!exists) {
+					const ok = await isValidSymbolViaYahoo(nextSymbol);
+					if (!ok) {
 						throw new TRPCError({
 							code: 'BAD_REQUEST',
-							message: 'Symbol contains invalid characters.'
-						});
-					}
-					const exists = await ctx.db.watchlistItem.findUnique({
-						select: { symbol: true },
-						where: { userId_symbol: { symbol: nextSymbol, userId } }
-					});
-					if (!exists) {
-						const ok = await isValidSymbolViaYahoo(nextSymbol);
-						if (!ok) {
-							throw new TRPCError({
-								code: 'BAD_REQUEST',
 							message: 'Unknown symbol. Please select from suggestions.'
 						});
 					}

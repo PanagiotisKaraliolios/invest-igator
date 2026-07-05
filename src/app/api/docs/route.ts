@@ -142,13 +142,13 @@ function generateTRPCPaths() {
 		}),
 		'/api/trpc/account.changePassword': postOp({
 			description: 'Change the current user password (credential accounts only).',
-				requestSchema: {
-					properties: {
-						currentPassword: { minLength: 1, type: 'string' },
-						newPassword: { maxLength: PASSWORD_MAX_LENGTH, minLength: PASSWORD_MIN_LENGTH, type: 'string' }
-					},
-					required: ['currentPassword', 'newPassword'],
-					type: 'object'
+			requestSchema: {
+				properties: {
+					currentPassword: { minLength: 1, type: 'string' },
+					newPassword: { maxLength: PASSWORD_MAX_LENGTH, minLength: PASSWORD_MIN_LENGTH, type: 'string' }
+				},
+				required: ['currentPassword', 'newPassword'],
+				type: 'object'
 			},
 			responseSchema: okResponse,
 			summary: 'Change password'
@@ -251,15 +251,15 @@ function generateTRPCPaths() {
 			responseSchema: okResponse,
 			summary: 'Request email verification (deprecated)'
 		}),
-			'/api/trpc/account.setPassword': postOp({
-				description: 'Set a password for an account that does not yet have one (e.g., OAuth-only users).',
-				requestSchema: {
-					properties: {
-						newPassword: { maxLength: PASSWORD_MAX_LENGTH, minLength: PASSWORD_MIN_LENGTH, type: 'string' }
-					},
-					required: ['newPassword'],
-					type: 'object'
+		'/api/trpc/account.setPassword': postOp({
+			description: 'Set a password for an account that does not yet have one (e.g., OAuth-only users).',
+			requestSchema: {
+				properties: {
+					newPassword: { maxLength: PASSWORD_MAX_LENGTH, minLength: PASSWORD_MIN_LENGTH, type: 'string' }
 				},
+				required: ['newPassword'],
+				type: 'object'
+			},
 			responseSchema: okResponse,
 			summary: 'Set password (OAuth users)'
 		}),
