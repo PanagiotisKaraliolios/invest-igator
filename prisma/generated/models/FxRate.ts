@@ -192,7 +192,7 @@ export type FxRateGroupByOutputType = {
   _max: FxRateMaxAggregateOutputType | null
 }
 
-type GetFxRateGroupByPayload<T extends FxRateGroupByArgs> = Prisma.PrismaPromise<
+export type GetFxRateGroupByPayload<T extends FxRateGroupByArgs> = Prisma.PrismaPromise<
   Array<
     Prisma.PickEnumerable<FxRateGroupByOutputType, T['by']> &
       {
@@ -1004,6 +1004,11 @@ export type FxRateFindManyArgs<ExtArgs extends runtime.Types.Extensions.Internal
    * Skip the first `n` FxRates.
    */
   skip?: number
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+   * 
+   * Filter by unique combinations of FxRates.
+   */
   distinct?: Prisma.FxRateScalarFieldEnum | Prisma.FxRateScalarFieldEnum[]
 }
 

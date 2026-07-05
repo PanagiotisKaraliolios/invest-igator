@@ -1,3 +1,4 @@
+import { createId } from '@paralleldrive/cuid2';
 import * as bcrypt from 'bcryptjs';
 import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
@@ -21,11 +22,8 @@ export const auth = betterAuth({
 	advanced: {
 		cookiePrefix: 'better-auth',
 		database: {
-			generateId: () => {
-				// Use cuid() to match existing schema
-				const { createId } = require('@paralleldrive/cuid2');
-				return createId();
-			}
+			// Use cuid() to match existing schema
+			generateId: () => createId()
 		},
 		useSecureCookies: env.NODE_ENV === 'production'
 	},

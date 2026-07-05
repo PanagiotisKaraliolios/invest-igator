@@ -252,9 +252,7 @@ export const transactionsRouter = createTRPCRouter({
 			for (const t of rows) {
 				const line = [
 					// use YYYY-MM-DD
-					new Date(t.date)
-						.toISOString()
-						.slice(0, 10),
+					new Date(t.date).toISOString().slice(0, 10),
 					t.symbol,
 					t.side,
 					String(t.quantity),

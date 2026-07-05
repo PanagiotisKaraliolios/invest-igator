@@ -1,7 +1,8 @@
 'use client';
 
-import { ChartLine, Github } from 'lucide-react';
+import { ChartLine } from 'lucide-react';
 import Link from 'next/link';
+import { FaGithub } from 'react-icons/fa';
 import { useGsap, useGsapStagger } from '@/hooks/use-gsap';
 
 interface AnimatedFooterProps {
@@ -37,7 +38,7 @@ export function AnimatedFooter({ appName }: AnimatedFooterProps) {
 								rel='noopener noreferrer'
 								target='_blank'
 							>
-								<Github className='size-5' />
+								<FaGithub className='size-5' />
 							</a>
 						</div>
 					</div>

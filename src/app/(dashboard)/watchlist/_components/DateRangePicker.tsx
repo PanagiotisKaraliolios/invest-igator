@@ -100,6 +100,7 @@ export default function DateRangePicker({
 				<Calendar
 					autoFocus
 					disabled={{ after: yesterday }}
+					endMonth={yesterday}
 					mode='range'
 					numberOfMonths={2}
 					onSelect={(r) => {
@@ -114,7 +115,6 @@ export default function DateRangePicker({
 						onPresetChange(null);
 					}}
 					selected={dateRange}
-					toDate={yesterday}
 				/>
 			</PopoverContent>
 		</Popover>

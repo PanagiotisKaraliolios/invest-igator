@@ -15,7 +15,7 @@ const writeOptions: Partial<WriteOptions> = {
 };
 export const influxWriteApi = influx.getWriteApi(env.INFLUXDB_ORG, env.INFLUXDB_BUCKET, 'ns', writeOptions);
 export const influxQueryApi = influx.getQueryApi(env.INFLUXDB_ORG);
-export { Point, HttpError };
+export { HttpError, Point };
 
 export type DailyBar = {
 	time: string; // YYYY-MM-DD

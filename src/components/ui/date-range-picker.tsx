@@ -3,7 +3,7 @@
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import * as React from 'react';
-import type { DateRange } from 'react-day-picker';
+import type { DateRange, Matcher } from 'react-day-picker';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -51,14 +51,15 @@ export function DateRangePicker({
 		}
 	}, [open, value]);
 
-	// Combine custom disabledDays with maxDate enforcement
-	const combinedDisabledDays = React.useMemo(() => {
-		if (!strictMaxDate || !maxDate) return disabledDays;
-		return (date: Date) => {
-			if (disabledDays && disabledDays(date)) return true;
-			return date > maxDate;
-		};
-	}, [disabledDays, maxDate, strictMaxDate]);
+	// Combine custom disabledDays with min/max bounds into a matcher list
+	const combinedDisabledDays = React.useMemo<Matcher[]>(() => {
+		const matchers: Matcher[] = [];
+		if (disabledDays) matchers.push(disabledDays);
+		if (strictMaxDate && maxDate) matchers.push((date: Date) => !!maxDate && date > maxDate);
+		if (minDate) matchers.push({ before: minDate });
+		if (maxDate) matchers.push({ after: maxDate });
+		return matchers;
+	}, [disabledDays, maxDate, minDate, strictMaxDate]);
 
 	return (
 		<Popover onOpenChange={setOpen} open={open}>
@@ -85,15 +86,14 @@ export function DateRangePicker({
 							autoFocus
 							defaultMonth={tempRange?.from}
 							disabled={combinedDisabledDays}
-							fromDate={minDate}
-							initialFocus
+							endMonth={maxDate}
 							mode='range'
 							numberOfMonths={numberOfMonths}
 							onSelect={(range) => {
 								setTempRange(range);
 							}}
 							selected={tempRange}
-							toDate={maxDate}
+							startMonth={minDate}
 						/>
 						<div className='flex items-center justify-between gap-2 border-t p-3'>
 							<p className='text-xs text-muted-foreground'>

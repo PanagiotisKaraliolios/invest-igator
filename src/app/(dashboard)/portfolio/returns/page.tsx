@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import type { DateRange } from 'react-day-picker';
-import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { CartesianGrid, Legend, Line, LineChart, Tooltip, XAxis, YAxis } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -182,7 +182,7 @@ export default function PortfolioReturnsPage() {
 							</PopoverTrigger>
 							<PopoverContent align='end' className='w-auto p-0'>
 								<Calendar
-									initialFocus
+									autoFocus
 									mode='range'
 									numberOfMonths={2}
 									onSelect={(r) => {
@@ -202,79 +202,77 @@ export default function PortfolioReturnsPage() {
 						</div>
 					) : (
 						<ChartContainer className='aspect-[16/7]' config={chartConfig}>
-							<ResponsiveContainer>
-								<LineChart data={chartData} margin={{ bottom: 0, left: 8, right: 8, top: 8 }}>
-									<CartesianGrid strokeDasharray='3 3' />
-									<XAxis axisLine={false} dataKey='date' minTickGap={24} tickLine={false} />
-									<YAxis
-										axisLine={false}
+							<LineChart data={chartData} margin={{ bottom: 0, left: 8, right: 8, top: 8 }}>
+								<CartesianGrid strokeDasharray='3 3' />
+								<XAxis axisLine={false} dataKey='date' minTickGap={24} tickLine={false} />
+								<YAxis
+									axisLine={false}
+									dataKey='yield'
+									tickFormatter={(n) => pct(Number(n))}
+									tickLine={false}
+									width={48}
+									yAxisId='left'
+								/>
+								<YAxis
+									axisLine={false}
+									dataKey='net'
+									orientation='right'
+									tickFormatter={(n) => formatCurrency(Number(n), currency as Currency, 0)}
+									tickLine={false}
+									width={72}
+									yAxisId='right'
+								/>
+								<Tooltip
+									content={
+										<ChartTooltipContent
+											formatter={(value, name) => {
+												if (name === 'yield') return [pct(Number(value)), ' Yield'] as any;
+												return [
+													formatCurrency(Number(value), currency as Currency, 0),
+													' Net assets'
+												] as any;
+											}}
+										/>
+									}
+								/>
+								<Legend content={<ChartLegendContent />} />
+								{seriesShown.includes('yield') && (
+									<Line
+										activeDot={{
+											fill: 'var(--color-yield)',
+											r: 4,
+											stroke: 'var(--background)',
+											strokeWidth: 1
+										}}
+										connectNulls
 										dataKey='yield'
-										tickFormatter={(n) => pct(Number(n))}
-										tickLine={false}
-										width={48}
+										dot={false}
+										name='yield'
+										stroke='var(--color-yield)'
+										strokeWidth={2}
+										type='monotone'
 										yAxisId='left'
 									/>
-									<YAxis
-										axisLine={false}
+								)}
+								{seriesShown.includes('net') && (
+									<Line
+										activeDot={{
+											fill: 'var(--color-net)',
+											r: 4,
+											stroke: 'var(--background)',
+											strokeWidth: 1
+										}}
+										connectNulls
 										dataKey='net'
-										orientation='right'
-										tickFormatter={(n) => formatCurrency(Number(n), currency as Currency, 0)}
-										tickLine={false}
-										width={72}
+										dot={false}
+										name='net'
+										stroke='var(--color-net)'
+										strokeWidth={2}
+										type='monotone'
 										yAxisId='right'
 									/>
-									<Tooltip
-										content={
-											<ChartTooltipContent
-												formatter={(value, name) => {
-													if (name === 'yield') return [pct(Number(value)), ' Yield'] as any;
-													return [
-														formatCurrency(Number(value), currency as Currency, 0),
-														' Net assets'
-													] as any;
-												}}
-											/>
-										}
-									/>
-									<Legend content={<ChartLegendContent />} />
-									{seriesShown.includes('yield') && (
-										<Line
-											activeDot={{
-												fill: 'var(--color-yield)',
-												r: 4,
-												stroke: 'var(--background)',
-												strokeWidth: 1
-											}}
-											connectNulls
-											dataKey='yield'
-											dot={false}
-											name='yield'
-											stroke='var(--color-yield)'
-											strokeWidth={2}
-											type='monotone'
-											yAxisId='left'
-										/>
-									)}
-									{seriesShown.includes('net') && (
-										<Line
-											activeDot={{
-												fill: 'var(--color-net)',
-												r: 4,
-												stroke: 'var(--background)',
-												strokeWidth: 1
-											}}
-											connectNulls
-											dataKey='net'
-											dot={false}
-											name='net'
-											stroke='var(--color-net)'
-											strokeWidth={2}
-											type='monotone'
-											yAxisId='right'
-										/>
-									)}
-								</LineChart>
-							</ResponsiveContainer>
+								)}
+							</LineChart>
 						</ChartContainer>
 					)}
 				</CardContent>

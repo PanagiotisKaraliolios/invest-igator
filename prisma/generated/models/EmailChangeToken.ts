@@ -165,7 +165,7 @@ export type EmailChangeTokenGroupByOutputType = {
   _max: EmailChangeTokenMaxAggregateOutputType | null
 }
 
-type GetEmailChangeTokenGroupByPayload<T extends EmailChangeTokenGroupByArgs> = Prisma.PrismaPromise<
+export type GetEmailChangeTokenGroupByPayload<T extends EmailChangeTokenGroupByArgs> = Prisma.PrismaPromise<
   Array<
     Prisma.PickEnumerable<EmailChangeTokenGroupByOutputType, T['by']> &
       {
@@ -1157,6 +1157,11 @@ export type EmailChangeTokenFindManyArgs<ExtArgs extends runtime.Types.Extension
    * Skip the first `n` EmailChangeTokens.
    */
   skip?: number
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+   * 
+   * Filter by unique combinations of EmailChangeTokens.
+   */
   distinct?: Prisma.EmailChangeTokenScalarFieldEnum | Prisma.EmailChangeTokenScalarFieldEnum[]
 }
 
