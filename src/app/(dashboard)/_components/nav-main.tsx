@@ -49,10 +49,11 @@ export function NavMain({
 										const isSubItemActive = pathname.startsWith(subItem.url);
 										return (
 											<SidebarMenuSubItem key={subItem.title}>
-												<SidebarMenuSubButton asChild isActive={isSubItemActive}>
-													<a href={subItem.url}>
-														<span>{subItem.title}</span>
-													</a>
+												<SidebarMenuSubButton
+													isActive={isSubItemActive}
+													render={<a href={subItem.url} />}
+												>
+													<span>{subItem.title}</span>
 												</SidebarMenuSubButton>
 											</SidebarMenuSubItem>
 										);
