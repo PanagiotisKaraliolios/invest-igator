@@ -5,8 +5,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-lock.yaml
-bun.lockb
-bun.lock
+# bun.lock is intentionally NOT ignored: the Dockerfile copies it so
+# `bun install --frozen-lockfile` installs pinned, reproducible versions
+# (an unpinned install pulls newer deps that break the Turbopack build).
 
 # Next.js
 .next
