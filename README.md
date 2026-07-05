@@ -106,7 +106,7 @@ const { data } = api.watchlist.list.useQuery();
 - ✅ Bun 1.0+
 - ✅ Node 20+ (optional, Bun runs everything)
 - ✅ A PostgreSQL 16 database (use `./start-database.sh`)
-- ✅ An InfluxDB 2.x instance (local or remote)
+- ✅ An InfluxDB 2.x instance (use `./start-influxdb.sh`, or bring your own local/remote)
 
 ### Setup steps
 
@@ -120,11 +120,17 @@ bun install
 
 See the [Environment variables](#-environment-variables) section below. For a smoke test you can set placeholders and use `SKIP_ENV_VALIDATION=1` while you iterate.
 
-**3️⃣ Start Postgres (dev helper)**
+**3️⃣ Start the databases (dev helpers)**
 
 ```sh
-./start-database.sh
+./start-database.sh   # Postgres 16
+./start-influxdb.sh   # InfluxDB 2.x
 ```
+
+For local dev, make sure `INFLUXDB_URL` points at the local instance —
+`INFLUXDB_URL=http://localhost:8086` in `.env.local` (org/bucket/token stay
+as in your `.env`). `./start-influxdb.sh` reads those values and provisions
+the container to match.
 
 **4️⃣ Generate and apply Prisma schema**
 
@@ -434,7 +440,8 @@ docker compose down -v
 │   └── entrypoint.sh          # 🐳 Container startup script (migrations, server)
 ├── Dockerfile                 # 📦 Multi-stage build (deps, builder, runner)
 ├── docker-compose.yml         # 🐙 Compose stack (app, db, scheduler)
-└── start-database.sh          # 🗄️  Dev Postgres script
+├── start-database.sh          # 🗄️  Dev Postgres script
+└── start-influxdb.sh          # 📊  Dev InfluxDB 2.x script
 ```
 
 **Quick pointers:**
