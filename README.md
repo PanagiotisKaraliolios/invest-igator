@@ -538,4 +538,4 @@ Add a few symbols to your watchlist and run the Yahoo ingest job; the watchlist 
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=PanagiotisKaraliolios/invest-igator&type=date&legend=top-left)](https://www.star-history.com/#PanagiotisKaraliolios/invest-igator&type=date&legend=top-left)
+[![Star History Chart](https://api.star-history.com/chart?repos=PanagiotisKaraliolios/invest-igator&type=date&legend=top-left&sealed_token=LRF8t_pQzHiES4nXq1adOnwTZaSyc9bFOAFCdoXfMyy2Qs_uNdCGwfcXB6GpyIuRfDJolkT5W1IYiwTkNbkAnTLf2fouVwTiqeVJyWLJVTuaptA_3YGo1r0VFFbEpZNcBrkRBAwOB-XZjQPju02Gu-sm9y_fgudv_eto4pAcgUbdsS6grqac3yiFZVFG)](https://www.star-history.com/?type=date&legend=top-left&repos=PanagiotisKaraliolios%2Finvest-igator)
