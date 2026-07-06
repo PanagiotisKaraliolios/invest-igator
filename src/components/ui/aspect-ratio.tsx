@@ -1,9 +1,9 @@
-'use client';
+import type * as React from 'react';
 
-import * as AspectRatioPrimitive from '@radix-ui/react-aspect-ratio';
-
-function AspectRatio({ ...props }: React.ComponentProps<typeof AspectRatioPrimitive.Root>) {
-	return <AspectRatioPrimitive.Root data-slot='aspect-ratio' {...props} />;
+// Base UI has no AspectRatio primitive. Radix's AspectRatio mapped `ratio` onto
+// the CSS `aspect-ratio` property, so render a plain div that does the same.
+function AspectRatio({ ratio = 1, style, ...props }: React.ComponentProps<'div'> & { ratio?: number }) {
+	return <div data-slot='aspect-ratio' style={{ aspectRatio: ratio, ...style }} {...props} />;
 }
 
 export { AspectRatio };

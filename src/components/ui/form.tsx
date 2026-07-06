@@ -1,7 +1,7 @@
 'use client';
 
-import * as LabelPrimitive from '@radix-ui/react-label';
-import { Slot } from '@radix-ui/react-slot';
+import { mergeProps } from '@base-ui/react/merge-props';
+import { useRender } from '@base-ui/react/use-render';
 import * as React from 'react';
 import {
 	Controller,
@@ -78,7 +78,7 @@ function FormItem({ className, ...props }: React.ComponentProps<'div'>) {
 	);
 }
 
-function FormLabel({ className, ...props }: React.ComponentProps<typeof LabelPrimitive.Root>) {
+function FormLabel({ className, ...props }: React.ComponentProps<typeof Label>) {
 	const { error, formItemId } = useFormField();
 
 	return (
@@ -92,18 +92,24 @@ function FormLabel({ className, ...props }: React.ComponentProps<typeof LabelPri
 	);
 }
 
-function FormControl({ ...props }: React.ComponentProps<typeof Slot>) {
+function FormControl({ children, ...props }: React.ComponentProps<'div'>) {
 	const { error, formItemId, formDescriptionId, formMessageId } = useFormField();
 
-	return (
-		<Slot
-			aria-describedby={!error ? `${formDescriptionId}` : `${formDescriptionId} ${formMessageId}`}
-			aria-invalid={!!error}
-			data-slot='form-control'
-			id={formItemId}
-			{...props}
-		/>
-	);
+	// Radix Slot merged its props onto the single child; Base UI's useRender does
+	// the same, with the child passed as the `render` element. Consumers keep the
+	// <FormControl><Input/></FormControl> shape unchanged.
+	return useRender({
+		props: mergeProps<'div'>(
+			{
+				'aria-describedby': !error ? `${formDescriptionId}` : `${formDescriptionId} ${formMessageId}`,
+				'aria-invalid': !!error,
+				'data-slot': 'form-control',
+				id: formItemId
+			} as React.ComponentProps<'div'>,
+			props
+		),
+		render: children as React.ReactElement
+	});
 }
 
 function FormDescription({ className, ...props }: React.ComponentProps<'p'>) {

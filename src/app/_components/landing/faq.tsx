@@ -37,7 +37,7 @@ export function FAQSection() {
 				<p className='text-muted-foreground mt-3'>Answers to common questions about the platform.</p>
 			</div>
 			<div ref={accordionRef}>
-				<Accordion className='mx-auto max-w-3xl' collapsible type='single'>
+				<Accordion className='mx-auto max-w-3xl'>
 					{faqs.map((f, i) => (
 						<AccordionItem data-gsap-item key={f.q} value={`item-${i}`}>
 							<AccordionTrigger className='text-left'>{f.q}</AccordionTrigger>

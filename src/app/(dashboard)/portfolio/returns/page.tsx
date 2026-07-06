@@ -121,9 +121,8 @@ export default function PortfolioReturnsPage() {
 						<ToggleGroup
 							aria-label='Return mode'
 							data-testid='mode-toggle'
-							onValueChange={(v) => v && setMode(v as Mode)}
-							type='single'
-							value={mode}
+							onValueChange={(v) => v[0] && setMode(v[0] as Mode)}
+							value={[mode]}
 						>
 							<ToggleGroupItem aria-label='MWR' value='MWR'>
 								MWR
@@ -136,8 +135,8 @@ export default function PortfolioReturnsPage() {
 						<ToggleGroup
 							aria-label='Series shown'
 							data-testid='series-toggle'
+							multiple
 							onValueChange={(v) => v.length && setSeriesShown(v)}
-							type='multiple'
 							value={seriesShown}
 						>
 							<ToggleGroupItem aria-label='Yield' value='yield'>
@@ -150,6 +149,7 @@ export default function PortfolioReturnsPage() {
 
 						<Select
 							data-testid='period-select'
+							items={{ custom: 'Custom…', month: 'Month', year: 'Past year', ytd: 'Year-to-date' }}
 							onValueChange={(v) => setPreset(v as PeriodPreset)}
 							value={preset}
 						>
@@ -165,21 +165,23 @@ export default function PortfolioReturnsPage() {
 						</Select>
 
 						<Popover>
-							<PopoverTrigger asChild>
-								<Button
-									aria-label='Period selection'
-									className={cn(
-										'w-[220px] justify-start',
-										preset !== 'custom' && 'text-muted-foreground'
-									)}
-									data-testid='period-picker-button'
-									variant='outline'
-								>
-									{preset === 'custom' && range.from && range.to
-										? `${range.from.toLocaleDateString()} – ${range.to.toLocaleDateString()}`
-										: 'Period selection'}
-								</Button>
-							</PopoverTrigger>
+							<PopoverTrigger
+								render={
+									<Button
+										aria-label='Period selection'
+										className={cn(
+											'w-[220px] justify-start',
+											preset !== 'custom' && 'text-muted-foreground'
+										)}
+										data-testid='period-picker-button'
+										variant='outline'
+									>
+										{preset === 'custom' && range.from && range.to
+											? `${range.from.toLocaleDateString()} – ${range.to.toLocaleDateString()}`
+											: 'Period selection'}
+									</Button>
+								}
+							/>
 							<PopoverContent align='end' className='w-auto p-0'>
 								<Calendar
 									autoFocus

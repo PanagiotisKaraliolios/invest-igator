@@ -3,6 +3,8 @@
 @import "react-image-crop/dist/ReactCrop.css";
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant data-starting-style (&[data-starting-style]);
+@custom-variant data-ending-style (&[data-ending-style]);
 
 @theme {
 	--font-sans:

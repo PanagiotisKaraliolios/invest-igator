@@ -13,12 +13,14 @@ export default function WatchlistPage() {
 			<h1 className='text-2xl font-semibold tracking-tight'>Watchlist</h1>
 			<div>
 				<Dialog>
-					<DialogTrigger asChild>
-						<Button size='sm'>
-							<Plus className='mr-2 h-4 w-4' />
-							Add to watchlist
-						</Button>
-					</DialogTrigger>
+					<DialogTrigger
+						render={
+							<Button size='sm'>
+								<Plus className='mr-2 h-4 w-4' />
+								Add to watchlist
+							</Button>
+						}
+					/>
 					<DialogContent className='max-w-2xl'>
 						<DialogHeader>
 							<DialogTitle>Search assets</DialogTitle>

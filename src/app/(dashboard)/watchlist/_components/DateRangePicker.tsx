@@ -68,18 +68,20 @@ export default function DateRangePicker({
 	const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
 	return (
 		<Popover>
-			<PopoverTrigger asChild>
-				<Button className={buttonClassName ?? 'h-8 gap-2'} variant='outline'>
-					<CalendarIcon className='h-4 w-4' />
-					{dateRange.from && dateRange.to ? (
-						<span>
-							{format(dateRange.from, 'MMM d, yyyy')} – {format(dateRange.to, 'MMM d, yyyy')}
-						</span>
-					) : (
-						<span>Pick date range</span>
-					)}
-				</Button>
-			</PopoverTrigger>
+			<PopoverTrigger
+				render={
+					<Button className={buttonClassName ?? 'h-8 gap-2'} variant='outline'>
+						<CalendarIcon className='h-4 w-4' />
+						{dateRange.from && dateRange.to ? (
+							<span>
+								{format(dateRange.from, 'MMM d, yyyy')} – {format(dateRange.to, 'MMM d, yyyy')}
+							</span>
+						) : (
+							<span>Pick date range</span>
+						)}
+					</Button>
+				}
+			/>
 			<PopoverContent align='end' className='w-auto p-0'>
 				<div className='flex flex-wrap items-center gap-1 p-2 pb-0'>
 					{presets.map((p) => (

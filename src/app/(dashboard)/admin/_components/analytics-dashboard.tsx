@@ -114,7 +114,11 @@ export function AnalyticsDashboard() {
 			{/* Controls */}
 			<div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
 				<div className='flex items-center gap-2'>
-					<Select onValueChange={(v) => setPeriod(v as Period)} value={period}>
+					<Select
+						items={{ daily: 'Daily', monthly: 'Monthly', weekly: 'Weekly' }}
+						onValueChange={(v) => setPeriod(v as Period)}
+						value={period}
+					>
 						<SelectTrigger className='w-[140px]'>
 							<SelectValue />
 						</SelectTrigger>

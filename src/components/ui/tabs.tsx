@@ -1,6 +1,6 @@
 'use client';
 
-import * as TabsPrimitive from '@radix-ui/react-tabs';
+import { Tabs as TabsPrimitive } from '@base-ui/react/tabs';
 import { motion } from 'framer-motion';
 import * as React from 'react';
 
@@ -23,7 +23,7 @@ function TabsList({ className, ...props }: React.ComponentProps<typeof TabsPrimi
 	);
 }
 
-function TabsTrigger({ className, children, ...props }: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
+function TabsTrigger({ className, children, ...props }: React.ComponentProps<typeof TabsPrimitive.Tab>) {
 	const [isActive, setIsActive] = React.useState(false);
 	const ref = React.useRef<HTMLButtonElement>(null);
 
@@ -31,25 +31,27 @@ function TabsTrigger({ className, children, ...props }: React.ComponentProps<typ
 		const element = ref.current;
 		if (!element) return;
 
+		// Base UI marks the active tab with a presence attribute `data-active`
+		// (Radix used data-state="active").
 		const observer = new MutationObserver(() => {
-			setIsActive(element.getAttribute('data-state') === 'active');
+			setIsActive(element.hasAttribute('data-active'));
 		});
 
 		observer.observe(element, {
-			attributeFilter: ['data-state'],
+			attributeFilter: ['data-active'],
 			attributes: true
 		});
 
 		// Initial check
-		setIsActive(element.getAttribute('data-state') === 'active');
+		setIsActive(element.hasAttribute('data-active'));
 
 		return () => observer.disconnect();
 	}, []);
 
 	return (
-		<TabsPrimitive.Trigger
+		<TabsPrimitive.Tab
 			className={cn(
-				"focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring text-foreground dark:text-muted-foreground relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-[3px] focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-[state=active]:text-foreground",
+				"focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring text-foreground dark:text-muted-foreground relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-[3px] focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-active:text-foreground",
 				className
 			)}
 			data-slot='tabs-trigger'
@@ -68,14 +70,12 @@ function TabsTrigger({ className, children, ...props }: React.ComponentProps<typ
 				/>
 			)}
 			<span className='relative z-10'>{children}</span>
-		</TabsPrimitive.Trigger>
+		</TabsPrimitive.Tab>
 	);
 }
 
-function TabsContent({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Content>) {
-	return (
-		<TabsPrimitive.Content className={cn('flex-1 outline-none', className)} data-slot='tabs-content' {...props} />
-	);
+function TabsContent({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Panel>) {
+	return <TabsPrimitive.Panel className={cn('flex-1 outline-none', className)} data-slot='tabs-content' {...props} />;
 }
 
 export { Tabs, TabsContent, TabsList, TabsTrigger };

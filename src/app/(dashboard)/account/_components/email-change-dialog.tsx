@@ -16,9 +16,7 @@ export function EmailChangeDialog() {
 	const [open, setOpen] = useState(false);
 	return (
 		<Dialog onOpenChange={setOpen} open={open}>
-			<DialogTrigger asChild>
-				<Button variant='outline'>Change email</Button>
-			</DialogTrigger>
+			<DialogTrigger render={<Button variant='outline'>Change email</Button>} />
 			<DialogContent>
 				<DialogHeader>
 					<DialogTitle>Change email securely</DialogTitle>

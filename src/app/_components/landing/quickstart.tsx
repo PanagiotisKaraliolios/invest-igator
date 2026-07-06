@@ -62,16 +62,20 @@ export function QuickstartSection() {
 							))}
 						</ol>
 						<div className='mt-4 flex flex-wrap gap-3'>
-							<Button asChild className='transition-transform hover:scale-105' size='sm'>
-								<a href='/signup'>Create account</a>
+							<Button
+								className='transition-transform hover:scale-105'
+								render={<a href='/signup' />}
+								size='sm'
+							>
+								Create account
 							</Button>
 							<Button
-								asChild
 								className='transition-transform hover:scale-105'
+								render={<a href='/login' />}
 								size='sm'
 								variant='outline'
 							>
-								<a href='/login'>Log in</a>
+								Log in
 							</Button>
 						</div>
 					</CardContent>
@@ -99,15 +103,20 @@ export function QuickstartSection() {
 							<span className='rounded-full bg-primary/10 px-2 py-1 text-primary'>Docker-friendly</span>
 							<span className='rounded-full bg-primary/10 px-2 py-1 text-primary'>tRPC v11</span>
 						</div>
-						<Button asChild className='w-full' size='sm' variant='secondary'>
-							<a
-								href='https://github.com/PanagiotisKaraliolios/invest-igator'
-								rel='noopener noreferrer'
-								target='_blank'
-							>
-								<BookOpenCheck className='mr-2 size-4' />
-								View README
-							</a>
+						<Button
+							className='w-full'
+							render={
+								<a
+									href='https://github.com/PanagiotisKaraliolios/invest-igator'
+									rel='noopener noreferrer'
+									target='_blank'
+								/>
+							}
+							size='sm'
+							variant='secondary'
+						>
+							<BookOpenCheck className='mr-2 size-4' />
+							View README
 						</Button>
 					</CardContent>
 				</Card>

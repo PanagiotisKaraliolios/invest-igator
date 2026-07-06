@@ -239,7 +239,16 @@ export function AuditLogsTable() {
 					/>
 				</div>
 
-				<Select onValueChange={(val) => setActionFilter(val)} value={actionFilter}>
+				<Select
+					items={{
+						ALL: 'All actions',
+						...Object.fromEntries(
+							Object.entries(ACTIONS_CONFIG).map(([action, config]) => [action, config.label])
+						)
+					}}
+					onValueChange={(val) => setActionFilter(val as string)}
+					value={actionFilter}
+				>
 					<SelectTrigger className='h-9 w-[180px]'>
 						<SelectValue placeholder='All actions' />
 					</SelectTrigger>
@@ -265,11 +274,13 @@ export function AuditLogsTable() {
 
 				<div className='ml-auto'>
 					<DropdownMenu>
-						<DropdownMenuTrigger asChild>
-							<Button size='sm' variant='outline'>
-								Columns <ChevronDown className='ml-2 size-4' />
-							</Button>
-						</DropdownMenuTrigger>
+						<DropdownMenuTrigger
+							render={
+								<Button size='sm' variant='outline'>
+									Columns <ChevronDown className='ml-2 size-4' />
+								</Button>
+							}
+						/>
 						<DropdownMenuContent align='end'>
 							{table
 								.getAllColumns()
@@ -357,7 +368,11 @@ export function AuditLogsTable() {
 					{data?.total ?? 0} total log{(data?.total ?? 0) !== 1 ? 's' : ''}
 				</div>
 				<div className='flex items-center gap-2'>
-					<Select onValueChange={(v) => table.setPageSize(Number(v))} value={String(pageSize)}>
+					<Select
+						items={{ '10': '10 rows', '25': '25 rows', '50': '50 rows', '100': '100 rows' }}
+						onValueChange={(v) => table.setPageSize(Number(v))}
+						value={String(pageSize)}
+					>
 						<SelectTrigger className='h-8 w-[110px]'>
 							<SelectValue placeholder='Rows' />
 						</SelectTrigger>

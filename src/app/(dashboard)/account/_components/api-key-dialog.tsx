@@ -349,7 +349,18 @@ function ApiKeyDialog({ mode, open, onOpenChange, onSuccess, apiKey }: ApiKeyDia
 
 							<Field data-invalid={!!errors.expiresIn}>
 								<FieldLabel htmlFor={`${idPrefix}-api-key-expiration`}>Expiration</FieldLabel>
-								<Select defaultValue='2592000' onValueChange={(value) => setValue('expiresIn', value)}>
+								<Select
+									defaultValue='2592000'
+									items={{
+										'604800': '7 days',
+										'2592000': '30 days',
+										'7776000': '90 days',
+										'15552000': '180 days',
+										'31536000': '1 year',
+										never: 'Never'
+									}}
+									onValueChange={(value) => setValue('expiresIn', value as string)}
+								>
 									<SelectTrigger
 										data-testid='api-key-expiration-select'
 										id={`${idPrefix}-api-key-expiration`}
@@ -396,8 +407,14 @@ function ApiKeyDialog({ mode, open, onOpenChange, onSuccess, apiKey }: ApiKeyDia
 						<Field data-invalid={!!errors.permissionTemplate}>
 							<FieldLabel htmlFor={`${idPrefix}-permission-template`}>Permission Template</FieldLabel>
 							<Select
+								items={{
+									custom: '⚙️ Custom',
+									'full-access': '🔓 Full Access',
+									'portfolio-manager': '💼 Portfolio Manager',
+									'read-only': '🔍 Read Only'
+								}}
 								onValueChange={(value) => {
-									setValue('permissionTemplate', value);
+									setValue('permissionTemplate', value as string);
 									handlePermissionTemplateChange(value as PermissionTemplate);
 								}}
 								value={permissionTemplate}
@@ -524,7 +541,14 @@ function ApiKeyDialog({ mode, open, onOpenChange, onSuccess, apiKey }: ApiKeyDia
 								<FieldLabel htmlFor={`${idPrefix}-rate-limit-window`}>Time Window</FieldLabel>
 								<Select
 									defaultValue={apiKey?.rateLimitTimeWindow?.toString() ?? '3600000'}
-									onValueChange={(value) => setValue('rateLimitTimeWindow', value)}
+									items={{
+										'60000': '1 minute',
+										'300000': '5 minutes',
+										'900000': '15 minutes',
+										'3600000': '1 hour',
+										'86400000': '1 day'
+									}}
+									onValueChange={(value) => setValue('rateLimitTimeWindow', value as string)}
 								>
 									<SelectTrigger
 										data-testid='rate-limit-window-select'

@@ -62,11 +62,9 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
 						<RotateCw className='mr-2 size-4' />
 						Try Again
 					</Button>
-					<Button asChild size='lg' variant='outline'>
-						<Link href='/'>
-							<Home className='mr-2 size-4' />
-							Back to Home
-						</Link>
+					<Button render={<Link href='/' />} size='lg' variant='outline'>
+						<Home className='mr-2 size-4' />
+						Back to Home
 					</Button>
 				</div>
 

@@ -21,8 +21,8 @@ export default async function SignOutPage() {
 						<CardDescription>Confirm you want to end your session.</CardDescription>
 					</CardHeader>
 					<CardContent className='flex items-center justify-between gap-3'>
-						<Button asChild variant='ghost'>
-							<Link href='/portfolio'>Cancel</Link>
+						<Button render={<Link href='/portfolio' />} variant='ghost'>
+							Cancel
 						</Button>
 						<SignOutButton label='Sign out' size='sm' variant='destructive' />
 					</CardContent>

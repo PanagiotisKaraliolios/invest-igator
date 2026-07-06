@@ -67,27 +67,32 @@ export function NavUser() {
 		<SidebarMenu>
 			<SidebarMenuItem>
 				<DropdownMenu>
-					<DropdownMenuTrigger asChild>
-						<SidebarMenuButton
-							className='data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
-							size='lg'
-						>
-							<Avatar className='h-8 w-8 rounded-lg'>
-								<AvatarImage alt={`Profile picture of ${user.name}`} src={user.avatar ?? undefined} />
-								<AvatarFallback className='rounded-lg'>
-									{user.name?.[0]?.toUpperCase() ?? user.email?.[0]?.toUpperCase() ?? '?'}
-								</AvatarFallback>
-							</Avatar>
-							<div className='grid flex-1 text-left text-sm leading-tight'>
-								<span className='truncate font-medium'>{user.name}</span>
-								<span className='truncate text-xs'>{user.email}</span>
-							</div>
-							<ChevronsUpDown className='ml-auto size-4' />
-						</SidebarMenuButton>
-					</DropdownMenuTrigger>
+					<DropdownMenuTrigger
+						render={
+							<SidebarMenuButton
+								className='data-[popup-open]:bg-sidebar-accent data-[popup-open]:text-sidebar-accent-foreground'
+								size='lg'
+							>
+								<Avatar className='h-8 w-8 rounded-lg'>
+									<AvatarImage
+										alt={`Profile picture of ${user.name}`}
+										src={user.avatar ?? undefined}
+									/>
+									<AvatarFallback className='rounded-lg'>
+										{user.name?.[0]?.toUpperCase() ?? user.email?.[0]?.toUpperCase() ?? '?'}
+									</AvatarFallback>
+								</Avatar>
+								<div className='grid flex-1 text-left text-sm leading-tight'>
+									<span className='truncate font-medium'>{user.name}</span>
+									<span className='truncate text-xs'>{user.email}</span>
+								</div>
+								<ChevronsUpDown className='ml-auto size-4' />
+							</SidebarMenuButton>
+						}
+					/>
 					<DropdownMenuContent
 						align='end'
-						className='w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg'
+						className='w-(--anchor-width) min-w-56 rounded-lg'
 						side={isMobile ? 'bottom' : 'right'}
 						sideOffset={4}
 					>
@@ -117,12 +122,14 @@ export function NavUser() {
 						</DropdownMenuGroup>
 						<DropdownMenuSeparator />
 						<DropdownMenuGroup>
-							<DropdownMenuItem asChild>
-								<Link className='flex items-center gap-2' href='/account' prefetch>
-									<BadgeCheck />
-									Account
-								</Link>
-							</DropdownMenuItem>
+							<DropdownMenuItem
+								render={
+									<Link className='flex items-center gap-2' href='/account' prefetch>
+										<BadgeCheck />
+										Account
+									</Link>
+								}
+							/>
 							<DropdownMenuItem>
 								<CreditCard />
 								Billing
@@ -133,12 +140,14 @@ export function NavUser() {
 							</DropdownMenuItem>
 						</DropdownMenuGroup>
 						<DropdownMenuSeparator />
-						<DropdownMenuItem asChild>
-							<Link className='flex items-center gap-2' href='/signout'>
-								<LogOut />
-								Sign out
-							</Link>
-						</DropdownMenuItem>
+						<DropdownMenuItem
+							render={
+								<Link className='flex items-center gap-2' href='/signout'>
+									<LogOut />
+									Sign out
+								</Link>
+							}
+						/>
 					</DropdownMenuContent>
 				</DropdownMenu>
 			</SidebarMenuItem>

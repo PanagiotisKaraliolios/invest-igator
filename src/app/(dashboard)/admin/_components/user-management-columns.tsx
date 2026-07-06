@@ -50,17 +50,19 @@ export function createUserColumns(): ColumnDef<User>[] {
 							<Badge variant='destructive'>Banned</Badge>
 							<TooltipProvider>
 								<Tooltip>
-									<TooltipTrigger asChild>
-										<Button
-											className='size-5 p-0'
-											data-testid='ban-reason-tooltip-trigger'
-											size='icon'
-											variant='ghost'
-										>
-											<Info className='size-3.5 text-muted-foreground' />
-											<span className='sr-only'>View ban reason</span>
-										</Button>
-									</TooltipTrigger>
+									<TooltipTrigger
+										render={
+											<Button
+												className='size-5 p-0'
+												data-testid='ban-reason-tooltip-trigger'
+												size='icon'
+												variant='ghost'
+											>
+												<Info className='size-3.5 text-muted-foreground' />
+												<span className='sr-only'>View ban reason</span>
+											</Button>
+										}
+									/>
 									<TooltipContent>
 										<p className='max-w-xs'>{banReason}</p>
 									</TooltipContent>

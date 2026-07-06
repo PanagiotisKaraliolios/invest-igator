@@ -49,10 +49,8 @@ export default function PrivacyPolicyPage() {
 							</p>
 						</div>
 					</div>
-					<Button asChild className='-mr-2' size='sm' variant='ghost'>
-						<Link href='/'>
-							<ChevronLeft className='mr-1 size-4' /> Back to home
-						</Link>
+					<Button className='-mr-2' render={<Link href='/' />} size='sm' variant='ghost'>
+						<ChevronLeft className='mr-1 size-4' /> Back to home
 					</Button>
 				</div>
 				<div className='mt-4'>

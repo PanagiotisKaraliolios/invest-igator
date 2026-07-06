@@ -89,19 +89,25 @@ export function TrustSignalsSection() {
 			</div>
 
 			<div className='mt-10 flex flex-wrap items-center justify-center gap-3'>
-				<Button asChild size='sm' variant='default'>
-					<a href='/docs' rel='noopener noreferrer' target='_blank'>
-						Read the docs
-					</a>
+				<Button
+					render={<a href='/docs' rel='noopener noreferrer' target='_blank' />}
+					size='sm'
+					variant='default'
+				>
+					Read the docs
 				</Button>
-				<Button asChild size='sm' variant='outline'>
-					<a
-						href='https://github.com/PanagiotisKaraliolios/invest-igator'
-						rel='noopener noreferrer'
-						target='_blank'
-					>
-						View the repo
-					</a>
+				<Button
+					render={
+						<a
+							href='https://github.com/PanagiotisKaraliolios/invest-igator'
+							rel='noopener noreferrer'
+							target='_blank'
+						/>
+					}
+					size='sm'
+					variant='outline'
+				>
+					View the repo
 				</Button>
 			</div>
 		</section>

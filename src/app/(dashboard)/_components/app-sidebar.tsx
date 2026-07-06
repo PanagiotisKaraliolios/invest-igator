@@ -31,15 +31,17 @@ export function AppSidebar({
 			title: 'Dashboard'
 		},
 		{
+			comingSoon: true,
 			icon: AudioWaveform,
 			isActive: isNavItemActive([{ url: '/analytics/risk' }, { url: '/analytics/reports' }]),
 			items: [
-				{ title: 'Risk', url: '/analytics/risk' },
-				{ title: 'Reports', url: '/analytics/reports' }
+				{ comingSoon: true, title: 'Risk', url: '/analytics/risk' },
+				{ comingSoon: true, title: 'Reports', url: '/analytics/reports' }
 			],
 			title: 'Analytics'
 		},
 		{
+			comingSoon: true,
 			icon: BookOpen,
 			isActive: isNavItemActive([
 				{ url: '/research/markets' },
@@ -48,10 +50,10 @@ export function AppSidebar({
 				{ url: '/research/news' }
 			]),
 			items: [
-				{ title: 'Markets', url: '/research/markets' },
-				{ title: 'ETFs', url: '/research/etfs' },
-				{ title: 'Stocks', url: '/research/stocks' },
-				{ title: 'News', url: '/research/news' }
+				{ comingSoon: true, title: 'Markets', url: '/research/markets' },
+				{ comingSoon: true, title: 'ETFs', url: '/research/etfs' },
+				{ comingSoon: true, title: 'Stocks', url: '/research/stocks' },
+				{ comingSoon: true, title: 'News', url: '/research/news' }
 			],
 			title: 'Research'
 		},
@@ -65,9 +67,9 @@ export function AppSidebar({
 			]),
 			items: [
 				{ title: 'Goals', url: '/tools/goals' },
-				{ title: 'Simulations', url: '/tools/simulations' },
-				{ title: 'Taxes', url: '/tools/taxes' },
-				{ title: 'Notes', url: '/tools/notes' }
+				{ comingSoon: true, title: 'Simulations', url: '/tools/simulations' },
+				{ comingSoon: true, title: 'Taxes', url: '/tools/taxes' },
+				{ comingSoon: true, title: 'Notes', url: '/tools/notes' }
 			],
 			title: 'Tools'
 		}
