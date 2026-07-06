@@ -3,6 +3,7 @@
 import { ChevronRight, type LucideIcon } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 
+import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
 	SidebarGroup,
@@ -22,9 +23,11 @@ export function NavMain({
 		title: string;
 		icon?: LucideIcon;
 		isActive?: boolean;
+		comingSoon?: boolean;
 		items?: {
 			title: string;
 			url: string;
+			comingSoon?: boolean;
 		}[];
 	}[];
 }) {
@@ -43,6 +46,11 @@ export function NavMain({
 						<CollapsibleTrigger render={<SidebarMenuButton tooltip={item.title} />}>
 							{item.icon && <item.icon />}
 							<span>{item.title}</span>
+							{item.comingSoon && (
+								<Badge className='h-4 px-1.5 text-[10px] leading-none' variant='secondary'>
+									Soon
+								</Badge>
+							)}
 							<ChevronRight className='ml-auto transition-transform duration-200 group-data-open/collapsible:rotate-90' />
 						</CollapsibleTrigger>
 						<CollapsibleContent>
@@ -56,6 +64,14 @@ export function NavMain({
 												render={<a href={subItem.url} />}
 											>
 												<span>{subItem.title}</span>
+												{subItem.comingSoon && (
+													<Badge
+														className='ml-auto h-4 px-1.5 text-[10px] leading-none'
+														variant='secondary'
+													>
+														Soon
+													</Badge>
+												)}
 											</SidebarMenuSubButton>
 										</SidebarMenuSubItem>
 									);
