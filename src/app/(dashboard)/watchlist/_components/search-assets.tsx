@@ -55,7 +55,14 @@ export default function SearchAssets() {
 										key={`${r.symbol}-${idx}`}
 									>
 										<div>
-											<div className='font-medium'>{r.displaySymbol || r.symbol}</div>
+											<div className='flex items-center gap-2'>
+												<span className='font-medium'>{r.displaySymbol || r.symbol}</span>
+												{r.exchange && (
+													<span className='rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground'>
+														{r.exchange}
+													</span>
+												)}
+											</div>
 											<div className='text-xs text-muted-foreground'>{r.description}</div>
 										</div>
 										<Button

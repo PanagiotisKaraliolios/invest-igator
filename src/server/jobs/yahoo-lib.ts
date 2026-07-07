@@ -1,7 +1,15 @@
 import type { Currency } from '@prisma/generated';
 import { env } from '@/env';
 import { db } from '@/server/db';
-import { buildPoint, type DailyBar, influxWriteApi, Point, symbolHasAnyData } from '@/server/influx';
+import { buildPoint, type DailyBar, influxWriteApi, Point } from '@/server/influx';
+import {
+	type CapitalGainEvent,
+	type ChartStatus,
+	classifyChartResponse,
+	type DividendEvent,
+	type SplitEvent,
+	type YahooChartResponse
+} from '@/server/yahoo-chart-parse';
 
 function mapCurrencyString(currencyStr?: string): Currency {
 	if (!currencyStr) return 'USD';
@@ -25,50 +33,9 @@ function mapCurrencyString(currencyStr?: string): Currency {
 	}
 }
 
-interface YahooChartResponse {
-	chart?: {
-		result?: Array<{
-			meta?: { currency: string; gmtoffset?: number };
-			timestamp?: number[];
-			events?: {
-				dividends?: Record<string, { amount?: number; date?: number }>;
-				splits?: Record<
-					string,
-					{ date?: number; numerator?: number; denominator?: number; splitRatio?: number }
-				>;
-				capitalGains?: Record<string, { amount?: number; date?: number }>;
-				// other event types may appear; we ignore unknowns safely
-			};
-			indicators?: {
-				quote?: Array<{
-					open?: Array<number | null>;
-					high?: Array<number | null>;
-					low?: Array<number | null>;
-					close?: Array<number | null>;
-					volume?: Array<number | null>;
-				}>;
-			};
-		}>;
-		error?: unknown;
-	};
-}
-
 export function sleep(ms: number) {
 	return new Promise((res) => setTimeout(res, ms));
 }
-
-function toDateStringFromEpochSec(epochSec: number, gmtoffset?: number): string {
-	const offsetMs = (gmtoffset ?? 0) * 1000;
-	const d = new Date(epochSec * 1000 + offsetMs);
-	const y = d.getUTCFullYear();
-	const m = String(d.getUTCMonth() + 1).padStart(2, '0');
-	const day = String(d.getUTCDate()).padStart(2, '0');
-	return `${y}-${m}-${day}`;
-}
-
-type DividendEvent = { date: string; amount: number };
-type SplitEvent = { date: string; numerator: number; denominator: number; ratio: number };
-type CapitalGainEvent = { date: string; amount: number };
 
 export async function fetchYahooDaily(
 	symbol: string,
@@ -80,6 +47,7 @@ export async function fetchYahooDaily(
 		events?: string;
 	}
 ): Promise<{
+	status: ChartStatus;
 	bars: DailyBar[];
 	dividends: DividendEvent[];
 	splits: SplitEvent[];
@@ -107,96 +75,7 @@ export async function fetchYahooDaily(
 	});
 	if (!rsp.ok) throw new Error(`Yahoo chart HTTP ${rsp.status} for ${symbol}`);
 	const json = (await rsp.json()) as YahooChartResponse;
-	const res = json.chart?.result?.[0];
-	if (!res) return { bars: [], capitalGains: [], dividends: [], splits: [] };
-
-	const currency = res.meta?.currency;
-	const quote = res.indicators?.quote?.[0];
-	const gmtoffset = res.meta?.gmtoffset;
-	const bars: DailyBar[] = [];
-	if (quote && res.timestamp) {
-		const timestamps = res.timestamp ?? [];
-		for (let i = 0; i < timestamps.length; i++) {
-			const ts = timestamps[i]!;
-			const o = quote.open?.[i] ?? null;
-			const h = quote.high?.[i] ?? null;
-			const l = quote.low?.[i] ?? null;
-			const c = quote.close?.[i] ?? null;
-			const v = quote.volume?.[i] ?? 0; // default missing volume to 0
-			if (o == null || h == null || l == null || c == null) continue;
-			if ([o, h, l, c].some((n) => Number.isNaN(Number(n)))) continue;
-			bars.push({
-				close: Number(c),
-				high: Number(h),
-				low: Number(l),
-				open: Number(o),
-				time: toDateStringFromEpochSec(ts, gmtoffset ?? 0),
-				volume: Math.max(0, Math.round(Number(v ?? 0)))
-			});
-		}
-		bars.sort((a, b) => a.time.localeCompare(b.time));
-	}
-
-	const dividends: DividendEvent[] = [];
-	const dividendsMap = res.events?.dividends ?? {};
-	for (const key of Object.keys(dividendsMap)) {
-		const ev = dividendsMap[key]!;
-		const amount = Number(ev.amount ?? Number.NaN);
-		const dateSec = ev.date ?? Number(key);
-		if (!Number.isFinite(amount) || !Number.isFinite(dateSec)) continue;
-		dividends.push({
-			amount,
-			date: toDateStringFromEpochSec(dateSec, gmtoffset ?? 0)
-		});
-	}
-	dividends.sort((a, b) => a.date.localeCompare(b.date));
-
-	const splits: SplitEvent[] = [];
-	const splitsMap = res.events?.splits ?? {};
-	for (const key of Object.keys(splitsMap)) {
-		const ev = splitsMap[key]!;
-		const dateSec = ev.date ?? Number(key);
-		const numerator = Number(ev.numerator ?? Number.NaN);
-		const denominator = Number(ev.denominator ?? Number.NaN);
-		// Some payloads include splitRatio; compute ratio if missing and numbers are valid
-		const ratio = Number(
-			Number.isFinite(ev.splitRatio as number)
-				? (ev.splitRatio as number)
-				: Number.isFinite(numerator) && Number.isFinite(denominator) && denominator !== 0
-					? numerator / denominator
-					: Number.NaN
-		);
-		if (
-			!Number.isFinite(dateSec) ||
-			!Number.isFinite(numerator) ||
-			!Number.isFinite(denominator) ||
-			!Number.isFinite(ratio)
-		)
-			continue;
-		splits.push({
-			date: toDateStringFromEpochSec(dateSec, gmtoffset ?? 0),
-			denominator,
-			numerator,
-			ratio
-		});
-	}
-	splits.sort((a, b) => a.date.localeCompare(b.date));
-
-	const capitalGains: CapitalGainEvent[] = [];
-	const capMap = res.events?.capitalGains ?? {};
-	for (const key of Object.keys(capMap)) {
-		const ev = capMap[key]!;
-		const amount = Number(ev.amount ?? Number.NaN);
-		const dateSec = ev.date ?? Number(key);
-		if (!Number.isFinite(amount) || !Number.isFinite(dateSec)) continue;
-		capitalGains.push({
-			amount,
-			date: toDateStringFromEpochSec(dateSec, gmtoffset ?? 0)
-		});
-	}
-	capitalGains.sort((a, b) => a.date.localeCompare(b.date));
-
-	return { bars, capitalGains, currency, dividends, splits };
+	return classifyChartResponse(json);
 }
 
 export async function writeBars(symbol: string, bars: DailyBar[]) {
@@ -305,10 +184,8 @@ export async function writeCapitalGains(symbol: string, events: CapitalGainEvent
 }
 
 export async function ingestYahooSymbol(symbol: string, options?: { userId?: string }) {
-	const has = await symbolHasAnyData(symbol);
-
 	// Always fetch currency metadata, even if we have data
-	const { bars, dividends, splits, capitalGains, currency } = await fetchYahooDaily(symbol, {
+	const { bars, dividends, splits, capitalGains, currency, status } = await fetchYahooDaily(symbol, {
 		includePrePost: false,
 		interval: '1d',
 		period1: 1,
@@ -334,14 +211,9 @@ export async function ingestYahooSymbol(symbol: string, options?: { userId?: str
 		}
 	}
 
-	// Only write data if we don't already have it
-	// if (has) {
-	// 	return { count: 0, currency: mapCurrencyString(currency), skipped: true } as const;
-	// }
-
 	if (bars.length > 0) await writeBars(symbol, bars);
 	if (dividends.length > 0) await writeDividends(symbol, dividends);
 	if (splits.length > 0) await writeSplits(symbol, splits);
 	if (capitalGains.length > 0) await writeCapitalGains(symbol, capitalGains);
-	return { count: bars.length, currency: mapCurrencyString(currency), skipped: false } as const;
+	return { count: bars.length, currency: mapCurrencyString(currency), skipped: false, status } as const;
 }

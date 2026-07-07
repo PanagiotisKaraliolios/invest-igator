@@ -1,40 +1,13 @@
 import type { Currency } from '@prisma/generated';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
-import { env } from '@/env';
 import { isValidSymbol as isValidSymbolFormat, normalizeSymbol, symbolSchema } from '@/lib/validation';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
+import { sleep } from '@/server/jobs/yahoo-lib';
+import { symbolExistsOnYahoo } from '@/server/yahoo-search';
 
 const supportedCurrencies: Currency[] = ['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB'];
-
-/**
- * Validates if a symbol exists using Yahoo Finance API.
- * @internal
- */
-async function isValidSymbolViaYahoo(symbol: string): Promise<boolean> {
-	try {
-		const url = new URL(`${env.YAHOO_API_URL}/search`);
-		url.searchParams.set('q', symbol);
-		url.searchParams.set('lang', 'en-US');
-		url.searchParams.set('region', 'US');
-		url.searchParams.set('newsCount', '0');
-		url.searchParams.set('enableLogoUrl', 'false');
-		const res = await fetch(url.toString(), {
-			headers: {
-				Accept: 'application/json, text/plain, */*',
-				'User-Agent': 'Mozilla/5.0 (compatible; invest-igator/1.0)'
-			}
-		});
-		if (!res.ok) return false;
-		const data = (await res.json()) as {
-			quotes?: Array<{ symbol?: string }>;
-		};
-		const up = symbol.trim().toUpperCase();
-		return Array.isArray(data.quotes) && data.quotes.some((r) => r.symbol && r.symbol.toUpperCase() === up);
-	} catch {
-		return false;
-	}
-}
+const CSV_NEW_SYMBOL_LIMIT = 50;
 
 /**
  * Transactions router - manages investment transactions (buys/sells).
@@ -148,8 +121,14 @@ export const transactionsRouter = createTRPCRouter({
 				where: { userId_symbol: { symbol, userId } }
 			});
 			if (!exists) {
-				const ok = await isValidSymbolViaYahoo(symbol);
-				if (!ok) {
+				const existence = await symbolExistsOnYahoo(symbol);
+				if (existence === 'unreachable') {
+					throw new TRPCError({
+						code: 'BAD_REQUEST',
+						message: `Couldn't reach Yahoo to verify ${symbol}. Please try again.`
+					});
+				}
+				if (existence === 'no') {
 					throw new TRPCError({
 						code: 'BAD_REQUEST',
 						message: 'Unknown symbol. Please select from suggestions.'
@@ -332,6 +311,39 @@ export const transactionsRouter = createTRPCRouter({
 				}
 			}
 
+			// Pre-validate distinct, format-valid, not-yet-tracked symbols against Yahoo once each.
+			const cellOf = (row: string[], name: string) => {
+				const idx = headerMap.get(name);
+				return idx != null ? (row[idx] ?? '') : '';
+			};
+			const distinctSymbols = new Set<string>();
+			for (const rawRow of data) {
+				if (rawRow.every((cell) => cell.trim() === '')) continue;
+				const s = normalizeSymbol(cellOf(rawRow, 'symbol'));
+				if (s && isValidSymbolFormat(s)) distinctSymbols.add(s);
+			}
+			const trackedRows = distinctSymbols.size
+				? await ctx.db.watchlistItem.findMany({
+						select: { symbol: true },
+						where: { symbol: { in: Array.from(distinctSymbols) }, userId: ctx.session.user.id }
+					})
+				: [];
+			const tracked = new Set(trackedRows.map((r) => r.symbol));
+			const newSymbols = Array.from(distinctSymbols).filter((s) => !tracked.has(s));
+			if (newSymbols.length > CSV_NEW_SYMBOL_LIMIT) {
+				throw new TRPCError({
+					code: 'BAD_REQUEST',
+					message: `This file has ${newSymbols.length} new symbols to verify (max ${CSV_NEW_SYMBOL_LIMIT}). Please split it into smaller files, or add these symbols to your watchlist first.`
+				});
+			}
+			const unknownSymbols = new Set<string>();
+			for (const s of newSymbols) {
+				// Only a definitive "reached Yahoo, no match" ('no') blocks the row; an 'unreachable'
+				// result is given the benefit of the doubt so a Yahoo blip doesn't reject valid symbols.
+				if ((await symbolExistsOnYahoo(s)) === 'no') unknownSymbols.add(s);
+				await sleep(150);
+			}
+
 			const supportedCurrencySet = new Set(supportedCurrencies);
 
 			data.forEach((rawRow, index) => {
@@ -347,6 +359,9 @@ export const transactionsRouter = createTRPCRouter({
 					if (!symbol) throw new Error('Symbol is required.');
 					if (!isValidSymbolFormat(symbol)) {
 						throw new Error('Symbol contains invalid characters.');
+					}
+					if (unknownSymbols.has(symbol)) {
+						throw new Error(`Unknown symbol "${symbol}" — not found on Yahoo Finance.`);
 					}
 
 					const sideRaw = byColumn('side').trim().toUpperCase();
@@ -850,8 +865,14 @@ export const transactionsRouter = createTRPCRouter({
 					where: { userId_symbol: { symbol: nextSymbol, userId } }
 				});
 				if (!exists) {
-					const ok = await isValidSymbolViaYahoo(nextSymbol);
-					if (!ok) {
+					const existence = await symbolExistsOnYahoo(nextSymbol);
+					if (existence === 'unreachable') {
+						throw new TRPCError({
+							code: 'BAD_REQUEST',
+							message: `Couldn't reach Yahoo to verify ${nextSymbol}. Please try again.`
+						});
+					}
+					if (existence === 'no') {
 						throw new TRPCError({
 							code: 'BAD_REQUEST',
 							message: 'Unknown symbol. Please select from suggestions.'

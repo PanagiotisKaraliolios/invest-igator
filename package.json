@@ -4,7 +4,7 @@
 	},
 	"dependencies": {
 		"@auth/prisma-adapter": "^2.11.2",
-		"@aws-sdk/client-s3": "^3.1079.0",
+		"@aws-sdk/client-s3": "^3.1080.0",
 		"@base-ui/react": "^1.6.0",
 		"@hookform/resolvers": "^5.4.0",
 		"@influxdata/influxdb-client": "^1.35.0",
@@ -101,6 +101,7 @@
 		"test:e2e:noweb": "PW_SKIP_WEBSERVER=1 bunx playwright test",
 		"test:e2e:ui": "bunx playwright test --ui",
 		"test:e2e:ui:noweb": "PW_SKIP_WEBSERVER=1 bunx playwright test --ui",
+		"test:unit": "bun test src",
 		"typecheck": "tsc --noEmit",
 		"verify:secrets": "bash scripts/verify-secrets.sh"
 	},

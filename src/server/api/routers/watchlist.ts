@@ -5,6 +5,7 @@ import { isValidSymbol, normalizeSymbol, symbolSchema } from '@/lib/validation';
 import { createTRPCRouter, withPermissions } from '@/server/api/trpc';
 import { fluxStringLiteral, influxQueryApi, measurement } from '@/server/influx';
 import { ingestYahooSymbol } from '@/server/jobs/yahoo-lib';
+import { searchYahooSymbols, symbolExistsOnYahoo } from '@/server/yahoo-search';
 
 /**
  * Watchlist router - manages user watchlists and market data.
@@ -31,7 +32,8 @@ import { ingestYahooSymbol } from '@/server/jobs/yahoo-lib';
 export const watchlistRouter = createTRPCRouter({
 	/**
 	 * Adds a symbol to the user's watchlist.
-	 * Creates or updates the watchlist item. Triggers background ingestion if no data exists.
+	 * Validates the symbol is recognized by Yahoo before persisting (rejects unknown symbols, and
+	 * surfaces a retryable error if Yahoo is unreachable). Full price history is then ingested in the background.
 	 *
 	 * @input symbol - Stock symbol (required)
 	 * @input displaySymbol - Optional display name
@@ -59,13 +61,28 @@ export const watchlistRouter = createTRPCRouter({
 		.mutation(async ({ ctx, input }) => {
 			const userId = ctx.session.user.id;
 			const symbol = normalizeSymbol(input.symbol);
+
+			// Validate the symbol is recognized by Yahoo before persisting. Tri-state so a
+			// transient Yahoo outage is retryable rather than a false "unknown symbol".
+			const existence = await symbolExistsOnYahoo(symbol);
+			if (existence === 'unreachable') {
+				throw new TRPCError({
+					code: 'BAD_REQUEST',
+					message: `Couldn't reach Yahoo to verify ${symbol}. Please try again.`
+				});
+			}
+			if (existence === 'no') {
+				throw new TRPCError({
+					code: 'BAD_REQUEST',
+					message: `${symbol} is not a recognized Yahoo Finance symbol.`
+				});
+			}
+
 			const data = { ...input, symbol };
 			let created = false;
 			let result: any;
 			try {
-				result = await ctx.db.watchlistItem.create({
-					data: { userId, ...data }
-				});
+				result = await ctx.db.watchlistItem.create({ data: { userId, ...data } });
 				created = true;
 			} catch (e) {
 				// upsert-like behavior for unique(userId,symbol)
@@ -76,7 +93,7 @@ export const watchlistRouter = createTRPCRouter({
 				result = { alreadyExists: true } as const;
 			}
 
-			// Fire-and-forget ingestion if symbol has no data yet
+			// Fire-and-forget full-history ingestion (errors swallowed; validated above).
 			void (async () => {
 				try {
 					await ingestYahooSymbol(symbol, { userId });
@@ -375,7 +392,7 @@ export const watchlistRouter = createTRPCRouter({
 	 *
 	 * @input q - Search query (min 1 character)
 	 *
-	 * @returns Search results with count and result array containing symbol, displaySymbol, description, type
+	 * @returns Search results with count and result array containing symbol, displaySymbol, description, type, exchange
 	 *
 	 * @throws {Error} If Yahoo Finance search fails
 	 *
@@ -386,54 +403,20 @@ export const watchlistRouter = createTRPCRouter({
 	search: withPermissions('watchlist', 'read')
 		.input(z.object({ q: z.string().min(1) }))
 		.query(async ({ input }) => {
-			const url = new URL('https://query1.finance.yahoo.com/v1/finance/search');
-			url.searchParams.set('q', input.q);
-			url.searchParams.set('lang', 'en-US');
-			url.searchParams.set('region', 'US');
-			url.searchParams.set('newsCount', '0');
-			url.searchParams.set('enableLogoUrl', 'true');
-
-			const res = await fetch(url.toString(), {
-				headers: {
-					Accept: 'application/json, text/plain, */*',
-					'User-Agent': 'Mozilla/5.0 (compatible; invest-igator/1.0)'
-				}
-			});
-			if (!res.ok) {
-				const errorText = await res.text().catch(() => 'Unknown error');
-				throw new Error(`Yahoo Finance search failed: ${res.status} - ${errorText}`);
-			}
-			const yahooData = (await res.json()) as {
-				count: number;
-				quotes: Array<{
-					exchange: string;
-					shortname: string;
-					quoteType: string;
-					symbol: string;
-					typeDisp: string;
-					longname?: string;
-					exchDisp: string;
-					logoUrl?: string;
-					sector?: string;
-					industry?: string;
-				}>;
-			};
-
-			// Transform Yahoo Finance response to match expected format
+			const results = await searchYahooSymbols(input.q);
 			const data = {
-				count: yahooData.count,
-				result: yahooData.quotes.map((quote) => ({
-					description: quote.longname || quote.shortname,
-					displaySymbol: quote.symbol,
-					symbol: quote.symbol,
-					type: quote.typeDisp
+				count: results.length,
+				result: results.map((r) => ({
+					description: r.description,
+					displaySymbol: r.symbol,
+					exchange: r.exchange,
+					symbol: r.symbol,
+					type: r.type
 				}))
 			};
-
 			if (process.env.NODE_ENV !== 'production') {
 				console.log('[watchlist.search] Yahoo Finance response', data);
 			}
-
 			return data;
 		}),
 	/**
