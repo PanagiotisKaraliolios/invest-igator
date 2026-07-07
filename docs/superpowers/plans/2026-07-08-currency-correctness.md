@@ -42,12 +42,11 @@
 
 **Interfaces:**
 - Produces:
-  - `const SUPPORTED_CURRENCIES = ['EUR','USD','GBP','HKD','CHF','RUB','JPY','CAD','AUD','SGD'] as const`
-  - `type Currency = (typeof SUPPORTED_CURRENCIES)[number]`
-  - `const currencySchema: z.ZodEnum<...>` = `z.enum(SUPPORTED_CURRENCIES)`
-  - `function isSupportedCurrency(x: string): x is Currency`
+  - `const SUPPORTED_CURRENCIES = ['EUR','USD','GBP','HKD','CHF','RUB','JPY','CAD','AUD','SGD'] as const` (the new 10)
+  - `const currencySchema` = `z.enum(SUPPORTED_CURRENCIES)`
+  - `function isSupportedCurrency(x: string): x is (typeof SUPPORTED_CURRENCIES)[number]`
   - `function formatCurrency(n: number, currency: string, maximumFractionDigits?: number): string` (unchanged behavior; param widened to `string`)
-  - Back-compat: keep `export const supportedCurrencies = SUPPORTED_CURRENCIES` alias so existing importers keep compiling until Task 3 migrates them.
+- **Unchanged in this task (critical):** `supportedCurrencies` stays the 6-tuple and `type Currency` stays derived from it. Do NOT widen `type Currency` to the 10 here — `@prisma/generated` still exports a 6-member `Currency` enum, and widening `@/lib/currency`'s `Currency` to 10 while the Prisma one stays 6 makes `'JPY'` non-assignable at every interop point (≈13 typecheck errors). Task 2 flips `type Currency`/`supportedCurrencies` to the 10 in the SAME commit that drops the Prisma enum, so both change together and typecheck stays green.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -83,21 +82,24 @@ Expected: FAIL — `SUPPORTED_CURRENCIES`/`currencySchema`/`isSupportedCurrency`
 
 - [ ] **Step 3: Implement**
 
-Replace the entire contents of `src/lib/currency.ts` with:
+Replace the entire contents of `src/lib/currency.ts` with (note: `supportedCurrencies` and `type Currency` stay the **6** — only the new symbols are added; Task 2 flips them to the 10):
 
 ```ts
 import { z } from 'zod';
 
+/**
+ * The 10 supported currencies. Task 2 makes this the source for `type Currency` and
+ * `supportedCurrencies` once the Postgres Currency enum is dropped; kept separate here so this
+ * task stays typecheck-green (widening `type Currency` to 10 while @prisma/generated stays 6 breaks interop).
+ */
 export const SUPPORTED_CURRENCIES = ['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB', 'JPY', 'CAD', 'AUD', 'SGD'] as const;
 
-export type Currency = (typeof SUPPORTED_CURRENCIES)[number];
-
-/** Back-compat alias for existing importers; migrated away in Task 3. */
-export const supportedCurrencies = SUPPORTED_CURRENCIES;
+export const supportedCurrencies = ['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB'] as const;
+export type Currency = (typeof supportedCurrencies)[number];
 
 export const currencySchema = z.enum(SUPPORTED_CURRENCIES);
 
-export function isSupportedCurrency(x: string): x is Currency {
+export function isSupportedCurrency(x: string): x is (typeof SUPPORTED_CURRENCIES)[number] {
 	return (SUPPORTED_CURRENCIES as readonly string[]).includes(x);
 }
 
@@ -150,6 +152,14 @@ In `prisma/schema.prisma`: delete the `enum Currency { … }` block (`:153-160`)
 - `FxRate.base Currency` → `String`
 - `FxRate.quote Currency` → `String`
 - `Goal.targetCurrency Currency @default(USD)` → `String @default("USD")`
+
+- [ ] **Step 1b: Flip `type Currency`/`supportedCurrencies` to the 10 in `src/lib/currency.ts`**
+
+Now that the Prisma `Currency` enum is being removed, make `@/lib/currency` the single source. In `src/lib/currency.ts`:
+- Delete the separate 6-tuple `export const supportedCurrencies = ['EUR', …] as const;` and replace with `export const supportedCurrencies = SUPPORTED_CURRENCIES;`
+- Change `export type Currency = (typeof supportedCurrencies)[number];` to `export type Currency = (typeof SUPPORTED_CURRENCIES)[number];`
+
+(`type Currency` is now the 10-union; because the Prisma 6-enum disappears in the same commit, there is no 6-vs-10 interop mismatch.)
 
 - [ ] **Step 2: Regenerate the Prisma client (no DB needed)**
 
