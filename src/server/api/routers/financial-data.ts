@@ -1,7 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { env } from '@/env';
-import type { Currency } from '@/lib/currency';
+import { currencySchema } from '@/lib/currency';
 import { isValidSymbol, normalizeSymbol, symbolSchema } from '@/lib/validation';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
 import { db } from '@/server/db';
@@ -243,8 +243,8 @@ export const financialDataRouter = createTRPCRouter({
 	getFxRates: adminProcedure
 		.input(
 			z.object({
-				base: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']).optional(),
-				quote: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']).optional()
+				base: currencySchema.optional(),
+				quote: currencySchema.optional()
 			})
 		)
 		.query(async ({ input, ctx }) => {
@@ -445,7 +445,7 @@ schema.measurementTagValues(
 	updateSymbol: adminProcedure
 		.input(
 			z.object({
-				currency: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']).optional(),
+				currency: currencySchema.optional(),
 				description: z.string().optional(),
 				displaySymbol: z.string().optional(),
 				symbol: z.string(),

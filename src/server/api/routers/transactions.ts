@@ -1,12 +1,12 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
-import { type Currency, currencySchema } from '@/lib/currency';
+import { type Currency, currencySchema, SUPPORTED_CURRENCIES } from '@/lib/currency';
 import { isValidSymbol as isValidSymbolFormat, normalizeSymbol, symbolSchema } from '@/lib/validation';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
 import { sleep } from '@/server/jobs/yahoo-lib';
 import { symbolExistsOnYahoo } from '@/server/yahoo-search';
 
-const supportedCurrencies: Currency[] = ['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB'];
+const supportedCurrencies = SUPPORTED_CURRENCIES;
 const CSV_NEW_SYMBOL_LIMIT = 50;
 
 /**

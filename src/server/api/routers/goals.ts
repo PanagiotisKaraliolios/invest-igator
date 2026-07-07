@@ -3,8 +3,6 @@ import { z } from 'zod';
 import { type Currency, currencySchema } from '@/lib/currency';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
 
-const supportedCurrencies: Currency[] = ['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB'];
-
 /**
  * Goals router - manages user financial goals.
  * All procedures require authentication (protectedProcedure).

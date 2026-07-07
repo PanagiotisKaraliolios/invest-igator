@@ -26,7 +26,7 @@
 import { faker } from '@faker-js/faker';
 import { PrismaPg } from '@prisma/adapter-pg';
 import * as bcrypt from 'bcryptjs';
-import type { Currency } from '../src/lib/currency';
+import { type Currency, SUPPORTED_CURRENCIES } from '../src/lib/currency';
 import { env } from '../src/env';
 import { PrismaClient, type TransactionSide } from './generated/client';
 
@@ -158,7 +158,7 @@ const SYMBOLS = [
 	'MDB'
 ];
 
-const CURRENCIES: Currency[] = ['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB'];
+const CURRENCIES: Currency[] = [...SUPPORTED_CURRENCIES];
 
 // User profile types for realistic behavior patterns
 type UserProfile = 'active_trader' | 'casual_investor' | 'new_user' | 'long_term_holder';
