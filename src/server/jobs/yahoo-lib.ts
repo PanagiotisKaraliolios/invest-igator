@@ -1,5 +1,4 @@
 import { env } from '@/env';
-import type { Currency } from '@/lib/currency';
 import { db } from '@/server/db';
 import { buildPoint, type DailyBar, influxWriteApi, Point } from '@/server/influx';
 import {
@@ -10,28 +9,6 @@ import {
 	type SplitEvent,
 	type YahooChartResponse
 } from '@/server/yahoo-chart-parse';
-
-function mapCurrencyString(currencyStr?: string): Currency {
-	if (!currencyStr) return 'USD';
-
-	const upper = currencyStr.toUpperCase();
-	switch (upper) {
-		case 'EUR':
-			return 'EUR';
-		case 'USD':
-			return 'USD';
-		case 'GBP':
-			return 'GBP';
-		case 'HKD':
-			return 'HKD';
-		case 'CHF':
-			return 'CHF';
-		case 'RUB':
-			return 'RUB';
-		default:
-			return 'USD'; // Default fallback
-	}
-}
 
 export function sleep(ms: number) {
 	return new Promise((res) => setTimeout(res, ms));
@@ -195,10 +172,9 @@ export async function ingestYahooSymbol(symbol: string, options?: { userId?: str
 	// Update watchlist item with currency if userId is provided
 	if (options?.userId && currency) {
 		try {
-			const mappedCurrency = mapCurrencyString(currency);
 			await db.watchlistItem.updateMany({
 				data: {
-					currency: mappedCurrency
+					currency
 				},
 				where: {
 					symbol: symbol,
@@ -215,5 +191,5 @@ export async function ingestYahooSymbol(symbol: string, options?: { userId?: str
 	if (dividends.length > 0) await writeDividends(symbol, dividends);
 	if (splits.length > 0) await writeSplits(symbol, splits);
 	if (capitalGains.length > 0) await writeCapitalGains(symbol, capitalGains);
-	return { count: bars.length, currency: mapCurrencyString(currency), skipped: false, status } as const;
+	return { count: bars.length, currency: currency ?? 'USD', skipped: false, status } as const;
 }
