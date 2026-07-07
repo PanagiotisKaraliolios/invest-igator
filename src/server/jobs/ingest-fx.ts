@@ -1,9 +1,10 @@
 #!/usr/bin/env bun
 import { env } from '@/env';
 import type { Currency } from '@/lib/currency';
+import { SUPPORTED_CURRENCIES } from '@/lib/currency';
 import { db } from '@/server/db';
 
-const supported: Currency[] = ['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB'];
+const supported = SUPPORTED_CURRENCIES;
 
 async function fetchRate(base: Currency, quote: Currency): Promise<number | null> {
 	if (base === quote) return 1;
