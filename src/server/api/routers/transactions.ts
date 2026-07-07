@@ -1,6 +1,6 @@
-import type { Currency } from '@prisma/generated';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
+import { type Currency, currencySchema } from '@/lib/currency';
 import { isValidSymbol as isValidSymbolFormat, normalizeSymbol, symbolSchema } from '@/lib/validation';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
 import { sleep } from '@/server/jobs/yahoo-lib';
@@ -103,10 +103,10 @@ export const transactionsRouter = createTRPCRouter({
 			z.object({
 				date: z.string().transform((s) => new Date(s)),
 				fee: z.number().optional(),
-				feeCurrency: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']).optional(),
+				feeCurrency: currencySchema.optional(),
 				note: z.string().optional(),
 				price: z.number(),
-				priceCurrency: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']).default('USD'),
+				priceCurrency: currencySchema.default('USD'),
 				quantity: z.number(),
 				side: z.enum(['BUY', 'SELL']),
 				symbol: symbolSchema
@@ -605,10 +605,10 @@ export const transactionsRouter = createTRPCRouter({
 							date: z.string().min(1),
 							duplicateId: z.string().min(1),
 							fee: z.number().nonnegative().nullable().optional(),
-							feeCurrency: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']).nullable().optional(),
+							feeCurrency: currencySchema.nullable().optional(),
 							note: z.string().nullable().optional(),
 							price: z.number().positive(),
-							priceCurrency: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']),
+							priceCurrency: currencySchema,
 							quantity: z.number().positive(),
 							side: z.enum(['BUY', 'SELL']),
 							symbol: z.string().min(1)
@@ -834,11 +834,11 @@ export const transactionsRouter = createTRPCRouter({
 					.transform((s) => new Date(s))
 					.optional(),
 				fee: z.number().nullable().optional(),
-				feeCurrency: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']).nullable().optional(),
+				feeCurrency: currencySchema.nullable().optional(),
 				id: z.string().min(1),
 				note: z.string().nullable().optional(),
 				price: z.number().optional(),
-				priceCurrency: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']).optional(),
+				priceCurrency: currencySchema.optional(),
 				quantity: z.number().optional(),
 				side: z.enum(['BUY', 'SELL']).optional(),
 				symbol: symbolSchema.optional()

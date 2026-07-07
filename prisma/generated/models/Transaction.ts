@@ -46,9 +46,9 @@ export type TransactionMinAggregateOutputType = {
   side: $Enums.TransactionSide | null
   quantity: number | null
   price: number | null
-  priceCurrency: $Enums.Currency | null
+  priceCurrency: string | null
   fee: number | null
-  feeCurrency: $Enums.Currency | null
+  feeCurrency: string | null
   note: string | null
   createdAt: Date | null
 }
@@ -61,9 +61,9 @@ export type TransactionMaxAggregateOutputType = {
   side: $Enums.TransactionSide | null
   quantity: number | null
   price: number | null
-  priceCurrency: $Enums.Currency | null
+  priceCurrency: string | null
   fee: number | null
-  feeCurrency: $Enums.Currency | null
+  feeCurrency: string | null
   note: string | null
   createdAt: Date | null
 }
@@ -237,9 +237,9 @@ export type TransactionGroupByOutputType = {
   side: $Enums.TransactionSide
   quantity: number
   price: number
-  priceCurrency: $Enums.Currency
+  priceCurrency: string
   fee: number | null
-  feeCurrency: $Enums.Currency | null
+  feeCurrency: string | null
   note: string | null
   createdAt: Date
   _count: TransactionCountAggregateOutputType | null
@@ -275,9 +275,9 @@ export type TransactionWhereInput = {
   side?: Prisma.EnumTransactionSideFilter<"Transaction"> | $Enums.TransactionSide
   quantity?: Prisma.FloatFilter<"Transaction"> | number
   price?: Prisma.FloatFilter<"Transaction"> | number
-  priceCurrency?: Prisma.EnumCurrencyFilter<"Transaction"> | $Enums.Currency
+  priceCurrency?: Prisma.StringFilter<"Transaction"> | string
   fee?: Prisma.FloatNullableFilter<"Transaction"> | number | null
-  feeCurrency?: Prisma.EnumCurrencyNullableFilter<"Transaction"> | $Enums.Currency | null
+  feeCurrency?: Prisma.StringNullableFilter<"Transaction"> | string | null
   note?: Prisma.StringNullableFilter<"Transaction"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Transaction"> | Date | string
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
@@ -310,9 +310,9 @@ export type TransactionWhereUniqueInput = Prisma.AtLeast<{
   side?: Prisma.EnumTransactionSideFilter<"Transaction"> | $Enums.TransactionSide
   quantity?: Prisma.FloatFilter<"Transaction"> | number
   price?: Prisma.FloatFilter<"Transaction"> | number
-  priceCurrency?: Prisma.EnumCurrencyFilter<"Transaction"> | $Enums.Currency
+  priceCurrency?: Prisma.StringFilter<"Transaction"> | string
   fee?: Prisma.FloatNullableFilter<"Transaction"> | number | null
-  feeCurrency?: Prisma.EnumCurrencyNullableFilter<"Transaction"> | $Enums.Currency | null
+  feeCurrency?: Prisma.StringNullableFilter<"Transaction"> | string | null
   note?: Prisma.StringNullableFilter<"Transaction"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Transaction"> | Date | string
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
@@ -349,9 +349,9 @@ export type TransactionScalarWhereWithAggregatesInput = {
   side?: Prisma.EnumTransactionSideWithAggregatesFilter<"Transaction"> | $Enums.TransactionSide
   quantity?: Prisma.FloatWithAggregatesFilter<"Transaction"> | number
   price?: Prisma.FloatWithAggregatesFilter<"Transaction"> | number
-  priceCurrency?: Prisma.EnumCurrencyWithAggregatesFilter<"Transaction"> | $Enums.Currency
+  priceCurrency?: Prisma.StringWithAggregatesFilter<"Transaction"> | string
   fee?: Prisma.FloatNullableWithAggregatesFilter<"Transaction"> | number | null
-  feeCurrency?: Prisma.EnumCurrencyNullableWithAggregatesFilter<"Transaction"> | $Enums.Currency | null
+  feeCurrency?: Prisma.StringNullableWithAggregatesFilter<"Transaction"> | string | null
   note?: Prisma.StringNullableWithAggregatesFilter<"Transaction"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Transaction"> | Date | string
 }
@@ -363,9 +363,9 @@ export type TransactionCreateInput = {
   side: $Enums.TransactionSide
   quantity: number
   price: number
-  priceCurrency?: $Enums.Currency
+  priceCurrency?: string
   fee?: number | null
-  feeCurrency?: $Enums.Currency | null
+  feeCurrency?: string | null
   note?: string | null
   createdAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutTransactionsInput
@@ -379,9 +379,9 @@ export type TransactionUncheckedCreateInput = {
   side: $Enums.TransactionSide
   quantity: number
   price: number
-  priceCurrency?: $Enums.Currency
+  priceCurrency?: string
   fee?: number | null
-  feeCurrency?: $Enums.Currency | null
+  feeCurrency?: string | null
   note?: string | null
   createdAt?: Date | string
 }
@@ -393,9 +393,9 @@ export type TransactionUpdateInput = {
   side?: Prisma.EnumTransactionSideFieldUpdateOperationsInput | $Enums.TransactionSide
   quantity?: Prisma.FloatFieldUpdateOperationsInput | number
   price?: Prisma.FloatFieldUpdateOperationsInput | number
-  priceCurrency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  priceCurrency?: Prisma.StringFieldUpdateOperationsInput | string
   fee?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
-  feeCurrency?: Prisma.NullableEnumCurrencyFieldUpdateOperationsInput | $Enums.Currency | null
+  feeCurrency?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutTransactionsNestedInput
@@ -409,9 +409,9 @@ export type TransactionUncheckedUpdateInput = {
   side?: Prisma.EnumTransactionSideFieldUpdateOperationsInput | $Enums.TransactionSide
   quantity?: Prisma.FloatFieldUpdateOperationsInput | number
   price?: Prisma.FloatFieldUpdateOperationsInput | number
-  priceCurrency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  priceCurrency?: Prisma.StringFieldUpdateOperationsInput | string
   fee?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
-  feeCurrency?: Prisma.NullableEnumCurrencyFieldUpdateOperationsInput | $Enums.Currency | null
+  feeCurrency?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -424,9 +424,9 @@ export type TransactionCreateManyInput = {
   side: $Enums.TransactionSide
   quantity: number
   price: number
-  priceCurrency?: $Enums.Currency
+  priceCurrency?: string
   fee?: number | null
-  feeCurrency?: $Enums.Currency | null
+  feeCurrency?: string | null
   note?: string | null
   createdAt?: Date | string
 }
@@ -438,9 +438,9 @@ export type TransactionUpdateManyMutationInput = {
   side?: Prisma.EnumTransactionSideFieldUpdateOperationsInput | $Enums.TransactionSide
   quantity?: Prisma.FloatFieldUpdateOperationsInput | number
   price?: Prisma.FloatFieldUpdateOperationsInput | number
-  priceCurrency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  priceCurrency?: Prisma.StringFieldUpdateOperationsInput | string
   fee?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
-  feeCurrency?: Prisma.NullableEnumCurrencyFieldUpdateOperationsInput | $Enums.Currency | null
+  feeCurrency?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -453,9 +453,9 @@ export type TransactionUncheckedUpdateManyInput = {
   side?: Prisma.EnumTransactionSideFieldUpdateOperationsInput | $Enums.TransactionSide
   quantity?: Prisma.FloatFieldUpdateOperationsInput | number
   price?: Prisma.FloatFieldUpdateOperationsInput | number
-  priceCurrency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  priceCurrency?: Prisma.StringFieldUpdateOperationsInput | string
   fee?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
-  feeCurrency?: Prisma.NullableEnumCurrencyFieldUpdateOperationsInput | $Enums.Currency | null
+  feeCurrency?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -547,20 +547,12 @@ export type FloatFieldUpdateOperationsInput = {
   divide?: number
 }
 
-export type EnumCurrencyFieldUpdateOperationsInput = {
-  set?: $Enums.Currency
-}
-
 export type NullableFloatFieldUpdateOperationsInput = {
   set?: number | null
   increment?: number
   decrement?: number
   multiply?: number
   divide?: number
-}
-
-export type NullableEnumCurrencyFieldUpdateOperationsInput = {
-  set?: $Enums.Currency | null
 }
 
 export type NullableStringFieldUpdateOperationsInput = {
@@ -616,9 +608,9 @@ export type TransactionCreateWithoutUserInput = {
   side: $Enums.TransactionSide
   quantity: number
   price: number
-  priceCurrency?: $Enums.Currency
+  priceCurrency?: string
   fee?: number | null
-  feeCurrency?: $Enums.Currency | null
+  feeCurrency?: string | null
   note?: string | null
   createdAt?: Date | string
 }
@@ -630,9 +622,9 @@ export type TransactionUncheckedCreateWithoutUserInput = {
   side: $Enums.TransactionSide
   quantity: number
   price: number
-  priceCurrency?: $Enums.Currency
+  priceCurrency?: string
   fee?: number | null
-  feeCurrency?: $Enums.Currency | null
+  feeCurrency?: string | null
   note?: string | null
   createdAt?: Date | string
 }
@@ -674,9 +666,9 @@ export type TransactionScalarWhereInput = {
   side?: Prisma.EnumTransactionSideFilter<"Transaction"> | $Enums.TransactionSide
   quantity?: Prisma.FloatFilter<"Transaction"> | number
   price?: Prisma.FloatFilter<"Transaction"> | number
-  priceCurrency?: Prisma.EnumCurrencyFilter<"Transaction"> | $Enums.Currency
+  priceCurrency?: Prisma.StringFilter<"Transaction"> | string
   fee?: Prisma.FloatNullableFilter<"Transaction"> | number | null
-  feeCurrency?: Prisma.EnumCurrencyNullableFilter<"Transaction"> | $Enums.Currency | null
+  feeCurrency?: Prisma.StringNullableFilter<"Transaction"> | string | null
   note?: Prisma.StringNullableFilter<"Transaction"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Transaction"> | Date | string
 }
@@ -688,9 +680,9 @@ export type TransactionCreateManyUserInput = {
   side: $Enums.TransactionSide
   quantity: number
   price: number
-  priceCurrency?: $Enums.Currency
+  priceCurrency?: string
   fee?: number | null
-  feeCurrency?: $Enums.Currency | null
+  feeCurrency?: string | null
   note?: string | null
   createdAt?: Date | string
 }
@@ -702,9 +694,9 @@ export type TransactionUpdateWithoutUserInput = {
   side?: Prisma.EnumTransactionSideFieldUpdateOperationsInput | $Enums.TransactionSide
   quantity?: Prisma.FloatFieldUpdateOperationsInput | number
   price?: Prisma.FloatFieldUpdateOperationsInput | number
-  priceCurrency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  priceCurrency?: Prisma.StringFieldUpdateOperationsInput | string
   fee?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
-  feeCurrency?: Prisma.NullableEnumCurrencyFieldUpdateOperationsInput | $Enums.Currency | null
+  feeCurrency?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -716,9 +708,9 @@ export type TransactionUncheckedUpdateWithoutUserInput = {
   side?: Prisma.EnumTransactionSideFieldUpdateOperationsInput | $Enums.TransactionSide
   quantity?: Prisma.FloatFieldUpdateOperationsInput | number
   price?: Prisma.FloatFieldUpdateOperationsInput | number
-  priceCurrency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  priceCurrency?: Prisma.StringFieldUpdateOperationsInput | string
   fee?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
-  feeCurrency?: Prisma.NullableEnumCurrencyFieldUpdateOperationsInput | $Enums.Currency | null
+  feeCurrency?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -730,9 +722,9 @@ export type TransactionUncheckedUpdateManyWithoutUserInput = {
   side?: Prisma.EnumTransactionSideFieldUpdateOperationsInput | $Enums.TransactionSide
   quantity?: Prisma.FloatFieldUpdateOperationsInput | number
   price?: Prisma.FloatFieldUpdateOperationsInput | number
-  priceCurrency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  priceCurrency?: Prisma.StringFieldUpdateOperationsInput | string
   fee?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
-  feeCurrency?: Prisma.NullableEnumCurrencyFieldUpdateOperationsInput | $Enums.Currency | null
+  feeCurrency?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -826,9 +818,9 @@ export type $TransactionPayload<ExtArgs extends runtime.Types.Extensions.Interna
     side: $Enums.TransactionSide
     quantity: number
     price: number
-    priceCurrency: $Enums.Currency
+    priceCurrency: string
     fee: number | null
-    feeCurrency: $Enums.Currency | null
+    feeCurrency: string | null
     note: string | null
     createdAt: Date
   }, ExtArgs["result"]["transaction"]>
@@ -1262,9 +1254,9 @@ export interface TransactionFieldRefs {
   readonly side: Prisma.FieldRef<"Transaction", 'TransactionSide'>
   readonly quantity: Prisma.FieldRef<"Transaction", 'Float'>
   readonly price: Prisma.FieldRef<"Transaction", 'Float'>
-  readonly priceCurrency: Prisma.FieldRef<"Transaction", 'Currency'>
+  readonly priceCurrency: Prisma.FieldRef<"Transaction", 'String'>
   readonly fee: Prisma.FieldRef<"Transaction", 'Float'>
-  readonly feeCurrency: Prisma.FieldRef<"Transaction", 'Currency'>
+  readonly feeCurrency: Prisma.FieldRef<"Transaction", 'String'>
   readonly note: Prisma.FieldRef<"Transaction", 'String'>
   readonly createdAt: Prisma.FieldRef<"Transaction", 'DateTime'>
 }

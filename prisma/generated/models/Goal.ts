@@ -39,7 +39,7 @@ export type GoalMinAggregateOutputType = {
   userId: string | null
   title: string | null
   targetAmount: number | null
-  targetCurrency: $Enums.Currency | null
+  targetCurrency: string | null
   targetDate: Date | null
   note: string | null
   createdAt: Date | null
@@ -51,7 +51,7 @@ export type GoalMaxAggregateOutputType = {
   userId: string | null
   title: string | null
   targetAmount: number | null
-  targetCurrency: $Enums.Currency | null
+  targetCurrency: string | null
   targetDate: Date | null
   note: string | null
   createdAt: Date | null
@@ -208,7 +208,7 @@ export type GoalGroupByOutputType = {
   userId: string
   title: string
   targetAmount: number
-  targetCurrency: $Enums.Currency
+  targetCurrency: string
   targetDate: Date | null
   note: string | null
   createdAt: Date
@@ -243,7 +243,7 @@ export type GoalWhereInput = {
   userId?: Prisma.StringFilter<"Goal"> | string
   title?: Prisma.StringFilter<"Goal"> | string
   targetAmount?: Prisma.FloatFilter<"Goal"> | number
-  targetCurrency?: Prisma.EnumCurrencyFilter<"Goal"> | $Enums.Currency
+  targetCurrency?: Prisma.StringFilter<"Goal"> | string
   targetDate?: Prisma.DateTimeNullableFilter<"Goal"> | Date | string | null
   note?: Prisma.StringNullableFilter<"Goal"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Goal"> | Date | string
@@ -272,7 +272,7 @@ export type GoalWhereUniqueInput = Prisma.AtLeast<{
   userId?: Prisma.StringFilter<"Goal"> | string
   title?: Prisma.StringFilter<"Goal"> | string
   targetAmount?: Prisma.FloatFilter<"Goal"> | number
-  targetCurrency?: Prisma.EnumCurrencyFilter<"Goal"> | $Enums.Currency
+  targetCurrency?: Prisma.StringFilter<"Goal"> | string
   targetDate?: Prisma.DateTimeNullableFilter<"Goal"> | Date | string | null
   note?: Prisma.StringNullableFilter<"Goal"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Goal"> | Date | string
@@ -305,7 +305,7 @@ export type GoalScalarWhereWithAggregatesInput = {
   userId?: Prisma.StringWithAggregatesFilter<"Goal"> | string
   title?: Prisma.StringWithAggregatesFilter<"Goal"> | string
   targetAmount?: Prisma.FloatWithAggregatesFilter<"Goal"> | number
-  targetCurrency?: Prisma.EnumCurrencyWithAggregatesFilter<"Goal"> | $Enums.Currency
+  targetCurrency?: Prisma.StringWithAggregatesFilter<"Goal"> | string
   targetDate?: Prisma.DateTimeNullableWithAggregatesFilter<"Goal"> | Date | string | null
   note?: Prisma.StringNullableWithAggregatesFilter<"Goal"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Goal"> | Date | string
@@ -316,7 +316,7 @@ export type GoalCreateInput = {
   id?: string
   title: string
   targetAmount: number
-  targetCurrency?: $Enums.Currency
+  targetCurrency?: string
   targetDate?: Date | string | null
   note?: string | null
   createdAt?: Date | string
@@ -329,7 +329,7 @@ export type GoalUncheckedCreateInput = {
   userId: string
   title: string
   targetAmount: number
-  targetCurrency?: $Enums.Currency
+  targetCurrency?: string
   targetDate?: Date | string | null
   note?: string | null
   createdAt?: Date | string
@@ -340,7 +340,7 @@ export type GoalUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   targetAmount?: Prisma.FloatFieldUpdateOperationsInput | number
-  targetCurrency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  targetCurrency?: Prisma.StringFieldUpdateOperationsInput | string
   targetDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -353,7 +353,7 @@ export type GoalUncheckedUpdateInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   targetAmount?: Prisma.FloatFieldUpdateOperationsInput | number
-  targetCurrency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  targetCurrency?: Prisma.StringFieldUpdateOperationsInput | string
   targetDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -365,7 +365,7 @@ export type GoalCreateManyInput = {
   userId: string
   title: string
   targetAmount: number
-  targetCurrency?: $Enums.Currency
+  targetCurrency?: string
   targetDate?: Date | string | null
   note?: string | null
   createdAt?: Date | string
@@ -376,7 +376,7 @@ export type GoalUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   targetAmount?: Prisma.FloatFieldUpdateOperationsInput | number
-  targetCurrency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  targetCurrency?: Prisma.StringFieldUpdateOperationsInput | string
   targetDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -388,7 +388,7 @@ export type GoalUncheckedUpdateManyInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   targetAmount?: Prisma.FloatFieldUpdateOperationsInput | number
-  targetCurrency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  targetCurrency?: Prisma.StringFieldUpdateOperationsInput | string
   targetDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -495,7 +495,7 @@ export type GoalCreateWithoutUserInput = {
   id?: string
   title: string
   targetAmount: number
-  targetCurrency?: $Enums.Currency
+  targetCurrency?: string
   targetDate?: Date | string | null
   note?: string | null
   createdAt?: Date | string
@@ -506,7 +506,7 @@ export type GoalUncheckedCreateWithoutUserInput = {
   id?: string
   title: string
   targetAmount: number
-  targetCurrency?: $Enums.Currency
+  targetCurrency?: string
   targetDate?: Date | string | null
   note?: string | null
   createdAt?: Date | string
@@ -547,7 +547,7 @@ export type GoalScalarWhereInput = {
   userId?: Prisma.StringFilter<"Goal"> | string
   title?: Prisma.StringFilter<"Goal"> | string
   targetAmount?: Prisma.FloatFilter<"Goal"> | number
-  targetCurrency?: Prisma.EnumCurrencyFilter<"Goal"> | $Enums.Currency
+  targetCurrency?: Prisma.StringFilter<"Goal"> | string
   targetDate?: Prisma.DateTimeNullableFilter<"Goal"> | Date | string | null
   note?: Prisma.StringNullableFilter<"Goal"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Goal"> | Date | string
@@ -558,7 +558,7 @@ export type GoalCreateManyUserInput = {
   id?: string
   title: string
   targetAmount: number
-  targetCurrency?: $Enums.Currency
+  targetCurrency?: string
   targetDate?: Date | string | null
   note?: string | null
   createdAt?: Date | string
@@ -569,7 +569,7 @@ export type GoalUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   targetAmount?: Prisma.FloatFieldUpdateOperationsInput | number
-  targetCurrency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  targetCurrency?: Prisma.StringFieldUpdateOperationsInput | string
   targetDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -580,7 +580,7 @@ export type GoalUncheckedUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   targetAmount?: Prisma.FloatFieldUpdateOperationsInput | number
-  targetCurrency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  targetCurrency?: Prisma.StringFieldUpdateOperationsInput | string
   targetDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -591,7 +591,7 @@ export type GoalUncheckedUpdateManyWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   targetAmount?: Prisma.FloatFieldUpdateOperationsInput | number
-  targetCurrency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  targetCurrency?: Prisma.StringFieldUpdateOperationsInput | string
   targetDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -672,7 +672,7 @@ export type $GoalPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     userId: string
     title: string
     targetAmount: number
-    targetCurrency: $Enums.Currency
+    targetCurrency: string
     targetDate: Date | null
     note: string | null
     createdAt: Date
@@ -1105,7 +1105,7 @@ export interface GoalFieldRefs {
   readonly userId: Prisma.FieldRef<"Goal", 'String'>
   readonly title: Prisma.FieldRef<"Goal", 'String'>
   readonly targetAmount: Prisma.FieldRef<"Goal", 'Float'>
-  readonly targetCurrency: Prisma.FieldRef<"Goal", 'Currency'>
+  readonly targetCurrency: Prisma.FieldRef<"Goal", 'String'>
   readonly targetDate: Prisma.FieldRef<"Goal", 'DateTime'>
   readonly note: Prisma.FieldRef<"Goal", 'String'>
   readonly createdAt: Prisma.FieldRef<"Goal", 'DateTime'>

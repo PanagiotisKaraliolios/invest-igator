@@ -38,7 +38,7 @@ export type UserMinAggregateOutputType = {
   banReason: string | null
   banExpires: Date | null
   theme: $Enums.Theme | null
-  currency: $Enums.Currency | null
+  currency: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -57,7 +57,7 @@ export type UserMaxAggregateOutputType = {
   banReason: string | null
   banExpires: Date | null
   theme: $Enums.Theme | null
-  currency: $Enums.Currency | null
+  currency: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -227,7 +227,7 @@ export type UserGroupByOutputType = {
   banReason: string | null
   banExpires: Date | null
   theme: $Enums.Theme
-  currency: $Enums.Currency
+  currency: string
   createdAt: Date
   updatedAt: Date
   _count: UserCountAggregateOutputType | null
@@ -267,7 +267,7 @@ export type UserWhereInput = {
   banReason?: Prisma.StringNullableFilter<"User"> | string | null
   banExpires?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   theme?: Prisma.EnumThemeFilter<"User"> | $Enums.Theme
-  currency?: Prisma.EnumCurrencyFilter<"User"> | $Enums.Currency
+  currency?: Prisma.StringFilter<"User"> | string
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"User"> | Date | string
   accounts?: Prisma.AccountListRelationFilter
@@ -324,7 +324,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   banReason?: Prisma.StringNullableFilter<"User"> | string | null
   banExpires?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   theme?: Prisma.EnumThemeFilter<"User"> | $Enums.Theme
-  currency?: Prisma.EnumCurrencyFilter<"User"> | $Enums.Currency
+  currency?: Prisma.StringFilter<"User"> | string
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"User"> | Date | string
   accounts?: Prisma.AccountListRelationFilter
@@ -376,7 +376,7 @@ export type UserScalarWhereWithAggregatesInput = {
   banReason?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   banExpires?: Prisma.DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
   theme?: Prisma.EnumThemeWithAggregatesFilter<"User"> | $Enums.Theme
-  currency?: Prisma.EnumCurrencyWithAggregatesFilter<"User"> | $Enums.Currency
+  currency?: Prisma.StringWithAggregatesFilter<"User"> | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
 }
@@ -395,7 +395,7 @@ export type UserCreateInput = {
   banReason?: string | null
   banExpires?: Date | string | null
   theme?: $Enums.Theme
-  currency?: $Enums.Currency
+  currency?: string
   createdAt?: Date | string
   updatedAt?: Date | string
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
@@ -422,7 +422,7 @@ export type UserUncheckedCreateInput = {
   banReason?: string | null
   banExpires?: Date | string | null
   theme?: $Enums.Theme
-  currency?: $Enums.Currency
+  currency?: string
   createdAt?: Date | string
   updatedAt?: Date | string
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
@@ -449,7 +449,7 @@ export type UserUpdateInput = {
   banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   theme?: Prisma.EnumThemeFieldUpdateOperationsInput | $Enums.Theme
-  currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
@@ -476,7 +476,7 @@ export type UserUncheckedUpdateInput = {
   banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   theme?: Prisma.EnumThemeFieldUpdateOperationsInput | $Enums.Theme
-  currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
@@ -503,7 +503,7 @@ export type UserCreateManyInput = {
   banReason?: string | null
   banExpires?: Date | string | null
   theme?: $Enums.Theme
-  currency?: $Enums.Currency
+  currency?: string
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -522,7 +522,7 @@ export type UserUpdateManyMutationInput = {
   banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   theme?: Prisma.EnumThemeFieldUpdateOperationsInput | $Enums.Theme
-  currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -541,7 +541,7 @@ export type UserUncheckedUpdateManyInput = {
   banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   theme?: Prisma.EnumThemeFieldUpdateOperationsInput | $Enums.Theme
-  currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -742,7 +742,7 @@ export type UserCreateWithoutTransactionsInput = {
   banReason?: string | null
   banExpires?: Date | string | null
   theme?: $Enums.Theme
-  currency?: $Enums.Currency
+  currency?: string
   createdAt?: Date | string
   updatedAt?: Date | string
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
@@ -768,7 +768,7 @@ export type UserUncheckedCreateWithoutTransactionsInput = {
   banReason?: string | null
   banExpires?: Date | string | null
   theme?: $Enums.Theme
-  currency?: $Enums.Currency
+  currency?: string
   createdAt?: Date | string
   updatedAt?: Date | string
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
@@ -810,7 +810,7 @@ export type UserUpdateWithoutTransactionsInput = {
   banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   theme?: Prisma.EnumThemeFieldUpdateOperationsInput | $Enums.Theme
-  currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
@@ -836,7 +836,7 @@ export type UserUncheckedUpdateWithoutTransactionsInput = {
   banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   theme?: Prisma.EnumThemeFieldUpdateOperationsInput | $Enums.Theme
-  currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
@@ -862,7 +862,7 @@ export type UserCreateWithoutAccountsInput = {
   banReason?: string | null
   banExpires?: Date | string | null
   theme?: $Enums.Theme
-  currency?: $Enums.Currency
+  currency?: string
   createdAt?: Date | string
   updatedAt?: Date | string
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
@@ -888,7 +888,7 @@ export type UserUncheckedCreateWithoutAccountsInput = {
   banReason?: string | null
   banExpires?: Date | string | null
   theme?: $Enums.Theme
-  currency?: $Enums.Currency
+  currency?: string
   createdAt?: Date | string
   updatedAt?: Date | string
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
@@ -930,7 +930,7 @@ export type UserUpdateWithoutAccountsInput = {
   banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   theme?: Prisma.EnumThemeFieldUpdateOperationsInput | $Enums.Theme
-  currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
@@ -956,7 +956,7 @@ export type UserUncheckedUpdateWithoutAccountsInput = {
   banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   theme?: Prisma.EnumThemeFieldUpdateOperationsInput | $Enums.Theme
-  currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
@@ -982,7 +982,7 @@ export type UserCreateWithoutSessionsInput = {
   banReason?: string | null
   banExpires?: Date | string | null
   theme?: $Enums.Theme
-  currency?: $Enums.Currency
+  currency?: string
   createdAt?: Date | string
   updatedAt?: Date | string
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
@@ -1008,7 +1008,7 @@ export type UserUncheckedCreateWithoutSessionsInput = {
   banReason?: string | null
   banExpires?: Date | string | null
   theme?: $Enums.Theme
-  currency?: $Enums.Currency
+  currency?: string
   createdAt?: Date | string
   updatedAt?: Date | string
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
@@ -1050,7 +1050,7 @@ export type UserUpdateWithoutSessionsInput = {
   banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   theme?: Prisma.EnumThemeFieldUpdateOperationsInput | $Enums.Theme
-  currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
@@ -1076,7 +1076,7 @@ export type UserUncheckedUpdateWithoutSessionsInput = {
   banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   theme?: Prisma.EnumThemeFieldUpdateOperationsInput | $Enums.Theme
-  currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
@@ -1102,7 +1102,7 @@ export type UserCreateWithoutTwoFactorInput = {
   banReason?: string | null
   banExpires?: Date | string | null
   theme?: $Enums.Theme
-  currency?: $Enums.Currency
+  currency?: string
   createdAt?: Date | string
   updatedAt?: Date | string
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
@@ -1128,7 +1128,7 @@ export type UserUncheckedCreateWithoutTwoFactorInput = {
   banReason?: string | null
   banExpires?: Date | string | null
   theme?: $Enums.Theme
-  currency?: $Enums.Currency
+  currency?: string
   createdAt?: Date | string
   updatedAt?: Date | string
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
@@ -1170,7 +1170,7 @@ export type UserUpdateWithoutTwoFactorInput = {
   banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   theme?: Prisma.EnumThemeFieldUpdateOperationsInput | $Enums.Theme
-  currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
@@ -1196,7 +1196,7 @@ export type UserUncheckedUpdateWithoutTwoFactorInput = {
   banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   theme?: Prisma.EnumThemeFieldUpdateOperationsInput | $Enums.Theme
-  currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
@@ -1222,7 +1222,7 @@ export type UserCreateWithoutEmailChangeTokensInput = {
   banReason?: string | null
   banExpires?: Date | string | null
   theme?: $Enums.Theme
-  currency?: $Enums.Currency
+  currency?: string
   createdAt?: Date | string
   updatedAt?: Date | string
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
@@ -1248,7 +1248,7 @@ export type UserUncheckedCreateWithoutEmailChangeTokensInput = {
   banReason?: string | null
   banExpires?: Date | string | null
   theme?: $Enums.Theme
-  currency?: $Enums.Currency
+  currency?: string
   createdAt?: Date | string
   updatedAt?: Date | string
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
@@ -1290,7 +1290,7 @@ export type UserUpdateWithoutEmailChangeTokensInput = {
   banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   theme?: Prisma.EnumThemeFieldUpdateOperationsInput | $Enums.Theme
-  currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
@@ -1316,7 +1316,7 @@ export type UserUncheckedUpdateWithoutEmailChangeTokensInput = {
   banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   theme?: Prisma.EnumThemeFieldUpdateOperationsInput | $Enums.Theme
-  currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
@@ -1342,7 +1342,7 @@ export type UserCreateWithoutWatchlistInput = {
   banReason?: string | null
   banExpires?: Date | string | null
   theme?: $Enums.Theme
-  currency?: $Enums.Currency
+  currency?: string
   createdAt?: Date | string
   updatedAt?: Date | string
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
@@ -1368,7 +1368,7 @@ export type UserUncheckedCreateWithoutWatchlistInput = {
   banReason?: string | null
   banExpires?: Date | string | null
   theme?: $Enums.Theme
-  currency?: $Enums.Currency
+  currency?: string
   createdAt?: Date | string
   updatedAt?: Date | string
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
@@ -1410,7 +1410,7 @@ export type UserUpdateWithoutWatchlistInput = {
   banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   theme?: Prisma.EnumThemeFieldUpdateOperationsInput | $Enums.Theme
-  currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
@@ -1436,7 +1436,7 @@ export type UserUncheckedUpdateWithoutWatchlistInput = {
   banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   theme?: Prisma.EnumThemeFieldUpdateOperationsInput | $Enums.Theme
-  currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
@@ -1462,7 +1462,7 @@ export type UserCreateWithoutGoalsInput = {
   banReason?: string | null
   banExpires?: Date | string | null
   theme?: $Enums.Theme
-  currency?: $Enums.Currency
+  currency?: string
   createdAt?: Date | string
   updatedAt?: Date | string
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
@@ -1488,7 +1488,7 @@ export type UserUncheckedCreateWithoutGoalsInput = {
   banReason?: string | null
   banExpires?: Date | string | null
   theme?: $Enums.Theme
-  currency?: $Enums.Currency
+  currency?: string
   createdAt?: Date | string
   updatedAt?: Date | string
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
@@ -1530,7 +1530,7 @@ export type UserUpdateWithoutGoalsInput = {
   banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   theme?: Prisma.EnumThemeFieldUpdateOperationsInput | $Enums.Theme
-  currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
@@ -1556,7 +1556,7 @@ export type UserUncheckedUpdateWithoutGoalsInput = {
   banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   theme?: Prisma.EnumThemeFieldUpdateOperationsInput | $Enums.Theme
-  currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
@@ -1582,7 +1582,7 @@ export type UserCreateWithoutApiKeysInput = {
   banReason?: string | null
   banExpires?: Date | string | null
   theme?: $Enums.Theme
-  currency?: $Enums.Currency
+  currency?: string
   createdAt?: Date | string
   updatedAt?: Date | string
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
@@ -1608,7 +1608,7 @@ export type UserUncheckedCreateWithoutApiKeysInput = {
   banReason?: string | null
   banExpires?: Date | string | null
   theme?: $Enums.Theme
-  currency?: $Enums.Currency
+  currency?: string
   createdAt?: Date | string
   updatedAt?: Date | string
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
@@ -1650,7 +1650,7 @@ export type UserUpdateWithoutApiKeysInput = {
   banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   theme?: Prisma.EnumThemeFieldUpdateOperationsInput | $Enums.Theme
-  currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
@@ -1676,7 +1676,7 @@ export type UserUncheckedUpdateWithoutApiKeysInput = {
   banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   theme?: Prisma.EnumThemeFieldUpdateOperationsInput | $Enums.Theme
-  currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
@@ -1908,7 +1908,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     banReason: string | null
     banExpires: Date | null
     theme: $Enums.Theme
-    currency: $Enums.Currency
+    currency: string
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["user"]>
@@ -2355,7 +2355,7 @@ export interface UserFieldRefs {
   readonly banReason: Prisma.FieldRef<"User", 'String'>
   readonly banExpires: Prisma.FieldRef<"User", 'DateTime'>
   readonly theme: Prisma.FieldRef<"User", 'Theme'>
-  readonly currency: Prisma.FieldRef<"User", 'Currency'>
+  readonly currency: Prisma.FieldRef<"User", 'String'>
   readonly createdAt: Prisma.FieldRef<"User", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"User", 'DateTime'>
 }

@@ -26,8 +26,9 @@
 import { faker } from '@faker-js/faker';
 import { PrismaPg } from '@prisma/adapter-pg';
 import * as bcrypt from 'bcryptjs';
+import type { Currency } from '../src/lib/currency';
 import { env } from '../src/env';
-import { type Currency, PrismaClient, type TransactionSide } from './generated/client';
+import { PrismaClient, type TransactionSide } from './generated/client';
 
 const adapter = new PrismaPg({ connectionString: env.DATABASE_URL });
 const db = new PrismaClient({ adapter });

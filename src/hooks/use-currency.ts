@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Currency } from '@/lib/currency';
+import { type Currency, isSupportedCurrency } from '@/lib/currency';
 import { api } from '@/trpc/react';
 
 export function useCurrencySwitch(isAuthenticated = false) {
@@ -29,7 +29,7 @@ export function useCurrencySwitch(isAuthenticated = false) {
 		if (typeof document !== 'undefined') {
 			const match = document.cookie.match(/(?:^|; )ui-currency=([^;]+)/);
 			const c = match ? decodeURIComponent(match[1]!) : null;
-			if (c === 'EUR' || c === 'USD' || c === 'GBP' || c === 'HKD' || c === 'CHF' || c === 'RUB') return c;
+			if (c && isSupportedCurrency(c)) return c;
 		}
 		return 'USD';
 	});

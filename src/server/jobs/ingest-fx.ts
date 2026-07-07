@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
-import type { Currency } from '@prisma/generated';
 import { env } from '@/env';
+import type { Currency } from '@/lib/currency';
 import { db } from '@/server/db';
 
 const supported: Currency[] = ['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB'];

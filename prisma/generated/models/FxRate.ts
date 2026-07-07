@@ -36,16 +36,16 @@ export type FxRateSumAggregateOutputType = {
 
 export type FxRateMinAggregateOutputType = {
   id: string | null
-  base: $Enums.Currency | null
-  quote: $Enums.Currency | null
+  base: string | null
+  quote: string | null
   rate: number | null
   fetchedAt: Date | null
 }
 
 export type FxRateMaxAggregateOutputType = {
   id: string | null
-  base: $Enums.Currency | null
-  quote: $Enums.Currency | null
+  base: string | null
+  quote: string | null
   rate: number | null
   fetchedAt: Date | null
 }
@@ -181,8 +181,8 @@ export type FxRateGroupByArgs<ExtArgs extends runtime.Types.Extensions.InternalA
 
 export type FxRateGroupByOutputType = {
   id: string
-  base: $Enums.Currency
-  quote: $Enums.Currency
+  base: string
+  quote: string
   rate: number
   fetchedAt: Date
   _count: FxRateCountAggregateOutputType | null
@@ -212,8 +212,8 @@ export type FxRateWhereInput = {
   OR?: Prisma.FxRateWhereInput[]
   NOT?: Prisma.FxRateWhereInput | Prisma.FxRateWhereInput[]
   id?: Prisma.StringFilter<"FxRate"> | string
-  base?: Prisma.EnumCurrencyFilter<"FxRate"> | $Enums.Currency
-  quote?: Prisma.EnumCurrencyFilter<"FxRate"> | $Enums.Currency
+  base?: Prisma.StringFilter<"FxRate"> | string
+  quote?: Prisma.StringFilter<"FxRate"> | string
   rate?: Prisma.FloatFilter<"FxRate"> | number
   fetchedAt?: Prisma.DateTimeFilter<"FxRate"> | Date | string
 }
@@ -232,8 +232,8 @@ export type FxRateWhereUniqueInput = Prisma.AtLeast<{
   AND?: Prisma.FxRateWhereInput | Prisma.FxRateWhereInput[]
   OR?: Prisma.FxRateWhereInput[]
   NOT?: Prisma.FxRateWhereInput | Prisma.FxRateWhereInput[]
-  base?: Prisma.EnumCurrencyFilter<"FxRate"> | $Enums.Currency
-  quote?: Prisma.EnumCurrencyFilter<"FxRate"> | $Enums.Currency
+  base?: Prisma.StringFilter<"FxRate"> | string
+  quote?: Prisma.StringFilter<"FxRate"> | string
   rate?: Prisma.FloatFilter<"FxRate"> | number
   fetchedAt?: Prisma.DateTimeFilter<"FxRate"> | Date | string
 }, "id" | "base_quote">
@@ -256,71 +256,71 @@ export type FxRateScalarWhereWithAggregatesInput = {
   OR?: Prisma.FxRateScalarWhereWithAggregatesInput[]
   NOT?: Prisma.FxRateScalarWhereWithAggregatesInput | Prisma.FxRateScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"FxRate"> | string
-  base?: Prisma.EnumCurrencyWithAggregatesFilter<"FxRate"> | $Enums.Currency
-  quote?: Prisma.EnumCurrencyWithAggregatesFilter<"FxRate"> | $Enums.Currency
+  base?: Prisma.StringWithAggregatesFilter<"FxRate"> | string
+  quote?: Prisma.StringWithAggregatesFilter<"FxRate"> | string
   rate?: Prisma.FloatWithAggregatesFilter<"FxRate"> | number
   fetchedAt?: Prisma.DateTimeWithAggregatesFilter<"FxRate"> | Date | string
 }
 
 export type FxRateCreateInput = {
   id?: string
-  base: $Enums.Currency
-  quote: $Enums.Currency
+  base: string
+  quote: string
   rate: number
   fetchedAt?: Date | string
 }
 
 export type FxRateUncheckedCreateInput = {
   id?: string
-  base: $Enums.Currency
-  quote: $Enums.Currency
+  base: string
+  quote: string
   rate: number
   fetchedAt?: Date | string
 }
 
 export type FxRateUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  base?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
-  quote?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  base?: Prisma.StringFieldUpdateOperationsInput | string
+  quote?: Prisma.StringFieldUpdateOperationsInput | string
   rate?: Prisma.FloatFieldUpdateOperationsInput | number
   fetchedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type FxRateUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  base?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
-  quote?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  base?: Prisma.StringFieldUpdateOperationsInput | string
+  quote?: Prisma.StringFieldUpdateOperationsInput | string
   rate?: Prisma.FloatFieldUpdateOperationsInput | number
   fetchedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type FxRateCreateManyInput = {
   id?: string
-  base: $Enums.Currency
-  quote: $Enums.Currency
+  base: string
+  quote: string
   rate: number
   fetchedAt?: Date | string
 }
 
 export type FxRateUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  base?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
-  quote?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  base?: Prisma.StringFieldUpdateOperationsInput | string
+  quote?: Prisma.StringFieldUpdateOperationsInput | string
   rate?: Prisma.FloatFieldUpdateOperationsInput | number
   fetchedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type FxRateUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  base?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
-  quote?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  base?: Prisma.StringFieldUpdateOperationsInput | string
+  quote?: Prisma.StringFieldUpdateOperationsInput | string
   rate?: Prisma.FloatFieldUpdateOperationsInput | number
   fetchedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type FxRateBaseQuoteCompoundUniqueInput = {
-  base: $Enums.Currency
-  quote: $Enums.Currency
+  base: string
+  quote: string
 }
 
 export type FxRateCountOrderByAggregateInput = {
@@ -396,8 +396,8 @@ export type $FxRatePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
   objects: {}
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
-    base: $Enums.Currency
-    quote: $Enums.Currency
+    base: string
+    quote: string
     rate: number
     fetchedAt: Date
   }, ExtArgs["result"]["fxRate"]>
@@ -824,8 +824,8 @@ export interface Prisma__FxRateClient<T, Null = never, ExtArgs extends runtime.T
  */
 export interface FxRateFieldRefs {
   readonly id: Prisma.FieldRef<"FxRate", 'String'>
-  readonly base: Prisma.FieldRef<"FxRate", 'Currency'>
-  readonly quote: Prisma.FieldRef<"FxRate", 'Currency'>
+  readonly base: Prisma.FieldRef<"FxRate", 'String'>
+  readonly quote: Prisma.FieldRef<"FxRate", 'String'>
   readonly rate: Prisma.FieldRef<"FxRate", 'Float'>
   readonly fetchedAt: Prisma.FieldRef<"FxRate", 'DateTime'>
 }

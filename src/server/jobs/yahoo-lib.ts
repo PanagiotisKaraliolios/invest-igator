@@ -1,5 +1,5 @@
-import type { Currency } from '@prisma/generated';
 import { env } from '@/env';
+import type { Currency } from '@/lib/currency';
 import { db } from '@/server/db';
 import { buildPoint, type DailyBar, influxWriteApi, Point } from '@/server/influx';
 import {

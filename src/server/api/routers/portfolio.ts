@@ -1,6 +1,6 @@
-import type { Currency } from '@prisma/generated';
 import { z } from 'zod';
 import { env } from '@/env';
+import { type Currency, currencySchema } from '@/lib/currency';
 import { isValidSymbol, normalizeSymbol } from '@/lib/validation';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
 import { convertAmount, getFxMatrix } from '@/server/fx';
@@ -82,7 +82,7 @@ export const portfolioRouter = createTRPCRouter({
 	performance: protectedProcedure
 		.input(
 			z.object({
-				currency: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']).default('USD'),
+				currency: currencySchema.default('USD'),
 				from: z.string(), // ISO yyyy-mm-dd
 				to: z.string() // ISO yyyy-mm-dd
 			})
@@ -357,7 +357,7 @@ export const portfolioRouter = createTRPCRouter({
 	structure: protectedProcedure
 		.input(
 			z.object({
-				currency: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']).default('USD')
+				currency: currencySchema.default('USD')
 			})
 		)
 		.query(async ({ ctx, input }) => {
@@ -435,7 +435,7 @@ export const portfolioRouter = createTRPCRouter({
 				}
 			});
 
-			const symbolCurrencies = new Map<string, Currency>();
+			const symbolCurrencies = new Map<string, string>();
 
 			for (const item of watchlistItems) {
 				const normalized = normalizeSymbol(item.symbol);

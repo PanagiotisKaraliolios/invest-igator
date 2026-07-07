@@ -1,25 +1,29 @@
-import type { Currency } from '@prisma/generated';
 import { db } from '@/server/db';
 
-export type FxMatrix = Record<Currency, Record<Currency, number>>;
+export type FxMatrix = Record<string, Record<string, number>>;
 
 export async function getFxMatrix(): Promise<FxMatrix> {
 	const rows = await db.fxRate.findMany({});
 	const out = {} as FxMatrix;
-	const currencies = ['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB'] as Currency[];
+	const currencies = ['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB'];
 	for (const c of currencies) {
-		out[c] = {} as Record<Currency, number>;
+		out[c] = {} as Record<string, number>;
 		out[c][c] = 1;
 	}
 	for (const r of rows) {
-		out[r.base][r.quote] = r.rate;
-		if (!out[r.quote]) out[r.quote] = {} as any;
-		if (r.rate !== 0) out[r.quote][r.base] = 1 / r.rate;
+		const baseRow = out[r.base] ?? {};
+		baseRow[r.quote] = r.rate;
+		out[r.base] = baseRow;
+		if (r.rate !== 0) {
+			const quoteRow = out[r.quote] ?? {};
+			quoteRow[r.base] = 1 / r.rate;
+			out[r.quote] = quoteRow;
+		}
 	}
 	return out;
 }
 
-export function convertAmount(amount: number, from: Currency, to: Currency, m: FxMatrix): number {
+export function convertAmount(amount: number, from: string, to: string, m: FxMatrix): number {
 	if (from === to) return amount;
 	const direct = m[from]?.[to];
 	if (typeof direct === 'number') return amount * direct;

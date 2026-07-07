@@ -1,14 +1,14 @@
 import { z } from 'zod';
 
 /**
- * The 10 supported currencies. Task 2 makes this the source for `type Currency` and
- * `supportedCurrencies` once the Postgres Currency enum is dropped; kept separate here so this
- * task stays typecheck-green (widening `type Currency` to 10 while @prisma/generated stays 6 breaks interop).
+ * The 10 supported currencies. This is the single source of truth for `type Currency` and
+ * `supportedCurrencies` now that the Postgres `Currency` enum has been dropped in favor of a
+ * plain ISO-4217 String column.
  */
 export const SUPPORTED_CURRENCIES = ['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB', 'JPY', 'CAD', 'AUD', 'SGD'] as const;
 
-export const supportedCurrencies = ['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB'] as const;
-export type Currency = (typeof supportedCurrencies)[number];
+export const supportedCurrencies = SUPPORTED_CURRENCIES;
+export type Currency = (typeof SUPPORTED_CURRENCIES)[number];
 
 export const currencySchema = z.enum(SUPPORTED_CURRENCIES);
 

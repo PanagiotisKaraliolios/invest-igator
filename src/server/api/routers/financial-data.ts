@@ -1,7 +1,7 @@
-import type { Currency } from '@prisma/generated';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { env } from '@/env';
+import type { Currency } from '@/lib/currency';
 import { isValidSymbol, normalizeSymbol, symbolSchema } from '@/lib/validation';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
 import { db } from '@/server/db';
