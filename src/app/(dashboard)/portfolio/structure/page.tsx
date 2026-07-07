@@ -47,9 +47,20 @@ export default async function PortfolioStructurePage() {
 												price: number;
 												value: number;
 												weight: number;
+												unconverted?: boolean;
 											}) => (
 												<tr key={row.symbol}>
-													<td className='px-2 py-2'>{row.symbol}</td>
+													<td className='px-2 py-2'>
+														{row.symbol}
+														{row.unconverted && (
+															<span
+																className='ml-2 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] text-amber-600'
+																title='No FX rate for this holding’s currency — excluded from totals'
+															>
+																unconverted
+															</span>
+														)}
+													</td>
 													<td className='px-2 py-2 text-right font-mono tabular-nums'>
 														{row.quantity.toLocaleString()}
 													</td>

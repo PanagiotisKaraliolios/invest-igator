@@ -3,7 +3,7 @@ import { env } from '@/env';
 import { type Currency, currencySchema } from '@/lib/currency';
 import { isValidSymbol, normalizeSymbol } from '@/lib/validation';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
-import { convertAmount, getFxMatrix } from '@/server/fx';
+import { convertAmount, getFxMatrix, MissingFxRateError } from '@/server/fx';
 import { fluxStringLiteral, influxQueryApi, measurement } from '@/server/influx';
 
 type Holding = {
@@ -129,7 +129,8 @@ export const portfolioRouter = createTRPCRouter({
 					prevDayReturnMwr: 0,
 					prevDayReturnTwr: 0,
 					totalReturnMwr: 0,
-					totalReturnTwr: 0
+					totalReturnTwr: 0,
+					unconvertedSymbols: [] as string[]
 				} as const;
 			}
 
@@ -203,20 +204,6 @@ export const portfolioRouter = createTRPCRouter({
 			// Get FX for conversion to target currency (current snapshot)
 			const fx = await getFxMatrix();
 
-			// Helper: value of a position vector at a date
-			function navOnDate(dateIso: string, qtyBySymbol: Map<string, number>): number {
-				let total = 0;
-				for (const [sym, qty] of qtyBySymbol) {
-					const p = priceBySymbolDate.get(sym)?.get(dateIso);
-					if (!p || qty <= 0) continue;
-					// Determine security currency from latest tx for that symbol, fallback USD
-					const latestTx = latestTxCurrencyBySymbol.get(sym)?.currency ?? 'USD';
-					const priceInTarget = convertAmount(p, latestTx, target, fx);
-					total += qty * priceInTarget;
-				}
-				return total;
-			}
-
 			// Track latest transaction currency per symbol for valuation conversion
 			const latestTxCurrencyBySymbol = new Map<string, { currency: Currency; date: Date }>();
 			for (const t of txs) {
@@ -228,6 +215,39 @@ export const portfolioRouter = createTRPCRouter({
 					if (!prevCur || t.date > prevCur.date)
 						latestTxCurrencyBySymbol.set(up, { currency: transactionCurrency, date: t.date });
 				}
+			}
+
+			// Authoritative market currency per symbol (listing currency), fallback latest tx, then USD.
+			const wlItems = await ctx.db.watchlistItem.findMany({
+				select: { currency: true, symbol: true },
+				where: { symbol: { in: Array.from(latestTxCurrencyBySymbol.keys()) }, userId }
+			});
+			const symbolCurrencies = new Map<string, string>();
+			for (const it of wlItems) {
+				const n = normalizeSymbol(it.symbol);
+				if (isValidSymbol(n)) symbolCurrencies.set(n, it.currency);
+			}
+			const unconvertedSymbols = new Set<string>();
+
+			// Helper: value of a position vector at a date
+			function navOnDate(dateIso: string, qtyBySymbol: Map<string, number>): number {
+				let total = 0;
+				for (const [sym, qty] of qtyBySymbol) {
+					const p = priceBySymbolDate.get(sym)?.get(dateIso);
+					if (!p || qty <= 0) continue;
+					const marketCurrency =
+						symbolCurrencies.get(sym) ?? latestTxCurrencyBySymbol.get(sym)?.currency ?? 'USD';
+					try {
+						total += qty * convertAmount(p, marketCurrency, target, fx);
+					} catch (e) {
+						if (e instanceof MissingFxRateError) {
+							unconvertedSymbols.add(sym);
+						} else {
+							throw e;
+						}
+					}
+				}
+				return total;
 			}
 
 			// Prepare date loop (inception -> to)
@@ -268,19 +288,27 @@ export const portfolioRouter = createTRPCRouter({
 					const sign = t.side === 'BUY' ? 1 : -1;
 					const transactionValue = t.quantity * t.price; // in priceCurrency
 					const transactionCurrency = (t.priceCurrency as Currency) ?? 'USD';
-					const valueInTarget = convertAmount(transactionValue, transactionCurrency, target, fx);
-					let feeInTarget = 0;
-					if (t.fee) {
-						const feeCurrency = (t.feeCurrency as Currency) ?? transactionCurrency;
-						feeInTarget = convertAmount(t.fee, feeCurrency, target, fx);
-					}
-					// Update positions first (buys increase qty, sells decrease)
+					// Update positions first (buys increase qty, sells decrease). Position
+					// accounting is currency-independent, so it must happen regardless of FX.
 					const prevQty = qtyBySymbol.get(up) ?? 0;
 					qtyBySymbol.set(up, prevQty + (sign === 1 ? t.quantity : -t.quantity));
-					// External flow from investor to portfolio (positive = contribution, negative = withdrawal)
-					// BUY: you contribute cash to acquire assets; SELL: you withdraw cash from the portfolio
-					const flowForTx = sign === 1 ? valueInTarget + feeInTarget : -(valueInTarget - feeInTarget);
-					flow += flowForTx;
+					// Convert the cash flow to target currency. On a missing FX rate, flag the
+					// symbol and skip this flow's contribution (treat as 0) rather than crashing.
+					try {
+						const valueInTarget = convertAmount(transactionValue, transactionCurrency, target, fx);
+						let feeInTarget = 0;
+						if (t.fee) {
+							const feeCurrency = (t.feeCurrency as string) ?? transactionCurrency;
+							feeInTarget = convertAmount(t.fee, feeCurrency, target, fx);
+						}
+						// External flow from investor to portfolio (positive = contribution, negative = withdrawal)
+						// BUY: you contribute cash to acquire assets; SELL: you withdraw cash from the portfolio
+						const flowForTx = sign === 1 ? valueInTarget + feeInTarget : -(valueInTarget - feeInTarget);
+						flow += flowForTx;
+					} catch (e) {
+						if (e instanceof MissingFxRateError) unconvertedSymbols.add(up);
+						else throw e;
+					}
 				}
 
 				const nav = navOnDate(day, qtyBySymbol);
@@ -310,7 +338,8 @@ export const portfolioRouter = createTRPCRouter({
 					prevDayReturnMwr: 0,
 					prevDayReturnTwr: 0,
 					totalReturnMwr: 0,
-					totalReturnTwr: 0
+					totalReturnTwr: 0,
+					unconvertedSymbols: Array.from(unconvertedSymbols)
 				} as const;
 			}
 
@@ -334,7 +363,14 @@ export const portfolioRouter = createTRPCRouter({
 			const prevDayReturnTwr = prevFull ? (lastFull.twrIndex / prevFull.twrIndex - 1) * 100 : 0;
 			const prevDayReturnMwr = prevFull ? (lastFull.mwrIndex / prevFull.mwrIndex - 1) * 100 : 0;
 
-			const res = { points, prevDayReturnMwr, prevDayReturnTwr, totalReturnMwr, totalReturnTwr } as const;
+			const res = {
+				points,
+				prevDayReturnMwr,
+				prevDayReturnTwr,
+				totalReturnMwr,
+				totalReturnTwr,
+				unconvertedSymbols: Array.from(unconvertedSymbols)
+			} as const;
 			return res;
 		}),
 	/**
@@ -382,26 +418,33 @@ export const portfolioRouter = createTRPCRouter({
 
 			const bySymbol = new Map<string, { symbol: string; quantity: number; totalCostInTarget: number }>();
 			const latestTxCurrencyBySymbol = new Map<string, { currency: Currency; date: Date }>();
+			// Symbols whose cost basis couldn't be converted (missing FX rate) — flagged, not crashed.
+			const costUnconverted = new Set<string>();
 			for (const t of txs) {
 				const up = normalizeSymbol(t.symbol);
 				if (!isValidSymbol(up)) continue;
 				const sign = t.side === 'BUY' ? 1 : -1;
 				const prev = bySymbol.get(up) ?? { quantity: 0, symbol: up, totalCostInTarget: 0 };
 
-				// Convert transaction value to target currency
 				const transactionValue = t.quantity * t.price;
 				const transactionCurrency = (t.priceCurrency as Currency) ?? 'USD';
-				const valueInTarget = convertAmount(transactionValue, transactionCurrency, target, fx);
 
-				// Convert fee to target currency if it exists
-				let feeInTarget = 0;
-				if (t.fee) {
-					const feeCurrency = (t.feeCurrency as Currency) ?? transactionCurrency;
-					feeInTarget = convertAmount(t.fee, feeCurrency, target, fx);
+				// Convert transaction value + fee to target currency. On a missing FX rate,
+				// still accumulate the quantity but skip the cost contribution (flag instead).
+				let costAdjustment = 0;
+				try {
+					const valueInTarget = convertAmount(transactionValue, transactionCurrency, target, fx);
+					let feeInTarget = 0;
+					if (t.fee) {
+						const feeCurrency = (t.feeCurrency as string) ?? transactionCurrency;
+						feeInTarget = convertAmount(t.fee, feeCurrency, target, fx);
+					}
+					// For buys: add cost, for sells: subtract proceeds
+					costAdjustment = sign === 1 ? valueInTarget + feeInTarget : -(valueInTarget - feeInTarget);
+				} catch (e) {
+					if (e instanceof MissingFxRateError) costUnconverted.add(up);
+					else throw e;
 				}
-
-				// For buys: add cost, for sells: subtract proceeds
-				const costAdjustment = sign === 1 ? valueInTarget + feeInTarget : -(valueInTarget - feeInTarget);
 
 				bySymbol.set(up, {
 					quantity: prev.quantity + sign * t.quantity,
@@ -452,18 +495,29 @@ export const portfolioRouter = createTRPCRouter({
 					const price = latest[h.symbol] ?? 0;
 					const marketCurrency =
 						symbolCurrencies.get(h.symbol) ?? latestTxCurrencyBySymbol.get(h.symbol)?.currency ?? 'USD';
-					const priceInTarget = convertAmount(price, marketCurrency, target, fx);
-					const currentValue = h.quantity * priceInTarget;
+					let priceInTarget = price;
+					let unconverted = costUnconverted.has(h.symbol);
+					try {
+						priceInTarget = convertAmount(price, marketCurrency, target, fx);
+					} catch (e) {
+						if (e instanceof MissingFxRateError) {
+							unconverted = true;
+						} else {
+							throw e;
+						}
+					}
+					const currentValue = unconverted ? 0 : h.quantity * priceInTarget;
 					return {
 						avgCost: h.quantity > 0 ? h.totalCostInTarget / h.quantity : 0,
-						price: priceInTarget,
+						price: unconverted ? price : priceInTarget,
 						quantity: h.quantity,
 						symbol: h.symbol,
 						totalCost: h.totalCostInTarget,
+						unconverted,
 						value: currentValue
 					};
 				})
-				.filter((i) => i.value > 0);
+				.filter((i) => i.value > 0 || i.unconverted);
 
 			const totalValue = items.reduce((acc, i) => acc + i.value, 0);
 			const withWeights = items
