@@ -3,6 +3,7 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { isValidSymbol as isValidSymbolFormat, normalizeSymbol, symbolSchema } from '@/lib/validation';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
+import { sleep } from '@/server/jobs/yahoo-lib';
 import { symbolExistsOnYahoo } from '@/server/yahoo-search';
 
 const supportedCurrencies: Currency[] = ['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB'];
@@ -303,6 +304,31 @@ export const transactionsRouter = createTRPCRouter({
 				}
 			}
 
+			// Pre-validate distinct, format-valid, not-yet-tracked symbols against Yahoo once each.
+			const cellOf = (row: string[], name: string) => {
+				const idx = headerMap.get(name);
+				return idx != null ? (row[idx] ?? '') : '';
+			};
+			const distinctSymbols = new Set<string>();
+			for (const rawRow of data) {
+				if (rawRow.every((cell) => cell.trim() === '')) continue;
+				const s = normalizeSymbol(cellOf(rawRow, 'symbol'));
+				if (s && isValidSymbolFormat(s)) distinctSymbols.add(s);
+			}
+			const trackedRows = distinctSymbols.size
+				? await ctx.db.watchlistItem.findMany({
+						select: { symbol: true },
+						where: { symbol: { in: Array.from(distinctSymbols) }, userId: ctx.session.user.id }
+					})
+				: [];
+			const tracked = new Set(trackedRows.map((r) => r.symbol));
+			const unknownSymbols = new Set<string>();
+			for (const s of distinctSymbols) {
+				if (tracked.has(s)) continue;
+				if (!(await symbolExistsOnYahoo(s))) unknownSymbols.add(s);
+				await sleep(150);
+			}
+
 			const supportedCurrencySet = new Set(supportedCurrencies);
 
 			data.forEach((rawRow, index) => {
@@ -318,6 +344,9 @@ export const transactionsRouter = createTRPCRouter({
 					if (!symbol) throw new Error('Symbol is required.');
 					if (!isValidSymbolFormat(symbol)) {
 						throw new Error('Symbol contains invalid characters.');
+					}
+					if (unknownSymbols.has(symbol)) {
+						throw new Error(`Unknown symbol "${symbol}" — not found on Yahoo Finance.`);
 					}
 
 					const sideRaw = byColumn('side').trim().toUpperCase();
