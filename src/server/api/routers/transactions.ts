@@ -1,40 +1,11 @@
 import type { Currency } from '@prisma/generated';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
-import { env } from '@/env';
 import { isValidSymbol as isValidSymbolFormat, normalizeSymbol, symbolSchema } from '@/lib/validation';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
+import { symbolExistsOnYahoo } from '@/server/yahoo-search';
 
 const supportedCurrencies: Currency[] = ['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB'];
-
-/**
- * Validates if a symbol exists using Yahoo Finance API.
- * @internal
- */
-async function isValidSymbolViaYahoo(symbol: string): Promise<boolean> {
-	try {
-		const url = new URL(`${env.YAHOO_API_URL}/search`);
-		url.searchParams.set('q', symbol);
-		url.searchParams.set('lang', 'en-US');
-		url.searchParams.set('region', 'US');
-		url.searchParams.set('newsCount', '0');
-		url.searchParams.set('enableLogoUrl', 'false');
-		const res = await fetch(url.toString(), {
-			headers: {
-				Accept: 'application/json, text/plain, */*',
-				'User-Agent': 'Mozilla/5.0 (compatible; invest-igator/1.0)'
-			}
-		});
-		if (!res.ok) return false;
-		const data = (await res.json()) as {
-			quotes?: Array<{ symbol?: string }>;
-		};
-		const up = symbol.trim().toUpperCase();
-		return Array.isArray(data.quotes) && data.quotes.some((r) => r.symbol && r.symbol.toUpperCase() === up);
-	} catch {
-		return false;
-	}
-}
 
 /**
  * Transactions router - manages investment transactions (buys/sells).
@@ -148,7 +119,7 @@ export const transactionsRouter = createTRPCRouter({
 				where: { userId_symbol: { symbol, userId } }
 			});
 			if (!exists) {
-				const ok = await isValidSymbolViaYahoo(symbol);
+				const ok = await symbolExistsOnYahoo(symbol);
 				if (!ok) {
 					throw new TRPCError({
 						code: 'BAD_REQUEST',
@@ -850,7 +821,7 @@ export const transactionsRouter = createTRPCRouter({
 					where: { userId_symbol: { symbol: nextSymbol, userId } }
 				});
 				if (!exists) {
-					const ok = await isValidSymbolViaYahoo(nextSymbol);
+					const ok = await symbolExistsOnYahoo(nextSymbol);
 					if (!ok) {
 						throw new TRPCError({
 							code: 'BAD_REQUEST',
