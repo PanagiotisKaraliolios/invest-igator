@@ -7,6 +7,7 @@ import { sleep } from '@/server/jobs/yahoo-lib';
 import { symbolExistsOnYahoo } from '@/server/yahoo-search';
 
 const supportedCurrencies: Currency[] = ['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB'];
+const CSV_NEW_SYMBOL_LIMIT = 50;
 
 /**
  * Transactions router - manages investment transactions (buys/sells).
@@ -120,8 +121,14 @@ export const transactionsRouter = createTRPCRouter({
 				where: { userId_symbol: { symbol, userId } }
 			});
 			if (!exists) {
-				const ok = await symbolExistsOnYahoo(symbol);
-				if (!ok) {
+				const existence = await symbolExistsOnYahoo(symbol);
+				if (existence === 'unreachable') {
+					throw new TRPCError({
+						code: 'BAD_REQUEST',
+						message: `Couldn't reach Yahoo to verify ${symbol}. Please try again.`
+					});
+				}
+				if (existence === 'no') {
 					throw new TRPCError({
 						code: 'BAD_REQUEST',
 						message: 'Unknown symbol. Please select from suggestions.'
@@ -322,10 +329,18 @@ export const transactionsRouter = createTRPCRouter({
 					})
 				: [];
 			const tracked = new Set(trackedRows.map((r) => r.symbol));
+			const newSymbols = Array.from(distinctSymbols).filter((s) => !tracked.has(s));
+			if (newSymbols.length > CSV_NEW_SYMBOL_LIMIT) {
+				throw new TRPCError({
+					code: 'BAD_REQUEST',
+					message: `This file has ${newSymbols.length} new symbols to verify (max ${CSV_NEW_SYMBOL_LIMIT}). Please split it into smaller files, or add these symbols to your watchlist first.`
+				});
+			}
 			const unknownSymbols = new Set<string>();
-			for (const s of distinctSymbols) {
-				if (tracked.has(s)) continue;
-				if (!(await symbolExistsOnYahoo(s))) unknownSymbols.add(s);
+			for (const s of newSymbols) {
+				// Only a definitive "reached Yahoo, no match" ('no') blocks the row; an 'unreachable'
+				// result is given the benefit of the doubt so a Yahoo blip doesn't reject valid symbols.
+				if ((await symbolExistsOnYahoo(s)) === 'no') unknownSymbols.add(s);
 				await sleep(150);
 			}
 
@@ -850,8 +865,14 @@ export const transactionsRouter = createTRPCRouter({
 					where: { userId_symbol: { symbol: nextSymbol, userId } }
 				});
 				if (!exists) {
-					const ok = await symbolExistsOnYahoo(nextSymbol);
-					if (!ok) {
+					const existence = await symbolExistsOnYahoo(nextSymbol);
+					if (existence === 'unreachable') {
+						throw new TRPCError({
+							code: 'BAD_REQUEST',
+							message: `Couldn't reach Yahoo to verify ${nextSymbol}. Please try again.`
+						});
+					}
+					if (existence === 'no') {
 						throw new TRPCError({
 							code: 'BAD_REQUEST',
 							message: 'Unknown symbol. Please select from suggestions.'

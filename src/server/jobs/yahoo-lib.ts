@@ -1,7 +1,7 @@
 import type { Currency } from '@prisma/generated';
 import { env } from '@/env';
 import { db } from '@/server/db';
-import { buildPoint, type DailyBar, influxWriteApi, Point, symbolHasAnyData } from '@/server/influx';
+import { buildPoint, type DailyBar, influxWriteApi, Point } from '@/server/influx';
 import {
 	type CapitalGainEvent,
 	type ChartStatus,
@@ -184,8 +184,6 @@ export async function writeCapitalGains(symbol: string, events: CapitalGainEvent
 }
 
 export async function ingestYahooSymbol(symbol: string, options?: { userId?: string }) {
-	const has = await symbolHasAnyData(symbol);
-
 	// Always fetch currency metadata, even if we have data
 	const { bars, dividends, splits, capitalGains, currency, status } = await fetchYahooDaily(symbol, {
 		includePrePost: false,
@@ -212,11 +210,6 @@ export async function ingestYahooSymbol(symbol: string, options?: { userId?: str
 			console.warn(`Failed to update watchlist currency for ${symbol}:`, error);
 		}
 	}
-
-	// Only write data if we don't already have it
-	// if (has) {
-	// 	return { count: 0, currency: mapCurrencyString(currency), skipped: true } as const;
-	// }
 
 	if (bars.length > 0) await writeBars(symbol, bars);
 	if (dividends.length > 0) await writeDividends(symbol, dividends);

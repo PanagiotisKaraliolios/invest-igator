@@ -29,21 +29,49 @@ describe('filterTradableQuotes', () => {
 	});
 });
 
-describe('symbolExistsOnYahoo', () => {
-	test('true on exact symbol match, false otherwise', async () => {
+describe('symbolExistsOnYahoo (tri-state)', () => {
+	const withFetch = async (fetchImpl: typeof fetch, run: () => Promise<void>) => {
 		const original = globalThis.fetch;
-		globalThis.fetch = (async () =>
-			new Response(JSON.stringify({ quotes: [{ isYahooFinance: true, symbol: 'AAPL' }] }), {
-				status: 200
-			})) as typeof fetch;
+		globalThis.fetch = fetchImpl;
 		try {
-			expect(await symbolExistsOnYahoo('aapl')).toBe(true);
-			expect(await symbolExistsOnYahoo('NOPE')).toBe(false);
+			await run();
 		} finally {
 			globalThis.fetch = original;
 		}
+	};
+
+	test("'yes' on exact match, 'no' when reached with no match", async () => {
+		await withFetch(
+			(async () =>
+				new Response(JSON.stringify({ quotes: [{ isYahooFinance: true, symbol: 'AAPL' }] }), {
+					status: 200
+				})) as typeof fetch,
+			async () => {
+				expect(await symbolExistsOnYahoo('aapl')).toBe('yes');
+				expect(await symbolExistsOnYahoo('NOPE')).toBe('no');
+			}
+		);
 	});
 
+	test("'unreachable' when fetch throws", async () => {
+		await withFetch(
+			(async () => {
+				throw new Error('network down');
+			}) as typeof fetch,
+			async () => {
+				expect(await symbolExistsOnYahoo('AAPL')).toBe('unreachable');
+			}
+		);
+	});
+
+	test("'unreachable' on non-ok response", async () => {
+		await withFetch((async () => new Response('boom', { status: 500 })) as typeof fetch, async () => {
+			expect(await symbolExistsOnYahoo('AAPL')).toBe('unreachable');
+		});
+	});
+});
+
+describe('fetchYahooSearchQuotes', () => {
 	test('fetchYahooSearchQuotes returns [] on non-ok response', async () => {
 		const original = globalThis.fetch;
 		globalThis.fetch = (async () => new Response('boom', { status: 500 })) as typeof fetch;

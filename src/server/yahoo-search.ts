@@ -36,11 +36,8 @@ export function filterTradableQuotes(quotes: YahooRawQuote[]): YahooSearchResult
 		}));
 }
 
-/**
- * Fetch raw Yahoo search quotes for a query. Returns [] on any HTTP/parse failure.
- * Env-free: the search endpoint is fixed and unauthenticated.
- */
-export async function fetchYahooSearchQuotes(q: string): Promise<YahooRawQuote[]> {
+/** Fetch raw Yahoo search quotes, distinguishing "reached Yahoo" (ok:true) from "couldn't reach it" (ok:false). */
+export async function fetchYahooSearchResult(q: string): Promise<{ ok: boolean; quotes: YahooRawQuote[] }> {
 	const url = new URL(YAHOO_SEARCH_URL);
 	url.searchParams.set('q', q);
 	url.searchParams.set('lang', 'en-US');
@@ -54,12 +51,17 @@ export async function fetchYahooSearchQuotes(q: string): Promise<YahooRawQuote[]
 				'User-Agent': 'Mozilla/5.0 (compatible; invest-igator/1.0)'
 			}
 		});
-		if (!res.ok) return [];
+		if (!res.ok) return { ok: false, quotes: [] };
 		const data = (await res.json()) as { quotes?: YahooRawQuote[] };
-		return Array.isArray(data.quotes) ? data.quotes : [];
+		return { ok: true, quotes: Array.isArray(data.quotes) ? data.quotes : [] };
 	} catch {
-		return [];
+		return { ok: false, quotes: [] };
 	}
+}
+
+/** Raw Yahoo search quotes (picker path). Returns [] on any HTTP/parse/network failure. */
+export async function fetchYahooSearchQuotes(q: string): Promise<YahooRawQuote[]> {
+	return (await fetchYahooSearchResult(q)).quotes;
 }
 
 /** Tradable, normalized search results for the symbol picker. */
@@ -67,14 +69,20 @@ export async function searchYahooSymbols(q: string): Promise<YahooSearchResult[]
 	return filterTradableQuotes(await fetchYahooSearchQuotes(q));
 }
 
+export type SymbolExistence = 'yes' | 'no' | 'unreachable';
+
 /**
- * Existence check used to validate user-typed symbols (transaction create, CSV import).
- * Lenient by design: matches the exact symbol against ALL returned quotes so a real ticker
- * is never falsely rejected. Replaces the buggy isValidSymbolViaYahoo (v8/finance/search 500).
+ * Existence check for user-typed symbols (transaction create/update, CSV import, watchlist add).
+ * Tri-state so a transient Yahoo failure is NOT mistaken for "does not exist":
+ * - 'yes'         — a returned quote's symbol exactly matches (case-insensitive)
+ * - 'no'          — Yahoo was reached but returned no matching symbol
+ * - 'unreachable' — Yahoo could not be reached / returned a non-ok response
+ * Lenient match against ALL returned quotes (not the tradable-filtered list) so a real ticker is never falsely rejected.
  */
-export async function symbolExistsOnYahoo(symbol: string): Promise<boolean> {
+export async function symbolExistsOnYahoo(symbol: string): Promise<SymbolExistence> {
 	const up = symbol.trim().toUpperCase();
-	if (!up) return false;
-	const quotes = await fetchYahooSearchQuotes(up);
-	return quotes.some((q) => (q.symbol || '').toUpperCase() === up);
+	if (!up) return 'no';
+	const { ok, quotes } = await fetchYahooSearchResult(up);
+	if (!ok) return 'unreachable';
+	return quotes.some((q) => (q.symbol || '').toUpperCase() === up) ? 'yes' : 'no';
 }
