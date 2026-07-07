@@ -32,7 +32,8 @@ import { searchYahooSymbols } from '@/server/yahoo-search';
 export const watchlistRouter = createTRPCRouter({
 	/**
 	 * Adds a symbol to the user's watchlist.
-	 * Creates or updates the watchlist item. Triggers background ingestion if no data exists.
+	 * Creates or updates the watchlist item, then validates the symbol against Yahoo (blocking):
+	 * rejects with BAD_REQUEST — rolling back a newly-created row — if Yahoo has no price data for it.
 	 *
 	 * @input symbol - Stock symbol (required)
 	 * @input displaySymbol - Optional display name
@@ -77,12 +78,25 @@ export const watchlistRouter = createTRPCRouter({
 				result = { alreadyExists: true } as const;
 			}
 
-			// Fire-and-forget ingestion if symbol has no data yet
-			void (async () => {
-				try {
-					await ingestYahooSymbol(symbol, { userId });
-				} catch {}
-			})();
+			// Validate the symbol actually has Yahoo price data; block (and roll back a
+			// freshly-created row) if not. Pre-existing rows are left untouched.
+			let ingest: Awaited<ReturnType<typeof ingestYahooSymbol>> | undefined;
+			let verifyFailed = false;
+			try {
+				ingest = await ingestYahooSymbol(symbol, { userId });
+			} catch {
+				verifyFailed = true;
+			}
+			const noData = verifyFailed || !ingest || ingest.status === 'not-found' || ingest.count === 0;
+			if (created && noData) {
+				await ctx.db.watchlistItem.delete({ where: { userId_symbol: { symbol, userId } } }).catch(() => {});
+				throw new TRPCError({
+					code: 'BAD_REQUEST',
+					message: verifyFailed
+						? `Couldn't reach Yahoo to verify ${symbol}. Please try again.`
+						: `Yahoo has no price data for ${symbol}.`
+				});
+			}
 
 			return result ?? { alreadyExists: !created };
 		}),
