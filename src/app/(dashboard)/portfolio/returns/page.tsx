@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import type { DateRange } from 'react-day-picker';
 import { CartesianGrid, Legend, Line, LineChart, Tooltip, XAxis, YAxis } from 'recharts';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -110,6 +111,16 @@ export default function PortfolioReturnsPage() {
 	return (
 		<div className='space-y-4'>
 			<h1 className='text-2xl font-semibold tracking-tight'>Return Analysis</h1>
+
+			{perfQuery.data?.unconvertedSymbols && perfQuery.data.unconvertedSymbols.length > 0 && (
+				<Alert className='border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-400'>
+					<AlertTitle>Some holdings couldn't be converted</AlertTitle>
+					<AlertDescription className='text-amber-700/90 dark:text-amber-400/90'>
+						No FX rate for {perfQuery.data.unconvertedSymbols.join(', ')} — these are excluded from the
+						returns above. Run FX ingest for their currency to include them.
+					</AlertDescription>
+				</Alert>
+			)}
 
 			<Card>
 				<CardHeader className='gap-4 md:flex-row md:items-center md:justify-between'>
