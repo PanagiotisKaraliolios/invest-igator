@@ -38,6 +38,11 @@ export type Session = Prisma.SessionModel
  */
 export type User = Prisma.UserModel
 /**
+ * Model PortfolioCache
+ * 
+ */
+export type PortfolioCache = Prisma.PortfolioCacheModel
+/**
  * Model TwoFactor
  * 
  */

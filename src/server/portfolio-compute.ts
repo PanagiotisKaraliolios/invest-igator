@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/generated';
 import { env } from '@/env';
 import type { Currency } from '@/lib/currency';
 import { toLocalIsoDate } from '@/lib/date';
@@ -12,34 +13,48 @@ import { fluxStringLiteral, influxQueryApi, measurement } from '@/server/influx'
  *
  * The expensive inception-to-date NAV/TWR/MWR series and the current-value
  * structure are pure functions of (userId, currency, today). They are cached in a
- * process-local TTL memo (single-container deployment — no Redis, and no
- * dependency on Next's in-flux cache-tag API) keyed on those inputs, so every
- * /portfolio and /portfolio/returns view is served from memory and shares one
- * entry. `invalidatePortfolioCache` is called from the mutations that change the
- * inputs (transactions, watchlist) so edits appear immediately.
+ * shared Postgres table (`PortfolioCache`) keyed on those inputs, so every
+ * /portfolio and /portfolio/returns view is served from one store that ALL app
+ * instances read consistently (multi-instance safe, read-your-writes) — no Redis.
+ * `invalidatePortfolioCache` is called from the mutations that change the inputs
+ * (transactions) so edits appear immediately across every instance.
  */
 
-const CACHE_TTL_MS = 60 * 60 * 1000; // 1h backstop; mutations invalidate explicitly
+const CACHE_TTL_MS = 60 * 60 * 1000; // freshness backstop (intraday ingest); mutations invalidate explicitly
 
-type CacheEntry<T> = { expiresAt: number; promise: Promise<T> };
-// key: `${userId}::${kind}::${currency}::${todayIso}` — userId first so a user's
-// entries can be cleared by prefix on mutation. userId is a cuid (no "::").
-const portfolioCache = new Map<string, CacheEntry<unknown>>();
-
-function memoized<T>(key: string, fn: () => Promise<T>): Promise<T> {
-	const now = Date.now();
-	const existing = portfolioCache.get(key) as CacheEntry<T> | undefined;
-	if (existing && existing.expiresAt > now) return existing.promise;
-	// Prune expired entries opportunistically to keep the map bounded.
-	for (const [k, v] of portfolioCache) if (v.expiresAt <= now) portfolioCache.delete(k);
-	const entry: CacheEntry<T> = { expiresAt: now + CACHE_TTL_MS, promise: Promise.resolve() as Promise<T> };
-	entry.promise = fn().catch((e: unknown) => {
-		// Never cache a failure.
-		if (portfolioCache.get(key) === (entry as CacheEntry<unknown>)) portfolioCache.delete(key);
-		throw e;
-	});
-	portfolioCache.set(key, entry as CacheEntry<unknown>);
-	return entry.promise;
+/**
+ * Read a cached payload if present and fresh; otherwise compute, persist, and return.
+ * Purely additive: a cache read/write failure degrades to an uncached compute rather
+ * than surfacing a new error.
+ */
+async function cached<T>(
+	userId: string,
+	currency: Currency,
+	day: string,
+	kind: string,
+	compute: () => Promise<T>
+): Promise<T> {
+	const where = { userId_currency_day_kind: { currency, day, kind, userId } };
+	try {
+		const row = await db.portfolioCache.findUnique({ where });
+		if (row && Date.now() - row.computedAt.getTime() < CACHE_TTL_MS) {
+			return row.payload as unknown as T;
+		}
+	} catch {
+		// cache read failed — fall through and compute fresh
+	}
+	const result = await compute();
+	try {
+		const payload = result as unknown as Prisma.InputJsonValue;
+		await db.portfolioCache.upsert({
+			create: { currency, day, kind, payload, userId },
+			update: { computedAt: new Date(), payload },
+			where
+		});
+	} catch {
+		// persisting is best-effort; return the fresh result regardless
+	}
+	return result;
 }
 
 type PerfTx = {
@@ -339,7 +354,7 @@ export async function computeFullSeries(userId: string, target: Currency, todayI
 
 /** Cached inception-to-date series. One entry per (user, currency, day). */
 export function getCachedFullSeries(userId: string, target: Currency, todayIso: string): Promise<FullSeries> {
-	return memoized(`${userId}::full::${target}::${todayIso}`, () => computeFullSeries(userId, target, todayIso));
+	return cached(userId, target, todayIso, 'full', () => computeFullSeries(userId, target, todayIso));
 }
 
 export type StructureItem = {
@@ -468,21 +483,18 @@ export async function computeStructure(userId: string, target: Currency, todayIs
 
 /** Cached current structure. One entry per (user, currency, day). */
 export function getCachedStructure(userId: string, target: Currency, todayIso: string): Promise<StructureResult> {
-	return memoized(`${userId}::struct::${target}::${todayIso}`, () => computeStructure(userId, target, todayIso));
+	return cached(userId, target, todayIso, 'structure', () => computeStructure(userId, target, todayIso));
 }
 
-/** Invalidate a user's cached portfolio computations after a mutation. */
-export function invalidatePortfolioCache(userId: string): void {
-	const prefix = `${userId}::`;
-	for (const key of portfolioCache.keys()) {
-		if (key.startsWith(prefix)) portfolioCache.delete(key);
-	}
+/** Invalidate a user's cached portfolio computations after a mutation (await to guarantee read-your-writes). */
+export async function invalidatePortfolioCache(userId: string): Promise<void> {
+	await db.portfolioCache.deleteMany({ where: { userId } });
 }
 
 /**
  * Clear ALL users' cached portfolio computations. Used when a global input changes
  * for many users at once (e.g. an admin correcting a symbol's listing currency).
  */
-export function invalidateAllPortfolioCache(): void {
-	portfolioCache.clear();
+export async function invalidateAllPortfolioCache(): Promise<void> {
+	await db.portfolioCache.deleteMany({});
 }

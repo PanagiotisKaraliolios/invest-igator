@@ -388,6 +388,7 @@ export const ModelName = {
   Account: 'Account',
   Session: 'Session',
   User: 'User',
+  PortfolioCache: 'PortfolioCache',
   TwoFactor: 'TwoFactor',
   Verification: 'Verification',
   VerificationToken: 'VerificationToken',
@@ -411,7 +412,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "transaction" | "account" | "session" | "user" | "twoFactor" | "verification" | "verificationToken" | "emailChangeToken" | "watchlistItem" | "goal" | "auditLog" | "apiKey"
+    modelProps: "transaction" | "account" | "session" | "user" | "portfolioCache" | "twoFactor" | "verification" | "verificationToken" | "emailChangeToken" | "watchlistItem" | "goal" | "auditLog" | "apiKey"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -708,6 +709,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.UserCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.UserCountAggregateOutputType> | number
+        }
+      }
+    }
+    PortfolioCache: {
+      payload: Prisma.$PortfolioCachePayload<ExtArgs>
+      fields: Prisma.PortfolioCacheFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PortfolioCacheFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PortfolioCachePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PortfolioCacheFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PortfolioCachePayload>
+        }
+        findFirst: {
+          args: Prisma.PortfolioCacheFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PortfolioCachePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PortfolioCacheFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PortfolioCachePayload>
+        }
+        findMany: {
+          args: Prisma.PortfolioCacheFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PortfolioCachePayload>[]
+        }
+        create: {
+          args: Prisma.PortfolioCacheCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PortfolioCachePayload>
+        }
+        createMany: {
+          args: Prisma.PortfolioCacheCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PortfolioCacheCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PortfolioCachePayload>[]
+        }
+        delete: {
+          args: Prisma.PortfolioCacheDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PortfolioCachePayload>
+        }
+        update: {
+          args: Prisma.PortfolioCacheUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PortfolioCachePayload>
+        }
+        deleteMany: {
+          args: Prisma.PortfolioCacheDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PortfolioCacheUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PortfolioCacheUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PortfolioCachePayload>[]
+        }
+        upsert: {
+          args: Prisma.PortfolioCacheUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PortfolioCachePayload>
+        }
+        aggregate: {
+          args: Prisma.PortfolioCacheAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePortfolioCache>
+        }
+        groupBy: {
+          args: Prisma.PortfolioCacheGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PortfolioCacheGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PortfolioCacheCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PortfolioCacheCountAggregateOutputType> | number
         }
       }
     }
@@ -1417,6 +1492,18 @@ export const UserScalarFieldEnum = {
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
 
 
+export const PortfolioCacheScalarFieldEnum = {
+  userId: 'userId',
+  currency: 'currency',
+  day: 'day',
+  kind: 'kind',
+  payload: 'payload',
+  computedAt: 'computedAt'
+} as const
+
+export type PortfolioCacheScalarFieldEnum = (typeof PortfolioCacheScalarFieldEnum)[keyof typeof PortfolioCacheScalarFieldEnum]
+
+
 export const TwoFactorScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
@@ -1541,6 +1628,13 @@ export const SortOrder = {
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
 
 
+export const JsonNullValueInput = {
+  JsonNull: JsonNull
+} as const
+
+export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
+
+
 export const QueryMode = {
   default: 'default',
   insensitive: 'insensitive'
@@ -1555,6 +1649,15 @@ export const NullsOrder = {
 } as const
 
 export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
+export const JsonNullValueFilter = {
+  DbNull: DbNull,
+  JsonNull: JsonNull,
+  AnyNull: AnyNull
+} as const
+
+export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
 
 
 
@@ -1637,6 +1740,20 @@ export type EnumThemeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaMode
  * Reference to a field of type 'Theme[]'
  */
 export type ListEnumThemeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Theme[]'>
+    
+
+
+/**
+ * Reference to a field of type 'Json'
+ */
+export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Json'>
+    
+
+
+/**
+ * Reference to a field of type 'QueryMode'
+ */
+export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'QueryMode'>
     
 
 
@@ -1767,6 +1884,7 @@ export type GlobalOmitConfig = {
   account?: Prisma.AccountOmit
   session?: Prisma.SessionOmit
   user?: Prisma.UserOmit
+  portfolioCache?: Prisma.PortfolioCacheOmit
   twoFactor?: Prisma.TwoFactorOmit
   verification?: Prisma.VerificationOmit
   verificationToken?: Prisma.VerificationTokenOmit

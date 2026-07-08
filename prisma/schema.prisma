@@ -51,6 +51,7 @@ model Account {
   user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([providerId, accountId])
+  @@index([userId])
   @@map("Account")
 }
 
@@ -68,6 +69,7 @@ model Session {
   updatedAt       DateTime @default(now()) @updatedAt
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
   @@map("Session")
 }
 
@@ -96,6 +98,23 @@ model User {
   goals                  Goal[]
   twoFactor              TwoFactor[]
   apiKeys                ApiKey[]
+  portfolioCache         PortfolioCache[]
+}
+
+// Shared server-side cache for the expensive portfolio computations (performance
+// series + structure). Keyed by user + target currency + the "today" the result was
+// computed for + kind. Lives in Postgres (not per-process memory) so all app
+// instances read one consistent store; invalidated by row delete on mutation.
+model PortfolioCache {
+  userId     String
+  currency   String
+  day        String // yyyy-mm-dd the series was computed to
+  kind       String // 'full' | 'structure'
+  payload    Json
+  computedAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, currency, day, kind])
 }
 
 // Better Auth Two-Factor Authentication

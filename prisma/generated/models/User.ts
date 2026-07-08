@@ -278,6 +278,7 @@ export type UserWhereInput = {
   goals?: Prisma.GoalListRelationFilter
   twoFactor?: Prisma.TwoFactorListRelationFilter
   apiKeys?: Prisma.ApiKeyListRelationFilter
+  portfolioCache?: Prisma.PortfolioCacheListRelationFilter
 }
 
 export type UserOrderByWithRelationInput = {
@@ -305,6 +306,7 @@ export type UserOrderByWithRelationInput = {
   goals?: Prisma.GoalOrderByRelationAggregateInput
   twoFactor?: Prisma.TwoFactorOrderByRelationAggregateInput
   apiKeys?: Prisma.ApiKeyOrderByRelationAggregateInput
+  portfolioCache?: Prisma.PortfolioCacheOrderByRelationAggregateInput
 }
 
 export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -335,6 +337,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   goals?: Prisma.GoalListRelationFilter
   twoFactor?: Prisma.TwoFactorListRelationFilter
   apiKeys?: Prisma.ApiKeyListRelationFilter
+  portfolioCache?: Prisma.PortfolioCacheListRelationFilter
 }, "id" | "email">
 
 export type UserOrderByWithAggregationInput = {
@@ -406,6 +409,7 @@ export type UserCreateInput = {
   goals?: Prisma.GoalCreateNestedManyWithoutUserInput
   twoFactor?: Prisma.TwoFactorCreateNestedManyWithoutUserInput
   apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutUserInput
+  portfolioCache?: Prisma.PortfolioCacheCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateInput = {
@@ -433,6 +437,7 @@ export type UserUncheckedCreateInput = {
   goals?: Prisma.GoalUncheckedCreateNestedManyWithoutUserInput
   twoFactor?: Prisma.TwoFactorUncheckedCreateNestedManyWithoutUserInput
   apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutUserInput
+  portfolioCache?: Prisma.PortfolioCacheUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserUpdateInput = {
@@ -460,6 +465,7 @@ export type UserUpdateInput = {
   goals?: Prisma.GoalUpdateManyWithoutUserNestedInput
   twoFactor?: Prisma.TwoFactorUpdateManyWithoutUserNestedInput
   apiKeys?: Prisma.ApiKeyUpdateManyWithoutUserNestedInput
+  portfolioCache?: Prisma.PortfolioCacheUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateInput = {
@@ -487,6 +493,7 @@ export type UserUncheckedUpdateInput = {
   goals?: Prisma.GoalUncheckedUpdateManyWithoutUserNestedInput
   twoFactor?: Prisma.TwoFactorUncheckedUpdateManyWithoutUserNestedInput
   apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutUserNestedInput
+  portfolioCache?: Prisma.PortfolioCacheUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateManyInput = {
@@ -658,6 +665,20 @@ export type EnumThemeFieldUpdateOperationsInput = {
   set?: $Enums.Theme
 }
 
+export type UserCreateNestedOneWithoutPortfolioCacheInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutPortfolioCacheInput, Prisma.UserUncheckedCreateWithoutPortfolioCacheInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutPortfolioCacheInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutPortfolioCacheNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutPortfolioCacheInput, Prisma.UserUncheckedCreateWithoutPortfolioCacheInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutPortfolioCacheInput
+  upsert?: Prisma.UserUpsertWithoutPortfolioCacheInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutPortfolioCacheInput, Prisma.UserUpdateWithoutPortfolioCacheInput>, Prisma.UserUncheckedUpdateWithoutPortfolioCacheInput>
+}
+
 export type UserCreateNestedOneWithoutTwoFactorInput = {
   create?: Prisma.XOR<Prisma.UserCreateWithoutTwoFactorInput, Prisma.UserUncheckedCreateWithoutTwoFactorInput>
   connectOrCreate?: Prisma.UserCreateOrConnectWithoutTwoFactorInput
@@ -752,6 +773,7 @@ export type UserCreateWithoutTransactionsInput = {
   goals?: Prisma.GoalCreateNestedManyWithoutUserInput
   twoFactor?: Prisma.TwoFactorCreateNestedManyWithoutUserInput
   apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutUserInput
+  portfolioCache?: Prisma.PortfolioCacheCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutTransactionsInput = {
@@ -778,6 +800,7 @@ export type UserUncheckedCreateWithoutTransactionsInput = {
   goals?: Prisma.GoalUncheckedCreateNestedManyWithoutUserInput
   twoFactor?: Prisma.TwoFactorUncheckedCreateNestedManyWithoutUserInput
   apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutUserInput
+  portfolioCache?: Prisma.PortfolioCacheUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutTransactionsInput = {
@@ -820,6 +843,7 @@ export type UserUpdateWithoutTransactionsInput = {
   goals?: Prisma.GoalUpdateManyWithoutUserNestedInput
   twoFactor?: Prisma.TwoFactorUpdateManyWithoutUserNestedInput
   apiKeys?: Prisma.ApiKeyUpdateManyWithoutUserNestedInput
+  portfolioCache?: Prisma.PortfolioCacheUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutTransactionsInput = {
@@ -846,6 +870,7 @@ export type UserUncheckedUpdateWithoutTransactionsInput = {
   goals?: Prisma.GoalUncheckedUpdateManyWithoutUserNestedInput
   twoFactor?: Prisma.TwoFactorUncheckedUpdateManyWithoutUserNestedInput
   apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutUserNestedInput
+  portfolioCache?: Prisma.PortfolioCacheUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutAccountsInput = {
@@ -872,6 +897,7 @@ export type UserCreateWithoutAccountsInput = {
   goals?: Prisma.GoalCreateNestedManyWithoutUserInput
   twoFactor?: Prisma.TwoFactorCreateNestedManyWithoutUserInput
   apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutUserInput
+  portfolioCache?: Prisma.PortfolioCacheCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutAccountsInput = {
@@ -898,6 +924,7 @@ export type UserUncheckedCreateWithoutAccountsInput = {
   goals?: Prisma.GoalUncheckedCreateNestedManyWithoutUserInput
   twoFactor?: Prisma.TwoFactorUncheckedCreateNestedManyWithoutUserInput
   apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutUserInput
+  portfolioCache?: Prisma.PortfolioCacheUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutAccountsInput = {
@@ -940,6 +967,7 @@ export type UserUpdateWithoutAccountsInput = {
   goals?: Prisma.GoalUpdateManyWithoutUserNestedInput
   twoFactor?: Prisma.TwoFactorUpdateManyWithoutUserNestedInput
   apiKeys?: Prisma.ApiKeyUpdateManyWithoutUserNestedInput
+  portfolioCache?: Prisma.PortfolioCacheUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutAccountsInput = {
@@ -966,6 +994,7 @@ export type UserUncheckedUpdateWithoutAccountsInput = {
   goals?: Prisma.GoalUncheckedUpdateManyWithoutUserNestedInput
   twoFactor?: Prisma.TwoFactorUncheckedUpdateManyWithoutUserNestedInput
   apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutUserNestedInput
+  portfolioCache?: Prisma.PortfolioCacheUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutSessionsInput = {
@@ -992,6 +1021,7 @@ export type UserCreateWithoutSessionsInput = {
   goals?: Prisma.GoalCreateNestedManyWithoutUserInput
   twoFactor?: Prisma.TwoFactorCreateNestedManyWithoutUserInput
   apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutUserInput
+  portfolioCache?: Prisma.PortfolioCacheCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutSessionsInput = {
@@ -1018,6 +1048,7 @@ export type UserUncheckedCreateWithoutSessionsInput = {
   goals?: Prisma.GoalUncheckedCreateNestedManyWithoutUserInput
   twoFactor?: Prisma.TwoFactorUncheckedCreateNestedManyWithoutUserInput
   apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutUserInput
+  portfolioCache?: Prisma.PortfolioCacheUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutSessionsInput = {
@@ -1060,6 +1091,7 @@ export type UserUpdateWithoutSessionsInput = {
   goals?: Prisma.GoalUpdateManyWithoutUserNestedInput
   twoFactor?: Prisma.TwoFactorUpdateManyWithoutUserNestedInput
   apiKeys?: Prisma.ApiKeyUpdateManyWithoutUserNestedInput
+  portfolioCache?: Prisma.PortfolioCacheUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutSessionsInput = {
@@ -1080,6 +1112,131 @@ export type UserUncheckedUpdateWithoutSessionsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  transactions?: Prisma.TransactionUncheckedUpdateManyWithoutUserNestedInput
+  watchlist?: Prisma.WatchlistItemUncheckedUpdateManyWithoutUserNestedInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUncheckedUpdateManyWithoutUserNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutUserNestedInput
+  twoFactor?: Prisma.TwoFactorUncheckedUpdateManyWithoutUserNestedInput
+  apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutUserNestedInput
+  portfolioCache?: Prisma.PortfolioCacheUncheckedUpdateManyWithoutUserNestedInput
+}
+
+export type UserCreateWithoutPortfolioCacheInput = {
+  id?: string
+  name?: string | null
+  email?: string | null
+  emailVerified?: boolean
+  emailVerifiedAt?: Date | string | null
+  image?: string | null
+  passwordHash?: string | null
+  twoFactorEnabled?: boolean
+  role?: string
+  banned?: boolean
+  banReason?: string | null
+  banExpires?: Date | string | null
+  theme?: $Enums.Theme
+  currency?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  transactions?: Prisma.TransactionCreateNestedManyWithoutUserInput
+  watchlist?: Prisma.WatchlistItemCreateNestedManyWithoutUserInput
+  emailChangeTokens?: Prisma.EmailChangeTokenCreateNestedManyWithoutUserInput
+  goals?: Prisma.GoalCreateNestedManyWithoutUserInput
+  twoFactor?: Prisma.TwoFactorCreateNestedManyWithoutUserInput
+  apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutPortfolioCacheInput = {
+  id?: string
+  name?: string | null
+  email?: string | null
+  emailVerified?: boolean
+  emailVerifiedAt?: Date | string | null
+  image?: string | null
+  passwordHash?: string | null
+  twoFactorEnabled?: boolean
+  role?: string
+  banned?: boolean
+  banReason?: string | null
+  banExpires?: Date | string | null
+  theme?: $Enums.Theme
+  currency?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutUserInput
+  watchlist?: Prisma.WatchlistItemUncheckedCreateNestedManyWithoutUserInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUncheckedCreateNestedManyWithoutUserInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutUserInput
+  twoFactor?: Prisma.TwoFactorUncheckedCreateNestedManyWithoutUserInput
+  apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutPortfolioCacheInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutPortfolioCacheInput, Prisma.UserUncheckedCreateWithoutPortfolioCacheInput>
+}
+
+export type UserUpsertWithoutPortfolioCacheInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutPortfolioCacheInput, Prisma.UserUncheckedUpdateWithoutPortfolioCacheInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutPortfolioCacheInput, Prisma.UserUncheckedCreateWithoutPortfolioCacheInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutPortfolioCacheInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutPortfolioCacheInput, Prisma.UserUncheckedUpdateWithoutPortfolioCacheInput>
+}
+
+export type UserUpdateWithoutPortfolioCacheInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  passwordHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  role?: Prisma.StringFieldUpdateOperationsInput | string
+  banned?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  theme?: Prisma.EnumThemeFieldUpdateOperationsInput | $Enums.Theme
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  transactions?: Prisma.TransactionUpdateManyWithoutUserNestedInput
+  watchlist?: Prisma.WatchlistItemUpdateManyWithoutUserNestedInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUpdateManyWithoutUserNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutUserNestedInput
+  twoFactor?: Prisma.TwoFactorUpdateManyWithoutUserNestedInput
+  apiKeys?: Prisma.ApiKeyUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutPortfolioCacheInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  passwordHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  role?: Prisma.StringFieldUpdateOperationsInput | string
+  banned?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  theme?: Prisma.EnumThemeFieldUpdateOperationsInput | $Enums.Theme
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   transactions?: Prisma.TransactionUncheckedUpdateManyWithoutUserNestedInput
   watchlist?: Prisma.WatchlistItemUncheckedUpdateManyWithoutUserNestedInput
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedUpdateManyWithoutUserNestedInput
@@ -1112,6 +1269,7 @@ export type UserCreateWithoutTwoFactorInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenCreateNestedManyWithoutUserInput
   goals?: Prisma.GoalCreateNestedManyWithoutUserInput
   apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutUserInput
+  portfolioCache?: Prisma.PortfolioCacheCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutTwoFactorInput = {
@@ -1138,6 +1296,7 @@ export type UserUncheckedCreateWithoutTwoFactorInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedCreateNestedManyWithoutUserInput
   goals?: Prisma.GoalUncheckedCreateNestedManyWithoutUserInput
   apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutUserInput
+  portfolioCache?: Prisma.PortfolioCacheUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutTwoFactorInput = {
@@ -1180,6 +1339,7 @@ export type UserUpdateWithoutTwoFactorInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUpdateManyWithoutUserNestedInput
   goals?: Prisma.GoalUpdateManyWithoutUserNestedInput
   apiKeys?: Prisma.ApiKeyUpdateManyWithoutUserNestedInput
+  portfolioCache?: Prisma.PortfolioCacheUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutTwoFactorInput = {
@@ -1206,6 +1366,7 @@ export type UserUncheckedUpdateWithoutTwoFactorInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedUpdateManyWithoutUserNestedInput
   goals?: Prisma.GoalUncheckedUpdateManyWithoutUserNestedInput
   apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutUserNestedInput
+  portfolioCache?: Prisma.PortfolioCacheUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutEmailChangeTokensInput = {
@@ -1232,6 +1393,7 @@ export type UserCreateWithoutEmailChangeTokensInput = {
   goals?: Prisma.GoalCreateNestedManyWithoutUserInput
   twoFactor?: Prisma.TwoFactorCreateNestedManyWithoutUserInput
   apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutUserInput
+  portfolioCache?: Prisma.PortfolioCacheCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutEmailChangeTokensInput = {
@@ -1258,6 +1420,7 @@ export type UserUncheckedCreateWithoutEmailChangeTokensInput = {
   goals?: Prisma.GoalUncheckedCreateNestedManyWithoutUserInput
   twoFactor?: Prisma.TwoFactorUncheckedCreateNestedManyWithoutUserInput
   apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutUserInput
+  portfolioCache?: Prisma.PortfolioCacheUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutEmailChangeTokensInput = {
@@ -1300,6 +1463,7 @@ export type UserUpdateWithoutEmailChangeTokensInput = {
   goals?: Prisma.GoalUpdateManyWithoutUserNestedInput
   twoFactor?: Prisma.TwoFactorUpdateManyWithoutUserNestedInput
   apiKeys?: Prisma.ApiKeyUpdateManyWithoutUserNestedInput
+  portfolioCache?: Prisma.PortfolioCacheUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutEmailChangeTokensInput = {
@@ -1326,6 +1490,7 @@ export type UserUncheckedUpdateWithoutEmailChangeTokensInput = {
   goals?: Prisma.GoalUncheckedUpdateManyWithoutUserNestedInput
   twoFactor?: Prisma.TwoFactorUncheckedUpdateManyWithoutUserNestedInput
   apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutUserNestedInput
+  portfolioCache?: Prisma.PortfolioCacheUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutWatchlistInput = {
@@ -1352,6 +1517,7 @@ export type UserCreateWithoutWatchlistInput = {
   goals?: Prisma.GoalCreateNestedManyWithoutUserInput
   twoFactor?: Prisma.TwoFactorCreateNestedManyWithoutUserInput
   apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutUserInput
+  portfolioCache?: Prisma.PortfolioCacheCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutWatchlistInput = {
@@ -1378,6 +1544,7 @@ export type UserUncheckedCreateWithoutWatchlistInput = {
   goals?: Prisma.GoalUncheckedCreateNestedManyWithoutUserInput
   twoFactor?: Prisma.TwoFactorUncheckedCreateNestedManyWithoutUserInput
   apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutUserInput
+  portfolioCache?: Prisma.PortfolioCacheUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutWatchlistInput = {
@@ -1420,6 +1587,7 @@ export type UserUpdateWithoutWatchlistInput = {
   goals?: Prisma.GoalUpdateManyWithoutUserNestedInput
   twoFactor?: Prisma.TwoFactorUpdateManyWithoutUserNestedInput
   apiKeys?: Prisma.ApiKeyUpdateManyWithoutUserNestedInput
+  portfolioCache?: Prisma.PortfolioCacheUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutWatchlistInput = {
@@ -1446,6 +1614,7 @@ export type UserUncheckedUpdateWithoutWatchlistInput = {
   goals?: Prisma.GoalUncheckedUpdateManyWithoutUserNestedInput
   twoFactor?: Prisma.TwoFactorUncheckedUpdateManyWithoutUserNestedInput
   apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutUserNestedInput
+  portfolioCache?: Prisma.PortfolioCacheUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutGoalsInput = {
@@ -1472,6 +1641,7 @@ export type UserCreateWithoutGoalsInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenCreateNestedManyWithoutUserInput
   twoFactor?: Prisma.TwoFactorCreateNestedManyWithoutUserInput
   apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutUserInput
+  portfolioCache?: Prisma.PortfolioCacheCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutGoalsInput = {
@@ -1498,6 +1668,7 @@ export type UserUncheckedCreateWithoutGoalsInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedCreateNestedManyWithoutUserInput
   twoFactor?: Prisma.TwoFactorUncheckedCreateNestedManyWithoutUserInput
   apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutUserInput
+  portfolioCache?: Prisma.PortfolioCacheUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutGoalsInput = {
@@ -1540,6 +1711,7 @@ export type UserUpdateWithoutGoalsInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUpdateManyWithoutUserNestedInput
   twoFactor?: Prisma.TwoFactorUpdateManyWithoutUserNestedInput
   apiKeys?: Prisma.ApiKeyUpdateManyWithoutUserNestedInput
+  portfolioCache?: Prisma.PortfolioCacheUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutGoalsInput = {
@@ -1566,6 +1738,7 @@ export type UserUncheckedUpdateWithoutGoalsInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedUpdateManyWithoutUserNestedInput
   twoFactor?: Prisma.TwoFactorUncheckedUpdateManyWithoutUserNestedInput
   apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutUserNestedInput
+  portfolioCache?: Prisma.PortfolioCacheUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutApiKeysInput = {
@@ -1592,6 +1765,7 @@ export type UserCreateWithoutApiKeysInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenCreateNestedManyWithoutUserInput
   goals?: Prisma.GoalCreateNestedManyWithoutUserInput
   twoFactor?: Prisma.TwoFactorCreateNestedManyWithoutUserInput
+  portfolioCache?: Prisma.PortfolioCacheCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutApiKeysInput = {
@@ -1618,6 +1792,7 @@ export type UserUncheckedCreateWithoutApiKeysInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedCreateNestedManyWithoutUserInput
   goals?: Prisma.GoalUncheckedCreateNestedManyWithoutUserInput
   twoFactor?: Prisma.TwoFactorUncheckedCreateNestedManyWithoutUserInput
+  portfolioCache?: Prisma.PortfolioCacheUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutApiKeysInput = {
@@ -1660,6 +1835,7 @@ export type UserUpdateWithoutApiKeysInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUpdateManyWithoutUserNestedInput
   goals?: Prisma.GoalUpdateManyWithoutUserNestedInput
   twoFactor?: Prisma.TwoFactorUpdateManyWithoutUserNestedInput
+  portfolioCache?: Prisma.PortfolioCacheUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutApiKeysInput = {
@@ -1686,6 +1862,7 @@ export type UserUncheckedUpdateWithoutApiKeysInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedUpdateManyWithoutUserNestedInput
   goals?: Prisma.GoalUncheckedUpdateManyWithoutUserNestedInput
   twoFactor?: Prisma.TwoFactorUncheckedUpdateManyWithoutUserNestedInput
+  portfolioCache?: Prisma.PortfolioCacheUncheckedUpdateManyWithoutUserNestedInput
 }
 
 
@@ -1702,6 +1879,7 @@ export type UserCountOutputType = {
   goals: number
   twoFactor: number
   apiKeys: number
+  portfolioCache: number
 }
 
 export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1713,6 +1891,7 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   goals?: boolean | UserCountOutputTypeCountGoalsArgs
   twoFactor?: boolean | UserCountOutputTypeCountTwoFactorArgs
   apiKeys?: boolean | UserCountOutputTypeCountApiKeysArgs
+  portfolioCache?: boolean | UserCountOutputTypeCountPortfolioCacheArgs
 }
 
 /**
@@ -1781,6 +1960,13 @@ export type UserCountOutputTypeCountApiKeysArgs<ExtArgs extends runtime.Types.Ex
   where?: Prisma.ApiKeyWhereInput
 }
 
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountPortfolioCacheArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.PortfolioCacheWhereInput
+}
+
 
 export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1807,6 +1993,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   goals?: boolean | Prisma.User$goalsArgs<ExtArgs>
   twoFactor?: boolean | Prisma.User$twoFactorArgs<ExtArgs>
   apiKeys?: boolean | Prisma.User$apiKeysArgs<ExtArgs>
+  portfolioCache?: boolean | Prisma.User$portfolioCacheArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["user"]>
 
@@ -1877,6 +2064,7 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   goals?: boolean | Prisma.User$goalsArgs<ExtArgs>
   twoFactor?: boolean | Prisma.User$twoFactorArgs<ExtArgs>
   apiKeys?: boolean | Prisma.User$apiKeysArgs<ExtArgs>
+  portfolioCache?: boolean | Prisma.User$portfolioCacheArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type UserIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -1893,6 +2081,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     goals: Prisma.$GoalPayload<ExtArgs>[]
     twoFactor: Prisma.$TwoFactorPayload<ExtArgs>[]
     apiKeys: Prisma.$ApiKeyPayload<ExtArgs>[]
+    portfolioCache: Prisma.$PortfolioCachePayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -2313,6 +2502,7 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   goals<T extends Prisma.User$goalsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$goalsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GoalPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   twoFactor<T extends Prisma.User$twoFactorArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$twoFactorArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TwoFactorPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   apiKeys<T extends Prisma.User$apiKeysArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$apiKeysArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ApiKeyPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  portfolioCache<T extends Prisma.User$portfolioCacheArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$portfolioCacheArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PortfolioCachePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2940,6 +3130,30 @@ export type User$apiKeysArgs<ExtArgs extends runtime.Types.Extensions.InternalAr
   take?: number
   skip?: number
   distinct?: Prisma.ApiKeyScalarFieldEnum | Prisma.ApiKeyScalarFieldEnum[]
+}
+
+/**
+ * User.portfolioCache
+ */
+export type User$portfolioCacheArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the PortfolioCache
+   */
+  select?: Prisma.PortfolioCacheSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the PortfolioCache
+   */
+  omit?: Prisma.PortfolioCacheOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PortfolioCacheInclude<ExtArgs> | null
+  where?: Prisma.PortfolioCacheWhereInput
+  orderBy?: Prisma.PortfolioCacheOrderByWithRelationInput | Prisma.PortfolioCacheOrderByWithRelationInput[]
+  cursor?: Prisma.PortfolioCacheWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.PortfolioCacheScalarFieldEnum | Prisma.PortfolioCacheScalarFieldEnum[]
 }
 
 /**
