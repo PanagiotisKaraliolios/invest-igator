@@ -109,7 +109,7 @@ model PortfolioCache {
   userId     String
   currency   String
   day        String // yyyy-mm-dd the series was computed to
-  kind       String // 'full' | 'structure'
+  kind       String // 'full:<payloadVersion>' | 'structure:<payloadVersion>'
   payload    Json
   computedAt DateTime @default(now())
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)

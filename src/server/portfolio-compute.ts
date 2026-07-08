@@ -23,6 +23,13 @@ import { fluxStringLiteral, influxQueryApi, measurement } from '@/server/influx'
 const CACHE_TTL_MS = 60 * 60 * 1000; // freshness backstop (intraday ingest); mutations invalidate explicitly
 
 /**
+ * Bump whenever the shape of a cached payload (`FullSeries` / `StructureResult`) changes.
+ * The version is part of the row key, so a deploy with a new shape misses every stale row
+ * instead of deserializing it as the new type for up to CACHE_TTL_MS.
+ */
+const PAYLOAD_VERSION = 'v1';
+
+/**
  * Read a cached payload if present and fresh; otherwise compute, persist, and return.
  * Purely additive: a cache read/write failure degrades to an uncached compute rather
  * than surfacing a new error.
@@ -354,7 +361,9 @@ export async function computeFullSeries(userId: string, target: Currency, todayI
 
 /** Cached inception-to-date series. One entry per (user, currency, day). */
 export function getCachedFullSeries(userId: string, target: Currency, todayIso: string): Promise<FullSeries> {
-	return cached(userId, target, todayIso, 'full', () => computeFullSeries(userId, target, todayIso));
+	return cached(userId, target, todayIso, `full:${PAYLOAD_VERSION}`, () =>
+		computeFullSeries(userId, target, todayIso)
+	);
 }
 
 export type StructureItem = {
@@ -483,7 +492,9 @@ export async function computeStructure(userId: string, target: Currency, todayIs
 
 /** Cached current structure. One entry per (user, currency, day). */
 export function getCachedStructure(userId: string, target: Currency, todayIso: string): Promise<StructureResult> {
-	return cached(userId, target, todayIso, 'structure', () => computeStructure(userId, target, todayIso));
+	return cached(userId, target, todayIso, `structure:${PAYLOAD_VERSION}`, () =>
+		computeStructure(userId, target, todayIso)
+	);
 }
 
 /** Invalidate a user's cached portfolio computations after a mutation (await to guarantee read-your-writes). */
