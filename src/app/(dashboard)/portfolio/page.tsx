@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { type Currency, formatCurrency, supportedCurrencies } from '@/lib/currency';
+import { toLocalIsoDate } from '@/lib/date';
 import { cn } from '@/lib/utils';
 import { api } from '@/trpc/server';
 
@@ -11,7 +12,7 @@ export default async function PortfolioPage() {
 	const currency: Currency = c && (supportedCurrencies as readonly string[]).includes(c) ? c : 'USD';
 
 	const now = new Date();
-	const isoToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+	const isoToday = toLocalIsoDate(now);
 
 	const [structure, perf] = await Promise.all([
 		api.portfolio.structure({ currency }),
