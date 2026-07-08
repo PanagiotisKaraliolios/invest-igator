@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Fragment, useMemo } from 'react';
 import {
@@ -50,7 +51,7 @@ export default function DashboardBreadcrumbs() {
 		const segs = pathname.split('/').filter(Boolean);
 
 		// Build breadcrumbs from actual path segments.
-		const items: { label: string; href?: string }[] = [];
+		const items: { href: string; label: string }[] = [];
 
 		segs.forEach((seg, idx) => {
 			const href = `/${segs.slice(0, idx + 1).join('/')}`;
@@ -72,7 +73,7 @@ export default function DashboardBreadcrumbs() {
 								{isLast ? (
 									<BreadcrumbPage>{c.label}</BreadcrumbPage>
 								) : (
-									<BreadcrumbLink href={c.href}>{c.label}</BreadcrumbLink>
+									<BreadcrumbLink render={<Link href={c.href} />}>{c.label}</BreadcrumbLink>
 								)}
 							</BreadcrumbItem>
 							{!isLast && <BreadcrumbSeparator className={i === 0 ? 'hidden md:block' : undefined} />}
