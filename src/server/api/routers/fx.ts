@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { createTRPCRouter, withPermissions } from '@/server/api/trpc';
-import { getFxMatrix } from '@/server/fx';
+import { getFxMatrix } from '@/server/fx-history';
 
 /**
  * FX router - provides foreign exchange rate information.

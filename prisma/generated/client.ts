@@ -87,11 +87,6 @@ export type EmailChangeToken = Prisma.EmailChangeTokenModel
  */
 export type WatchlistItem = Prisma.WatchlistItemModel
 /**
- * Model FxRate
- * 
- */
-export type FxRate = Prisma.FxRateModel
-/**
  * Model Goal
  * Personal financial goals for a user (e.g., buy a house, retirement)
  */

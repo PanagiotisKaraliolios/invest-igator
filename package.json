@@ -90,7 +90,6 @@
 		"db:seed": "bun prisma/seed.ts",
 		"db:studio": "prisma studio --port 5000",
 		"dev": "next dev --turbo",
-		"ingest:alpha": "bun run src/server/jobs/ingest-alpha.ts",
 		"ingest:fx": "bun run src/server/jobs/ingest-fx.ts",
 		"ingest:yahoo": "bun run src/server/jobs/ingest-yahoo.ts",
 		"postinstall": "prisma generate",
