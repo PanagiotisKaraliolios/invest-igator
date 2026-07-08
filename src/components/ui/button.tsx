@@ -1,4 +1,6 @@
 import { Button as ButtonPrimitive } from '@base-ui/react/button';
+import { mergeProps } from '@base-ui/react/merge-props';
+import { useRender } from '@base-ui/react/use-render';
 import { cva, type VariantProps } from 'class-variance-authority';
 import type * as React from 'react';
 
@@ -39,14 +41,35 @@ function Button({
 	className,
 	variant,
 	size,
+	render,
 	...props
 }: Omit<React.ComponentProps<typeof ButtonPrimitive>, 'className'> &
 	VariantProps<typeof buttonVariants> & {
 		className?: string;
 	}) {
-	return (
-		<ButtonPrimitive className={cn(buttonVariants({ className, size, variant }))} data-slot='button' {...props} />
-	);
+	const classes = cn(buttonVariants({ className, size, variant }));
+	// When rendered as a custom element (e.g. a Next.js <Link>/<a> for navigation), render it via
+	// useRender so it keeps its own native role/semantics — a navigation link stays role="link" and
+	// Base UI does not emit the "expected a native <button>" warning. Real <button>s keep the Base UI
+	// Button behavior (focus management, disabled handling, etc.).
+	if (render !== undefined) {
+		return <ButtonAsRender className={classes} render={render} {...props} />;
+	}
+	return <ButtonPrimitive className={classes} data-slot='button' {...props} />;
+}
+
+function ButtonAsRender({
+	className,
+	render,
+	...props
+}: Omit<React.ComponentProps<typeof ButtonPrimitive>, 'className'> & { className?: string }) {
+	return useRender({
+		props: mergeProps<'button'>(
+			{ className, 'data-slot': 'button' } as React.ComponentProps<'button'>,
+			props as React.ComponentProps<'button'>
+		),
+		render: render as useRender.ComponentProps<'button'>['render']
+	});
 }
 
 export { Button, buttonVariants };
