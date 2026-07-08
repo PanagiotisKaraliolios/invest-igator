@@ -152,93 +152,64 @@ export const watchlistRouter = createTRPCRouter({
 			const events: Record<string, { dividends: Div[]; splits: Split[]; capitalGains: CapG[] }> = {};
 
 			const days = input.days;
+			const symbolFilter = normalizedSymbols.map((s) => `r.symbol == ${fluxStringLiteral(s)}`).join(' or ');
 			for (const sym of normalizedSymbols) {
-				// Dividends
-				{
-					const flux = `from(bucket: ${fluxStringLiteral(env.INFLUXDB_BUCKET)})
-  |> range(start: -${days + 3}d)
-  |> filter(fn: (r) => r._measurement == ${fluxStringLiteral('dividends')} and r._field == ${fluxStringLiteral('amount')} and r.symbol == ${fluxStringLiteral(sym)})
-  |> keep(columns: ["_time", "_value"]) 
-  |> sort(columns: ["_time"])`;
-					const arr: Div[] = [];
-					for await (const row of influxQueryApi.iterateRows(flux)) {
-						let values: unknown;
-						let tableMeta: any;
-						if (Array.isArray(row)) {
-							values = row[0];
-							tableMeta = row[1];
-						} else if (row && typeof row === 'object' && 'values' in (row as any)) {
-							values = (row as any).values;
-							tableMeta = (row as any).tableMeta;
-						}
-						if (!values || !tableMeta || typeof tableMeta.toObject !== 'function') continue;
-						const obj = tableMeta.toObject(values as string[]);
-						const t = (obj._time as string) || '';
-						const v = Number(obj._value);
-						if (!t || !Number.isFinite(v)) continue;
-						arr.push({ amount: v, date: t.slice(0, 10) });
-					}
-					events[sym] = events[sym] ?? { capitalGains: [], dividends: [], splits: [] };
-					events[sym].dividends = arr;
-				}
+				events[sym] = { capitalGains: [], dividends: [], splits: [] };
+			}
 
-				// Splits (use ratio field)
-				{
-					const flux = `from(bucket: ${fluxStringLiteral(env.INFLUXDB_BUCKET)})
+			const [dividendRows, splitRows, capitalGainRows] = await Promise.all([
+				influxQueryApi.collectRows<{ symbol: string; _time: string; _value: number | string }>(
+					`from(bucket: ${fluxStringLiteral(env.INFLUXDB_BUCKET)})
   |> range(start: -${days + 3}d)
-  |> filter(fn: (r) => r._measurement == ${fluxStringLiteral('splits')} and r._field == ${fluxStringLiteral('ratio')} and r.symbol == ${fluxStringLiteral(sym)})
-  |> keep(columns: ["_time", "_value"]) 
-  |> sort(columns: ["_time"])`;
-					const arr: Split[] = [];
-					for await (const row of influxQueryApi.iterateRows(flux)) {
-						let values: unknown;
-						let tableMeta: any;
-						if (Array.isArray(row)) {
-							values = row[0];
-							tableMeta = row[1];
-						} else if (row && typeof row === 'object' && 'values' in (row as any)) {
-							values = (row as any).values;
-							tableMeta = (row as any).tableMeta;
-						}
-						if (!values || !tableMeta || typeof tableMeta.toObject !== 'function') continue;
-						const obj = tableMeta.toObject(values as string[]);
-						const t = (obj._time as string) || '';
-						const v = Number(obj._value);
-						if (!t || !Number.isFinite(v)) continue;
-						arr.push({ date: t.slice(0, 10), ratio: v });
-					}
-					events[sym] = events[sym] ?? { capitalGains: [], dividends: [], splits: [] };
-					events[sym].splits = arr;
-				}
+  |> filter(fn: (r) => r._measurement == ${fluxStringLiteral('dividends')} and r._field == ${fluxStringLiteral('amount')} and (${symbolFilter}))
+  |> keep(columns: ["_time", "_value", "symbol"])
+  |> sort(columns: ["_time"])`
+				),
+				influxQueryApi.collectRows<{ symbol: string; _time: string; _value: number | string }>(
+					`from(bucket: ${fluxStringLiteral(env.INFLUXDB_BUCKET)})
+  |> range(start: -${days + 3}d)
+  |> filter(fn: (r) => r._measurement == ${fluxStringLiteral('splits')} and r._field == ${fluxStringLiteral('ratio')} and (${symbolFilter}))
+  |> keep(columns: ["_time", "_value", "symbol"])
+  |> sort(columns: ["_time"])`
+				),
+				influxQueryApi.collectRows<{ symbol: string; _time: string; _value: number | string }>(
+					`from(bucket: ${fluxStringLiteral(env.INFLUXDB_BUCKET)})
+  |> range(start: -${days + 3}d)
+  |> filter(fn: (r) => r._measurement == ${fluxStringLiteral('capital_gains')} and r._field == ${fluxStringLiteral('amount')} and (${symbolFilter}))
+  |> keep(columns: ["_time", "_value", "symbol"])
+  |> sort(columns: ["_time"])`
+				)
+			]);
 
-				// Capital gains
-				{
-					const flux = `from(bucket: ${fluxStringLiteral(env.INFLUXDB_BUCKET)})
-  |> range(start: -${days + 3}d)
-  |> filter(fn: (r) => r._measurement == ${fluxStringLiteral('capital_gains')} and r._field == ${fluxStringLiteral('amount')} and r.symbol == ${fluxStringLiteral(sym)})
-  |> keep(columns: ["_time", "_value"]) 
-  |> sort(columns: ["_time"])`;
-					const arr: CapG[] = [];
-					for await (const row of influxQueryApi.iterateRows(flux)) {
-						let values: unknown;
-						let tableMeta: any;
-						if (Array.isArray(row)) {
-							values = row[0];
-							tableMeta = row[1];
-						} else if (row && typeof row === 'object' && 'values' in (row as any)) {
-							values = (row as any).values;
-							tableMeta = (row as any).tableMeta;
-						}
-						if (!values || !tableMeta || typeof tableMeta.toObject !== 'function') continue;
-						const obj = tableMeta.toObject(values as string[]);
-						const t = (obj._time as string) || '';
-						const v = Number(obj._value);
-						if (!t || !Number.isFinite(v)) continue;
-						arr.push({ amount: v, date: t.slice(0, 10) });
-					}
-					events[sym] = events[sym] ?? { capitalGains: [], dividends: [], splits: [] };
-					events[sym].capitalGains = arr;
-				}
+			for (const r of dividendRows) {
+				const bucket = events[normalizeSymbol(String(r.symbol))];
+				if (!bucket) continue;
+				const t = String(r._time);
+				const v = Number(r._value);
+				if (!t || !Number.isFinite(v)) continue;
+				bucket.dividends.push({ amount: v, date: t.slice(0, 10) });
+			}
+			for (const r of splitRows) {
+				const bucket = events[normalizeSymbol(String(r.symbol))];
+				if (!bucket) continue;
+				const t = String(r._time);
+				const v = Number(r._value);
+				if (!t || !Number.isFinite(v)) continue;
+				bucket.splits.push({ date: t.slice(0, 10), ratio: v });
+			}
+			for (const r of capitalGainRows) {
+				const bucket = events[normalizeSymbol(String(r.symbol))];
+				if (!bucket) continue;
+				const t = String(r._time);
+				const v = Number(r._value);
+				if (!t || !Number.isFinite(v)) continue;
+				bucket.capitalGains.push({ amount: v, date: t.slice(0, 10) });
+			}
+
+			for (const bucket of Object.values(events)) {
+				bucket.capitalGains.sort((a, b) => a.date.localeCompare(b.date));
+				bucket.dividends.sort((a, b) => a.date.localeCompare(b.date));
+				bucket.splits.sort((a, b) => a.date.localeCompare(b.date));
 			}
 
 			return { events } as const;
@@ -307,35 +278,31 @@ export const watchlistRouter = createTRPCRouter({
 			}
 
 			for (const sym of normalizedSymbols) {
-				const flux = `from(bucket: ${fluxStringLiteral(env.INFLUXDB_BUCKET)})
+				series[sym] = [];
+			}
+
+			const symbolFilter = normalizedSymbols.map((s) => `r.symbol == ${fluxStringLiteral(s)}`).join(' or ');
+			const flux = `from(bucket: ${fluxStringLiteral(env.INFLUXDB_BUCKET)})
   |> range(start: -${days + 3}d)
-  |> filter(fn: (r) => r._measurement == ${fluxStringLiteral(measurement)} and r._field == ${fluxStringLiteral(input.field)} and r.symbol == ${fluxStringLiteral(sym)})
+  |> filter(fn: (r) => r._measurement == ${fluxStringLiteral(measurement)} and r._field == ${fluxStringLiteral(input.field)} and (${symbolFilter}))
   |> aggregateWindow(every: ${every}, fn: last, createEmpty: true)
   |> fill(usePrevious: true)
-  |> keep(columns: ["_time", "_value"]) 
+  |> keep(columns: ["_time", "_value", "symbol"])
   |> sort(columns: ["_time"])`;
 
-				const arr: Array<{ date: string; value: number }> = [];
-				for await (const row of influxQueryApi.iterateRows(flux)) {
-					let values: unknown;
-					let tableMeta: any;
-					if (Array.isArray(row)) {
-						values = row[0];
-						tableMeta = row[1];
-					} else if (row && typeof row === 'object' && 'values' in (row as any)) {
-						values = (row as any).values;
-						tableMeta = (row as any).tableMeta;
-					}
+			const rows = await influxQueryApi.collectRows<{ symbol: string; _time: string; _value: number | string }>(
+				flux
+			);
+			for (const r of rows) {
+				const bucket = series[normalizeSymbol(String(r.symbol))];
+				if (!bucket) continue;
+				const t = String(r._time);
+				if (!t) continue;
+				bucket.push({ date: t.slice(0, 10), value: Number(r._value) });
+			}
 
-					if (!values || !tableMeta || typeof tableMeta.toObject !== 'function') continue;
-					const obj = tableMeta.toObject(values as string[]);
-					const t = (obj._time as string) || '';
-					const v = Number(obj._value);
-					if (!t) continue;
-					const d = t.slice(0, 10);
-					arr.push({ date: d, value: v });
-				}
-				series[sym] = arr;
+			for (const bucket of Object.values(series)) {
+				bucket.sort((a, b) => a.date.localeCompare(b.date));
 			}
 			return { series } as const;
 		}),
