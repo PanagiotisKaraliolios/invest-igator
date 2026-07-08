@@ -40,6 +40,18 @@ export function useCurrencySwitch(isAuthenticated = false) {
 			skipNextPersistRef.current = false;
 			return;
 		}
+		// Skip the cookie write + router.refresh() when the cookie already reflects
+		// this currency. This is true on the initial mount (state is initialized from
+		// the cookie), so navigation no longer triggers an avoidable RSC round-trip;
+		// the block below runs only on a genuine user-initiated currency change.
+		const currentCookie =
+			typeof document !== 'undefined'
+				? (document.cookie.match(/(?:^|; )ui-currency=([^;]+)/)?.[1] ?? null)
+				: null;
+		const cookieMatches = currentCookie ? decodeURIComponent(currentCookie) === currency : false;
+		if (cookieMatches) {
+			return;
+		}
 		if (isAuthenticated) {
 			if (debounceRef.current) clearTimeout(debounceRef.current);
 			debounceRef.current = setTimeout(() => {
