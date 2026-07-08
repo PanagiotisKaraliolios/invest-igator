@@ -193,7 +193,7 @@ export function DataTable<TData extends { id?: string }, TValue>({ columns }: Da
 
 	const sortDir = sorting[0]?.desc ? 'desc' : 'asc';
 
-	const { data, isLoading, refetch, isFetching } = api.transactions.list.useQuery(
+	const { data, isLoading, refetch, isFetching, isPlaceholderData } = api.transactions.list.useQuery(
 		{
 			dateFrom: dateRange?.from ? dateRange.from.toISOString().slice(0, 10) : undefined,
 			dateTo: dateRange?.to ? dateRange.to.toISOString().slice(0, 10) : undefined,
@@ -536,7 +536,7 @@ export function DataTable<TData extends { id?: string }, TValue>({ columns }: Da
 						Previous
 					</Button>
 					<Button
-						disabled={data ? (pageIndex + 1) * pageSize >= data.total : true}
+						disabled={isPlaceholderData || !data || (pageIndex + 1) * pageSize >= data.total}
 						onClick={() => table.nextPage()}
 						size='sm'
 						variant='outline'

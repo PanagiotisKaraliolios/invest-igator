@@ -67,7 +67,12 @@ export function NavMain({
 										<SidebarMenuSubItem key={subItem.title}>
 											<SidebarMenuSubButton
 												isActive={isSubItemActive}
-												render={<Link href={subItem.url} />}
+												render={
+													<Link
+														href={subItem.url}
+														prefetch={subItem.comingSoon ? false : undefined}
+													/>
+												}
 											>
 												<span>{subItem.title}</span>
 												{subItem.comingSoon && (

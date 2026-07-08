@@ -40,30 +40,31 @@ export function useCurrencySwitch(isAuthenticated = false) {
 			skipNextPersistRef.current = false;
 			return;
 		}
-		// Skip the cookie write + router.refresh() when the cookie already reflects
-		// this currency. This is true on the initial mount (state is initialized from
-		// the cookie), so navigation no longer triggers an avoidable RSC round-trip;
-		// the block below runs only on a genuine user-initiated currency change.
-		const currentCookie =
-			typeof document !== 'undefined'
-				? (document.cookie.match(/(?:^|; )ui-currency=([^;]+)/)?.[1] ?? null)
-				: null;
-		const cookieMatches = currentCookie ? decodeURIComponent(currentCookie) === currency : false;
-		if (cookieMatches) {
-			return;
-		}
+		// Re-persist the preference to the backend (idempotent, debounced) on every
+		// authenticated mount — this self-heals a cookie that was set while a prior
+		// mutation was interrupted. It is fire-and-forget and does not block render.
 		if (isAuthenticated) {
 			if (debounceRef.current) clearTimeout(debounceRef.current);
 			debounceRef.current = setTimeout(() => {
 				mutateRef.current(currency);
 			}, 1000);
 		}
-		try {
-			document.cookie = `ui-currency=${currency}; Path=/; Max-Age=${60 * 60 * 24 * 365}; SameSite=Lax`;
-			// Revalidate server-rendered data dependent on the currency cookie
-			// Use rAF to ensure the cookie write is visible to the next render tick
-			requestAnimationFrame(() => router.refresh());
-		} catch {}
+		// Only write the cookie + refresh the server tree when the cookie does not
+		// already reflect this currency. On a plain mount the cookie matches (state is
+		// initialized from it), so navigation no longer triggers an avoidable RSC
+		// round-trip; this runs only on a genuine user-initiated currency change.
+		const currentCookie =
+			typeof document !== 'undefined'
+				? (document.cookie.match(/(?:^|; )ui-currency=([^;]+)/)?.[1] ?? null)
+				: null;
+		const cookieMatches = currentCookie ? decodeURIComponent(currentCookie) === currency : false;
+		if (!cookieMatches) {
+			try {
+				document.cookie = `ui-currency=${currency}; Path=/; Max-Age=${60 * 60 * 24 * 365}; SameSite=Lax`;
+				// Use rAF to ensure the cookie write is visible to the next render tick
+				requestAnimationFrame(() => router.refresh());
+			} catch {}
+		}
 		return () => {
 			if (debounceRef.current) clearTimeout(debounceRef.current);
 		};
