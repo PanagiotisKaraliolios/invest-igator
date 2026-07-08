@@ -755,7 +755,9 @@ Run: `grep -rn "mapCurrencyString" src` — Expected: no hits (deleted).
 
 ## Deploy order (for the PR description / release)
 
-migrate (`prisma migrate deploy`) → deploy code → `bun run ingest:fx` (fetch new-currency rates) → `bun run currency:backfill` (correct existing labels).
+migrate (`prisma migrate deploy`) → deploy code → `bun run ingest:fx` (fetch new-currency rates) → `bun run currency:backfill` (correct existing `WatchlistItem.currency` labels) → **`bun run ingest:yahoo` (full re-ingest — REQUIRED)**.
+
+**Why the final re-ingest is required:** the `GBp`/pence ÷100 scaling happens at ingest time (`classifyChartResponse`). Price bars already in InfluxDB for UK `.L` holdings were written by the old code in **raw pence labelled GBP**, and `currency:backfill` only fixes the *label*, not the stored bars. Without a full `ingest:yahoo` re-run those holdings render **100× too high** in the current-value/structure view. Re-ingest is idempotent (overwrites by symbol+date, re-derives scale from raw Yahoo each run), so it is safe to run.
 
 ## Notes for the implementer
 

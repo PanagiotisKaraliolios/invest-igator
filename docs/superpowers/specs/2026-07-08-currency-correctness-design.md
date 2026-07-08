@@ -99,5 +99,5 @@ Date-keyed `FxRate` storage, historical FX ingest, and history-aware `getFxMatri
 ## Rollout notes
 
 - **One schema migration** (enum → text, drop type). One-way (can't re-add the enum easily), but additive and lossless for existing rows.
-- Deploy order: migrate → deploy code (new mapper + fail-loud) → run FX ingest for the new currencies → run the currency backfill.
+- Deploy order: migrate → deploy code (new mapper + fail-loud) → run FX ingest for the new currencies → run the currency backfill → **full `ingest:yahoo` re-ingest (REQUIRED)**. The `GBp`/pence ÷100 scaling happens at ingest time, so existing InfluxDB bars for `.L` holdings (stored in raw pence with a GBP label) must be re-ingested — the backfill only corrects the currency *label*, not the stored bars. Without the re-ingest, UK holdings render 100× too high. Re-ingest is idempotent (overwrites by symbol+date).
 - Behavioral change: foreign holdings that were silently mis-valued now value correctly (or show an "unconverted" badge if outside the 10). This is the intended fix.
