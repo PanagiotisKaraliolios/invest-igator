@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { Currency } from '@/lib/currency';
-import type { FxMatrix } from '@/server/fx';
+import { type FxMatrix, forwardFill } from '@/server/fx';
 import { buildFullSeries } from './portfolio-compute';
 
 // Local-midnight date for a calendar day so toLocalIsoDate() keys line up with the
@@ -97,6 +97,40 @@ describe('buildFullSeries', () => {
 		expect(unconvertedSymbols).toContain('SAP.DE');
 		// Unconvertible position contributes 0 to NAV rather than crashing
 		expect(full[0]!.nav).toBe(0);
+	});
+
+	test('carries a pre-inception close forward to value a gap on the inception day', () => {
+		// Inception is Sat 2024-01-06 (no bar); the prior close is Fri 2024-01-05 = 99.
+		// forwardFill seeds the inception day from that prior close (seed-at-inception),
+		// so the position is valued at 99 rather than 0 — the behavior the caching refactor
+		// relies on so inception-to-date totals don't depend on the requested chart range.
+		const dateKeys = ['2024-01-06', '2024-01-07', '2024-01-08'];
+		const priceBySymbolDate = new Map([
+			[
+				'AAPL',
+				forwardFill(
+					new Map([
+						['2024-01-05', 99],
+						['2024-01-08', 110]
+					]),
+					dateKeys
+				)
+			]
+		]);
+
+		const { full } = buildFullSeries({
+			fxByDate: emptyFx,
+			inceptionDate: day(2024, 1, 6),
+			latestTxCurrencyBySymbol: new Map([['AAPL', { currency: 'USD' as Currency, date: day(2024, 1, 6) }]]),
+			priceBySymbolDate,
+			symbolCurrencies: new Map([['AAPL', 'USD']]),
+			target: 'USD' as Currency,
+			toDate: day(2024, 1, 8),
+			txs: [tx({ date: day(2024, 1, 6) })] // BUY 10 @ 100 on the Saturday
+		});
+
+		expect(full[0]!.nav).toBe(990); // 10 shares × carried-forward 99, not 0
+		expect(full[2]!.nav).toBe(1100); // 10 × 110
 	});
 
 	test('returns an empty series when there are no dates', () => {

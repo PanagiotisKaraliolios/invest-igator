@@ -8,6 +8,7 @@ import { buildFxMatrixFromUsdLegs, convertAmount } from '@/server/fx';
 import { getLatestFxBars } from '@/server/fx-history';
 import { fluxStringLiteral, influxQueryApi, measurement } from '@/server/influx';
 import { ingestYahooSymbol } from '@/server/jobs/yahoo-lib';
+import { invalidateAllPortfolioCache } from '@/server/portfolio-compute';
 
 /**
  * Financial Data Management Router
@@ -473,6 +474,10 @@ schema.measurementTagValues(
 				},
 				where: { symbol }
 			});
+
+			// A listing-currency change alters how this symbol's holdings are valued for
+			// every user, so clear all cached portfolio computations (rare admin action).
+			if (currency !== undefined) invalidateAllPortfolioCache();
 
 			// Log audit action
 			try {

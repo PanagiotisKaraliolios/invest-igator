@@ -3,7 +3,7 @@ import type { Currency } from '@/lib/currency';
 import { toLocalIsoDate } from '@/lib/date';
 import { isValidSymbol, normalizeSymbol } from '@/lib/validation';
 import { db } from '@/server/db';
-import { convertAmount, type FxMatrix, MissingFxRateError } from '@/server/fx';
+import { convertAmount, type FxMatrix, forwardFill, MissingFxRateError } from '@/server/fx';
 import { buildFxByDate, getFxMatrix } from '@/server/fx-history';
 import { fluxStringLiteral, influxQueryApi, measurement } from '@/server/influx';
 
@@ -309,25 +309,13 @@ export async function computeFullSeries(userId: string, target: Currency, todayI
 			dateKeys.push(toLocalIsoDate(d));
 		}
 
-		// Seed each symbol with its latest close before inception, then forward-fill.
-		// (Positions are zero before their first buy at inception, so the pre-inception
-		// seed only matters if a price is missing exactly at inception.)
-		const isoInceptionKey = toLocalIsoDate(inceptionDate);
+		// Forward-fill each symbol across inception..to, seeded by its latest close strictly
+		// before inception (same helper as the FX carry-forward). Seeding at inception — rather
+		// than at a caller-supplied `from` — is deliberate: it makes the inception-to-date totals
+		// independent of the requested chart window and lets one cached series serve every range.
 		for (const s of symbols) {
 			const up = normalizeSymbol(s);
-			const src = raw.get(up) ?? new Map<string, number>();
-			let seedVal: number | undefined;
-			for (const [iso, val] of Array.from(src.entries()).sort((a, b) => (a[0] < b[0] ? -1 : 1))) {
-				if (iso < isoInceptionKey) seedVal = val;
-			}
-			const filled = new Map<string, number>();
-			let last = seedVal;
-			for (const iso of dateKeys) {
-				const v = src.get(iso);
-				if (v != null && Number.isFinite(v)) last = v;
-				if (last != null && Number.isFinite(last)) filled.set(iso, last);
-			}
-			priceBySymbolDate.set(up, filled);
+			priceBySymbolDate.set(up, forwardFill(raw.get(up) ?? new Map<string, number>(), dateKeys));
 		}
 	}
 
@@ -489,4 +477,12 @@ export function invalidatePortfolioCache(userId: string): void {
 	for (const key of portfolioCache.keys()) {
 		if (key.startsWith(prefix)) portfolioCache.delete(key);
 	}
+}
+
+/**
+ * Clear ALL users' cached portfolio computations. Used when a global input changes
+ * for many users at once (e.g. an admin correcting a symbol's listing currency).
+ */
+export function invalidateAllPortfolioCache(): void {
+	portfolioCache.clear();
 }
