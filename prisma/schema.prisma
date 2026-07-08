@@ -167,18 +167,6 @@ model WatchlistItem {
   @@index([symbol])
 }
 
-// Store latest FX rates by base->quote with timestamp
-model FxRate {
-  id        String   @id @default(cuid())
-  base      String
-  quote     String
-  rate      Float
-  fetchedAt DateTime @default(now())
-
-  @@unique([base, quote])
-  @@index([fetchedAt])
-}
-
 /// Personal financial goals for a user (e.g., buy a house, retirement)
 model Goal {
   id             String    @id @default(cuid())

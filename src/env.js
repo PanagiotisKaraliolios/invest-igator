@@ -28,8 +28,6 @@ export const env = createEnv({
 	 * middlewares) or client-side so we need to destruct manually.
 	 */
 	runtimeEnv: {
-		ALPHAVANTAGE_API_KEY: process.env.ALPHAVANTAGE_API_KEY,
-		ALPHAVANTAGE_API_URL: process.env.ALPHAVANTAGE_API_URL,
 		APP_NAME: process.env.APP_NAME,
 		AUTH_DISCORD_ID: process.env.AUTH_DISCORD_ID,
 		AUTH_DISCORD_SECRET: process.env.AUTH_DISCORD_SECRET,
@@ -65,8 +63,6 @@ export const env = createEnv({
 	 * isn't built with invalid env vars.
 	 */
 	server: {
-		ALPHAVANTAGE_API_KEY: z.string(),
-		ALPHAVANTAGE_API_URL: z.string().default('https://www.alphavantage.co/query'),
 		APP_NAME: z.string().default('Invest-igator'),
 		AUTH_DISCORD_ID: z.string(),
 		AUTH_DISCORD_SECRET: z.string(),

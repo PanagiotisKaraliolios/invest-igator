@@ -393,7 +393,6 @@ export const ModelName = {
   VerificationToken: 'VerificationToken',
   EmailChangeToken: 'EmailChangeToken',
   WatchlistItem: 'WatchlistItem',
-  FxRate: 'FxRate',
   Goal: 'Goal',
   AuditLog: 'AuditLog',
   ApiKey: 'ApiKey'
@@ -412,7 +411,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "transaction" | "account" | "session" | "user" | "twoFactor" | "verification" | "verificationToken" | "emailChangeToken" | "watchlistItem" | "fxRate" | "goal" | "auditLog" | "apiKey"
+    modelProps: "transaction" | "account" | "session" | "user" | "twoFactor" | "verification" | "verificationToken" | "emailChangeToken" | "watchlistItem" | "goal" | "auditLog" | "apiKey"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1082,80 +1081,6 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
-    FxRate: {
-      payload: Prisma.$FxRatePayload<ExtArgs>
-      fields: Prisma.FxRateFieldRefs
-      operations: {
-        findUnique: {
-          args: Prisma.FxRateFindUniqueArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$FxRatePayload> | null
-        }
-        findUniqueOrThrow: {
-          args: Prisma.FxRateFindUniqueOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$FxRatePayload>
-        }
-        findFirst: {
-          args: Prisma.FxRateFindFirstArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$FxRatePayload> | null
-        }
-        findFirstOrThrow: {
-          args: Prisma.FxRateFindFirstOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$FxRatePayload>
-        }
-        findMany: {
-          args: Prisma.FxRateFindManyArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$FxRatePayload>[]
-        }
-        create: {
-          args: Prisma.FxRateCreateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$FxRatePayload>
-        }
-        createMany: {
-          args: Prisma.FxRateCreateManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        createManyAndReturn: {
-          args: Prisma.FxRateCreateManyAndReturnArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$FxRatePayload>[]
-        }
-        delete: {
-          args: Prisma.FxRateDeleteArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$FxRatePayload>
-        }
-        update: {
-          args: Prisma.FxRateUpdateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$FxRatePayload>
-        }
-        deleteMany: {
-          args: Prisma.FxRateDeleteManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        updateMany: {
-          args: Prisma.FxRateUpdateManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        updateManyAndReturn: {
-          args: Prisma.FxRateUpdateManyAndReturnArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$FxRatePayload>[]
-        }
-        upsert: {
-          args: Prisma.FxRateUpsertArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$FxRatePayload>
-        }
-        aggregate: {
-          args: Prisma.FxRateAggregateArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.AggregateFxRate>
-        }
-        groupBy: {
-          args: Prisma.FxRateGroupByArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.FxRateGroupByOutputType>[]
-        }
-        count: {
-          args: Prisma.FxRateCountArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.FxRateCountAggregateOutputType> | number
-        }
-      }
-    }
     Goal: {
       payload: Prisma.$GoalPayload<ExtArgs>
       fields: Prisma.GoalFieldRefs
@@ -1550,17 +1475,6 @@ export const WatchlistItemScalarFieldEnum = {
 export type WatchlistItemScalarFieldEnum = (typeof WatchlistItemScalarFieldEnum)[keyof typeof WatchlistItemScalarFieldEnum]
 
 
-export const FxRateScalarFieldEnum = {
-  id: 'id',
-  base: 'base',
-  quote: 'quote',
-  rate: 'rate',
-  fetchedAt: 'fetchedAt'
-} as const
-
-export type FxRateScalarFieldEnum = (typeof FxRateScalarFieldEnum)[keyof typeof FxRateScalarFieldEnum]
-
-
 export const GoalScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
@@ -1858,7 +1772,6 @@ export type GlobalOmitConfig = {
   verificationToken?: Prisma.VerificationTokenOmit
   emailChangeToken?: Prisma.EmailChangeTokenOmit
   watchlistItem?: Prisma.WatchlistItemOmit
-  fxRate?: Prisma.FxRateOmit
   goal?: Prisma.GoalOmit
   auditLog?: Prisma.AuditLogOmit
   apiKey?: Prisma.ApiKeyOmit

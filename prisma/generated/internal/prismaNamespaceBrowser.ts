@@ -60,7 +60,6 @@ export const ModelName = {
   VerificationToken: 'VerificationToken',
   EmailChangeToken: 'EmailChangeToken',
   WatchlistItem: 'WatchlistItem',
-  FxRate: 'FxRate',
   Goal: 'Goal',
   AuditLog: 'AuditLog',
   ApiKey: 'ApiKey'
@@ -213,17 +212,6 @@ export const WatchlistItemScalarFieldEnum = {
 } as const
 
 export type WatchlistItemScalarFieldEnum = (typeof WatchlistItemScalarFieldEnum)[keyof typeof WatchlistItemScalarFieldEnum]
-
-
-export const FxRateScalarFieldEnum = {
-  id: 'id',
-  base: 'base',
-  quote: 'quote',
-  rate: 'rate',
-  fetchedAt: 'fetchedAt'
-} as const
-
-export type FxRateScalarFieldEnum = (typeof FxRateScalarFieldEnum)[keyof typeof FxRateScalarFieldEnum]
 
 
 export const GoalScalarFieldEnum = {
