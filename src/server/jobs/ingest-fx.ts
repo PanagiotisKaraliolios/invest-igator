@@ -42,6 +42,10 @@ async function main() {
 	if (failed > 0) {
 		console.warn(`FX ingest failures (existing series left intact): ${failures.join(' | ')}`);
 	}
+	if (written === 0 && failed > 0) {
+		process.exitCode = 1;
+		console.error('FX ingest wrote nothing — all currencies failed.');
+	}
 }
 
 try {

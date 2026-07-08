@@ -4,11 +4,10 @@ import { env } from '@/env';
 import { currencySchema, SUPPORTED_CURRENCIES } from '@/lib/currency';
 import { isValidSymbol, normalizeSymbol, symbolSchema } from '@/lib/validation';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
-import { db } from '@/server/db';
 import { buildFxMatrixFromUsdLegs, convertAmount } from '@/server/fx';
 import { getLatestFxBars } from '@/server/fx-history';
 import { fluxStringLiteral, influxQueryApi, measurement } from '@/server/influx';
-import { fetchYahooDaily, ingestYahooSymbol } from '@/server/jobs/yahoo-lib';
+import { ingestYahooSymbol } from '@/server/jobs/yahoo-lib';
 
 /**
  * Financial Data Management Router
