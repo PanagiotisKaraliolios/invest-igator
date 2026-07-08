@@ -1,10 +1,12 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { env } from '@/env';
-import { currencySchema } from '@/lib/currency';
+import { currencySchema, SUPPORTED_CURRENCIES } from '@/lib/currency';
 import { isValidSymbol, normalizeSymbol, symbolSchema } from '@/lib/validation';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
 import { db } from '@/server/db';
+import { buildFxMatrixFromUsdLegs, convertAmount } from '@/server/fx';
+import { getLatestFxBars } from '@/server/fx-history';
 import { fluxStringLiteral, influxQueryApi, measurement } from '@/server/influx';
 import { fetchYahooDaily, ingestYahooSymbol } from '@/server/jobs/yahoo-lib';
 
@@ -250,31 +252,37 @@ export const financialDataRouter = createTRPCRouter({
 		.query(async ({ input, ctx }) => {
 			const { base, quote } = input;
 
-			const whereClause: any = {};
-			if (base) whereClause.base = base;
-			if (quote) whereClause.quote = quote;
+			const { asOf, legs } = await getLatestFxBars();
+			const matrix = buildFxMatrixFromUsdLegs(legs);
+			const fetchedAt = asOf ?? new Date(0);
 
-			// Get all FX rates with filters
-			const rates = await ctx.db.fxRate.findMany({
-				orderBy: [{ base: 'asc' }, { quote: 'asc' }],
-				where: whereClause
-			});
+			const rates: { base: string; fetchedAt: Date; id: string; quote: string; rate: number }[] = [];
+			for (const b of SUPPORTED_CURRENCIES) {
+				if (base && b !== base) continue;
+				for (const q of SUPPORTED_CURRENCIES) {
+					if (b === q) continue;
+					if (quote && q !== quote) continue;
+					try {
+						rates.push({
+							base: b,
+							fetchedAt,
+							id: `${b}-${q}`,
+							quote: q,
+							rate: convertAmount(1, b, q, matrix)
+						});
+					} catch {
+						// No path for this pair at the current rate — omit it.
+					}
+				}
+			}
 
-			// Get update frequency statistics
 			const now = new Date();
 			const stats = {
-				averageAgeHours: 0,
-				oldestUpdate: null as Date | null,
-				recentUpdate: null as Date | null,
+				averageAgeHours: asOf ? (now.getTime() - asOf.getTime()) / (1000 * 60 * 60) : 0,
+				oldestUpdate: asOf,
+				recentUpdate: asOf,
 				totalRates: rates.length
 			};
-
-			if (rates.length > 0) {
-				const ages = rates.map((r) => now.getTime() - r.fetchedAt.getTime());
-				stats.averageAgeHours = ages.reduce((a, b) => a + b, 0) / ages.length / (1000 * 60 * 60);
-				stats.oldestUpdate = new Date(Math.min(...rates.map((r) => r.fetchedAt.getTime())));
-				stats.recentUpdate = new Date(Math.max(...rates.map((r) => r.fetchedAt.getTime())));
-			}
 
 			// Log audit action
 			try {
