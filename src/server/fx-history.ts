@@ -56,10 +56,20 @@ export async function getLatestFxBars(): Promise<{ asOf: Date | null; legs: Map<
 	return { asOf, legs };
 }
 
-/** Current FX matrix from the latest bar per currency. */
+// The latest-bar FX matrix is identical for all users and changes only when the FX
+// ingest job runs (1-2x/day), so a short in-process TTL memo removes a repeated
+// Influx read from the request path at zero infra cost.
+let fxMatrixMemo: { data: FxMatrix; expiresAt: number } | null = null;
+const FX_MATRIX_TTL_MS = 10 * 60 * 1000;
+
+/** Current FX matrix from the latest bar per currency (memoized ~10 min). */
 export async function getFxMatrix(): Promise<FxMatrix> {
+	const now = Date.now();
+	if (fxMatrixMemo && fxMatrixMemo.expiresAt > now) return fxMatrixMemo.data;
 	const { legs } = await getLatestFxBars();
-	return buildFxMatrixFromUsdLegs(legs);
+	const data = buildFxMatrixFromUsdLegs(legs);
+	fxMatrixMemo = { data, expiresAt: now + FX_MATRIX_TTL_MS };
+	return data;
 }
 
 /**
