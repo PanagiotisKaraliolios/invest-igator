@@ -1,4 +1,3 @@
-import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { AppSidebar } from '@/app/(dashboard)/_components/app-sidebar';
 import DashboardBreadcrumbs from '@/app/(dashboard)/_components/breadcrumbs';
@@ -8,10 +7,10 @@ import { ImpersonationBanner } from '@/components/admin/impersonation-banner';
 import { Separator } from '@/components/ui/separator';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { env } from '@/env';
-import { auth } from '@/lib/auth';
+import { getServerSession } from '@/lib/auth/get-session';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-	const session = await auth.api.getSession({ headers: await headers() });
+	const session = await getServerSession();
 	if (!session?.user) redirect('/login');
 
 	// Check if current session is impersonated

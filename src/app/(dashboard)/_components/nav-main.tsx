@@ -1,6 +1,7 @@
 'use client';
 
 import { ChevronRight, type LucideIcon } from 'lucide-react';
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 
@@ -66,7 +67,12 @@ export function NavMain({
 										<SidebarMenuSubItem key={subItem.title}>
 											<SidebarMenuSubButton
 												isActive={isSubItemActive}
-												render={<a href={subItem.url} />}
+												render={
+													<Link
+														href={subItem.url}
+														prefetch={subItem.comingSoon ? false : undefined}
+													/>
+												}
 											>
 												<span>{subItem.title}</span>
 												{subItem.comingSoon && (

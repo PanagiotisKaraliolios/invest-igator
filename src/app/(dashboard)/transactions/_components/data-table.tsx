@@ -1,5 +1,6 @@
 'use client';
 
+import { keepPreviousData } from '@tanstack/react-query';
 import type { ColumnDef, SortingState, VisibilityState } from '@tanstack/react-table';
 import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
 import {
@@ -63,6 +64,13 @@ export function DataTable<TData extends { id?: string }, TValue>({ columns }: Da
 
 	// Filters and pagination state
 	const [symbol, setSymbol] = useState('');
+	// Fast local value for the search box; debounced into `symbol` (the query key)
+	// so typing stays instant and only fires one request on pause.
+	const [symbolInput, setSymbolInput] = useState('');
+	useEffect(() => {
+		const t = setTimeout(() => setSymbol(symbolInput), 300);
+		return () => clearTimeout(t);
+	}, [symbolInput]);
 	const [side, setSide] = useState<'ALL' | 'BUY' | 'SELL'>('ALL');
 	const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 	const [pageIndex, setPageIndex] = useState(0); // 0-based for TanStack
@@ -185,16 +193,19 @@ export function DataTable<TData extends { id?: string }, TValue>({ columns }: Da
 
 	const sortDir = sorting[0]?.desc ? 'desc' : 'asc';
 
-	const { data, isLoading, refetch, isFetching } = api.transactions.list.useQuery({
-		dateFrom: dateRange?.from ? dateRange.from.toISOString().slice(0, 10) : undefined,
-		dateTo: dateRange?.to ? dateRange.to.toISOString().slice(0, 10) : undefined,
-		page: pageIndex + 1,
-		pageSize,
-		side: side === 'ALL' ? undefined : side,
-		sortBy,
-		sortDir,
-		symbol: symbol || undefined
-	});
+	const { data, isLoading, refetch, isFetching, isPlaceholderData } = api.transactions.list.useQuery(
+		{
+			dateFrom: dateRange?.from ? dateRange.from.toISOString().slice(0, 10) : undefined,
+			dateTo: dateRange?.to ? dateRange.to.toISOString().slice(0, 10) : undefined,
+			page: pageIndex + 1,
+			pageSize,
+			side: side === 'ALL' ? undefined : side,
+			sortBy,
+			sortDir,
+			symbol: symbol || undefined
+		},
+		{ placeholderData: keepPreviousData }
+	);
 
 	const showSkeletons = isLoading || (isFetching && (data?.items?.length ?? 0) === 0);
 	const duplicates: DuplicateReview[] = [...(importResult?.duplicates ?? [])];
@@ -363,9 +374,9 @@ export function DataTable<TData extends { id?: string }, TValue>({ columns }: Da
 					<Input
 						className='h-9 pl-8'
 						data-testid='transactions-search'
-						onChange={(e) => setSymbol(e.target.value)}
+						onChange={(e) => setSymbolInput(e.target.value)}
 						placeholder='Search by symbol...'
-						value={symbol}
+						value={symbolInput}
 					/>
 				</div>
 
@@ -525,7 +536,7 @@ export function DataTable<TData extends { id?: string }, TValue>({ columns }: Da
 						Previous
 					</Button>
 					<Button
-						disabled={data ? (pageIndex + 1) * pageSize >= data.total : true}
+						disabled={isPlaceholderData || !data || (pageIndex + 1) * pageSize >= data.total}
 						onClick={() => table.nextPage()}
 						size='sm'
 						variant='outline'

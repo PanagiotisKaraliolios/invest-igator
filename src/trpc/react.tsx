@@ -2,7 +2,7 @@
 
 import { type QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { httpBatchLink, httpBatchStreamLink, loggerLink } from '@trpc/client';
+import { httpBatchStreamLink, loggerLink } from '@trpc/client';
 import { createTRPCReact } from '@trpc/react-query';
 import type { inferRouterInputs, inferRouterOutputs } from '@trpc/server';
 import { useState } from 'react';
@@ -50,7 +50,7 @@ export function TRPCReactProvider(props: { children: React.ReactNode }) {
 						process.env.NODE_ENV === 'development' ||
 						(op.direction === 'down' && op.result instanceof Error)
 				}),
-				httpBatchLink({
+				httpBatchStreamLink({
 					headers: () => {
 						const headers = new Headers();
 						headers.set('x-trpc-source', 'nextjs-react');
