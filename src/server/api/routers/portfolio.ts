@@ -42,7 +42,16 @@ export const portfolioRouter = createTRPCRouter({
 				throw new Error('Invalid date range');
 			}
 
-			const { full, unconvertedSymbols } = await getCachedFullSeries(userId, target, toLocalIsoDate(toDate));
+			// Clamp a future `to` to today. There is no data beyond today, and an unclamped
+			// far-future value (e.g. '9999-12-31') would make the inception->to day loop —
+			// and the durable cache row it writes — effectively unbounded. For every legitimate
+			// `to` (<= today) this is a no-op, so computed values are unchanged.
+			const todayIso = toLocalIsoDate(new Date());
+			const toIso = toLocalIsoDate(toDate);
+			const fromIso = toLocalIsoDate(fromDate);
+			const effectiveToIso = toIso > todayIso ? todayIso : toIso;
+
+			const { full, unconvertedSymbols } = await getCachedFullSeries(userId, target, effectiveToIso);
 
 			if (full.length === 0) {
 				return {
@@ -56,7 +65,7 @@ export const portfolioRouter = createTRPCRouter({
 			}
 
 			// Chart points for the selected range, relative to the first point within it.
-			const startIdx = full.findIndex((p) => p.date >= toLocalIsoDate(fromDate));
+			const startIdx = full.findIndex((p) => p.date >= fromIso);
 			const chartSlice = startIdx >= 0 ? full.slice(startIdx) : [];
 			const baseTwr = chartSlice[0]?.twrIndex ?? 100;
 			const baseMwr = chartSlice[0]?.mwrIndex ?? 100;

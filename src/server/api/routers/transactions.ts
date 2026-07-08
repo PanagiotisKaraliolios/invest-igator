@@ -66,7 +66,7 @@ export const transactionsRouter = createTRPCRouter({
 			});
 			if (toDelete.length === 0) return { deleted: 0 } as const;
 			const res = await ctx.db.transaction.deleteMany({ where: { id: { in: toDelete.map((t) => t.id) } } });
-			invalidatePortfolioCache(userId);
+			await invalidatePortfolioCache(userId);
 			return { deleted: res.count } as const;
 		}),
 
@@ -160,7 +160,7 @@ export const transactionsRouter = createTRPCRouter({
 					where: { userId_symbol: { symbol: created.symbol, userId } }
 				});
 			} catch {}
-			invalidatePortfolioCache(userId);
+			await invalidatePortfolioCache(userId);
 			return { id: created.id } as const;
 		}),
 
@@ -582,7 +582,7 @@ export const transactionsRouter = createTRPCRouter({
 				});
 			}
 
-			invalidatePortfolioCache(userId);
+			await invalidatePortfolioCache(userId);
 			return { duplicates, errors, imported: toInsert.length } as const;
 		}),
 	/**
@@ -709,7 +709,7 @@ export const transactionsRouter = createTRPCRouter({
 			});
 
 			const processedIds = prepared.map((r) => r.duplicateId);
-			invalidatePortfolioCache(userId);
+			await invalidatePortfolioCache(userId);
 			return { created: prepared.length, processedIds };
 		}),
 	/**
@@ -809,7 +809,7 @@ export const transactionsRouter = createTRPCRouter({
 			throw new TRPCError({ code: 'NOT_FOUND', message: 'Transaction not found' });
 		}
 		await ctx.db.transaction.delete({ where: { id: input.id } });
-		invalidatePortfolioCache(userId);
+		await invalidatePortfolioCache(userId);
 		return { success: true } as const;
 	}),
 
@@ -911,7 +911,7 @@ export const transactionsRouter = createTRPCRouter({
 					});
 				} catch {}
 			}
-			invalidatePortfolioCache(userId);
+			await invalidatePortfolioCache(userId);
 			return { success: true } as const;
 		})
 });

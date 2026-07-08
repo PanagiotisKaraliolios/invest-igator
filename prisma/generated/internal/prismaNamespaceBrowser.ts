@@ -55,6 +55,7 @@ export const ModelName = {
   Account: 'Account',
   Session: 'Session',
   User: 'User',
+  PortfolioCache: 'PortfolioCache',
   TwoFactor: 'TwoFactor',
   Verification: 'Verification',
   VerificationToken: 'VerificationToken',
@@ -154,6 +155,18 @@ export const UserScalarFieldEnum = {
 } as const
 
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
+
+
+export const PortfolioCacheScalarFieldEnum = {
+  userId: 'userId',
+  currency: 'currency',
+  day: 'day',
+  kind: 'kind',
+  payload: 'payload',
+  computedAt: 'computedAt'
+} as const
+
+export type PortfolioCacheScalarFieldEnum = (typeof PortfolioCacheScalarFieldEnum)[keyof typeof PortfolioCacheScalarFieldEnum]
 
 
 export const TwoFactorScalarFieldEnum = {
@@ -280,6 +293,13 @@ export const SortOrder = {
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
 
 
+export const JsonNullValueInput = {
+  JsonNull: JsonNull
+} as const
+
+export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
+
+
 export const QueryMode = {
   default: 'default',
   insensitive: 'insensitive'
@@ -294,4 +314,13 @@ export const NullsOrder = {
 } as const
 
 export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
+export const JsonNullValueFilter = {
+  DbNull: DbNull,
+  JsonNull: JsonNull,
+  AnyNull: AnyNull
+} as const
+
+export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
 

@@ -477,7 +477,7 @@ schema.measurementTagValues(
 
 			// A listing-currency change alters how this symbol's holdings are valued for
 			// every user, so clear all cached portfolio computations (rare admin action).
-			if (currency !== undefined) invalidateAllPortfolioCache();
+			if (currency !== undefined) await invalidateAllPortfolioCache();
 
 			// Log audit action
 			try {

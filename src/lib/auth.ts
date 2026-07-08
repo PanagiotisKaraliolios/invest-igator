@@ -191,7 +191,11 @@ export const auth = betterAuth({
 			secure: env.NODE_ENV === 'production'
 		},
 		cookieCache: {
-			enabled: false // Disabled to ensure fresh session checks
+			// Serve the session from a signed cookie for up to 60s to cut a Postgres
+			// lookup off most requests (multi-instance/multi-user throughput). Session
+			// revocation, role changes, and start/stop-impersonation propagate within 60s.
+			enabled: true,
+			maxAge: 60
 		},
 		expiresIn: 60 * 60 * 24 * 7, // 7 days
 		updateAge: 60 * 60 * 24 // 1 day (refresh session every day)
