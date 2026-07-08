@@ -274,6 +274,7 @@ export const financialDataRouter = createTRPCRouter({
 					}
 				}
 			}
+			rates.sort((a, b) => a.base.localeCompare(b.base) || a.quote.localeCompare(b.quote));
 
 			const now = new Date();
 			const stats = {

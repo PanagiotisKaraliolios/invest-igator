@@ -1,16 +1,12 @@
 import { z } from 'zod';
 import { env } from '@/env';
 import { type Currency, currencySchema } from '@/lib/currency';
+import { toLocalIsoDate } from '@/lib/date';
 import { isValidSymbol, normalizeSymbol } from '@/lib/validation';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
 import { convertAmount, type FxMatrix, MissingFxRateError } from '@/server/fx';
 import { buildFxByDate, getFxMatrix } from '@/server/fx-history';
 import { fluxStringLiteral, influxQueryApi, measurement } from '@/server/influx';
-
-type Holding = {
-	symbol: string;
-	quantity: number;
-};
 
 /**
  * Fetches the latest closing prices for an array of symbols from InfluxDB.
@@ -167,11 +163,9 @@ export const portfolioRouter = createTRPCRouter({
 				}
 
 				// Prepare continuous date list for filling (inception -> to)
-				const toIsoKey = (d: Date) =>
-					`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 				const dateKeys: string[] = [];
 				for (let d = new Date(inceptionDate); d <= toDate; d.setDate(d.getDate() + 1)) {
-					dateKeys.push(toIsoKey(d));
+					dateKeys.push(toLocalIsoDate(d));
 				}
 
 				// For each symbol: seed with last known close before fromDate, then forward-fill across range
@@ -180,7 +174,7 @@ export const portfolioRouter = createTRPCRouter({
 					const up = normalizeSymbol(s);
 					const src = raw.get(up) ?? new Map<string, number>();
 					// find seed: latest date < from in src
-					const isoFromKey = toIsoKey(fromDate);
+					const isoFromKey = toLocalIsoDate(fromDate);
 					let seedVal: number | undefined;
 					for (const [iso, val] of Array.from(src.entries()).sort((a, b) => (a[0] < b[0] ? -1 : 1))) {
 						if (iso < isoFromKey) {
@@ -203,7 +197,7 @@ export const portfolioRouter = createTRPCRouter({
 			}
 
 			// Per-date FX (forward-filled) so each valuation/transaction converts at its own date.
-			const fxByDate = await buildFxByDate(toIso(inceptionDate), toIso(toDate));
+			const fxByDate = await buildFxByDate(toLocalIsoDate(inceptionDate), toLocalIsoDate(toDate));
 
 			// Track latest transaction currency per symbol for valuation conversion
 			const latestTxCurrencyBySymbol = new Map<string, { currency: Currency; date: Date }>();
@@ -253,12 +247,9 @@ export const portfolioRouter = createTRPCRouter({
 			}
 
 			// Prepare date loop (inception -> to)
-			function toIso(d: Date) {
-				return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-			}
 			const datesFull: string[] = [];
 			for (let d = new Date(inceptionDate); d <= toDate; d.setDate(d.getDate() + 1)) {
-				datesFull.push(toIso(d));
+				datesFull.push(toLocalIsoDate(d));
 			}
 
 			// State across days
@@ -270,7 +261,7 @@ export const portfolioRouter = createTRPCRouter({
 			// Group transactions by day
 			const txByDay = new Map<string, typeof txs>();
 			for (const t of txs) {
-				const day = t.date ? toIso(new Date(t.date)) : undefined;
+				const day = t.date ? toLocalIsoDate(new Date(t.date)) : undefined;
 				if (!day) continue;
 				if (!txByDay.has(day)) txByDay.set(day, [] as any);
 				txByDay.get(day)!.push(t);
@@ -347,7 +338,7 @@ export const portfolioRouter = createTRPCRouter({
 			}
 
 			// Prepare chart points for selected range relative to the first point within that range
-			const startIdx = full.findIndex((p) => p.date >= toIso(fromDate));
+			const startIdx = full.findIndex((p) => p.date >= toLocalIsoDate(fromDate));
 			const chartSlice = startIdx >= 0 ? full.slice(startIdx) : [];
 			const baseTwr = chartSlice[0]?.twrIndex ?? 100;
 			const baseMwr = chartSlice[0]?.mwrIndex ?? 100;
@@ -417,14 +408,12 @@ export const portfolioRouter = createTRPCRouter({
 			});
 
 			// Cost basis converts at each transaction's date; current market value converts at the latest rate.
-			const structToIso = (d: Date) =>
-				`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-			const todayIso = structToIso(new Date());
+			const todayIso = toLocalIsoDate(new Date());
 			let minTxDate: Date | null = null;
 			for (const t of txs) {
 				if (t.date && (!minTxDate || t.date < minTxDate)) minTxDate = t.date;
 			}
-			const fxByDate = await buildFxByDate(minTxDate ? structToIso(minTxDate) : todayIso, todayIso);
+			const fxByDate = await buildFxByDate(minTxDate ? toLocalIsoDate(minTxDate) : todayIso, todayIso);
 			const fxLatest = await getFxMatrix();
 
 			const bySymbol = new Map<string, { symbol: string; quantity: number; totalCostInTarget: number }>();
@@ -444,7 +433,7 @@ export const portfolioRouter = createTRPCRouter({
 				// still accumulate the quantity but skip the cost contribution (flag instead).
 				let costAdjustment = 0;
 				try {
-					const txFx: FxMatrix = t.date ? (fxByDate.get(structToIso(new Date(t.date))) ?? {}) : fxLatest;
+					const txFx: FxMatrix = t.date ? (fxByDate.get(toLocalIsoDate(new Date(t.date))) ?? {}) : fxLatest;
 					const valueInTarget = convertAmount(transactionValue, transactionCurrency, target, txFx);
 					let feeInTarget = 0;
 					if (t.fee) {

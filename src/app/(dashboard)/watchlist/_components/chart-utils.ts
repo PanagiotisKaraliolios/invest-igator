@@ -11,6 +11,7 @@
  */
 
 import { differenceInCalendarDays } from 'date-fns';
+import { toLocalIsoDate } from '@/lib/date';
 
 /** Event categories supported for annotations on charts. */
 export type EventType = 'dividend' | 'split' | 'capitalGain';
@@ -174,7 +175,7 @@ export function generateSeries(symbol: string, points = 30): SeriesDatum[] {
 		d.setDate(d.getDate() - i);
 		out.push({
 			date: d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }),
-			iso: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
+			iso: toLocalIsoDate(d),
 			value: Math.round(price * 100) / 100
 		});
 	}

@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useCurrencySwitch } from '@/hooks/use-currency';
 import { type Currency, formatCurrency } from '@/lib/currency';
+import { toLocalIsoDate } from '@/lib/date';
 import { cn } from '@/lib/utils';
 import { api } from '@/trpc/react';
 
@@ -58,11 +59,11 @@ export default function PortfolioReturnsPage() {
 
 	const isoFrom = useMemo(() => {
 		const d = range.from ?? janFirst(now);
-		return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+		return toLocalIsoDate(d);
 	}, [range.from]);
 	const isoTo = useMemo(() => {
 		const d = range.to ?? now;
-		return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+		return toLocalIsoDate(d);
 	}, [range.to]);
 
 	const perfQuery = api.portfolio.performance.useQuery(

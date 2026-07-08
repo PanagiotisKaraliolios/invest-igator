@@ -1,4 +1,5 @@
 import { env } from '@/env';
+import { toLocalIsoDate } from '@/lib/date';
 import { assembleFxByDate, buildFxMatrixFromUsdLegs, type FxMatrix } from '@/server/fx';
 import { fluxStringLiteral, influxQueryApi, influxWriteApi, Point } from '@/server/influx';
 
@@ -6,10 +7,6 @@ const FX_MEASUREMENT = 'fx_rates';
 
 function sleep(ms: number) {
 	return new Promise((res) => setTimeout(res, ms));
-}
-
-function isoKey(d: Date): string {
-	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 /** Write one currency's USD-leg daily closes to the fx_rates measurement (idempotent by timestamp). */
@@ -70,8 +67,8 @@ export async function getFxMatrix(): Promise<FxMatrix> {
  * currency from the latest bar in a 7-day window before fromIso, then carries forward across gaps.
  */
 export async function buildFxByDate(fromIso: string, toIso: string): Promise<Map<string, FxMatrix>> {
-	// Parse as LOCAL midnight (no 'Z') so isoKey() round-trips the inputs and the produced date keys
-	// match the local-formatted day keys portfolio.performance uses for fxByDate.get(dateIso) lookups.
+	// Parse as LOCAL midnight (no 'Z') so toLocalIsoDate() round-trips the inputs and the produced date
+	// keys match the local-formatted day keys portfolio.performance uses for fxByDate.get(dateIso) lookups.
 	const fromDate = new Date(`${fromIso}T00:00:00`);
 	const toDate = new Date(`${toIso}T00:00:00`);
 	if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime()) || fromDate > toDate) {
@@ -99,7 +96,7 @@ export async function buildFxByDate(fromIso: string, toIso: string): Promise<Map
 	}
 
 	const dateKeys: string[] = [];
-	for (let d = new Date(fromDate); d <= toDate; d.setDate(d.getDate() + 1)) dateKeys.push(isoKey(d));
+	for (let d = new Date(fromDate); d <= toDate; d.setDate(d.getDate() + 1)) dateKeys.push(toLocalIsoDate(d));
 
 	return assembleFxByDate(rawByCurrency, dateKeys);
 }
