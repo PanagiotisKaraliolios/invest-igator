@@ -39,13 +39,24 @@ function Button({
 	className,
 	variant,
 	size,
+	nativeButton,
+	render,
 	...props
 }: Omit<React.ComponentProps<typeof ButtonPrimitive>, 'className'> &
 	VariantProps<typeof buttonVariants> & {
 		className?: string;
 	}) {
+	// A custom `render` element (e.g. a Next.js <Link>/<a>) is not a native <button>. Base UI defaults
+	// `nativeButton` to true and warns when the rendered element isn't a real <button>, so default it to
+	// false whenever a `render` is provided. Still overridable via an explicit `nativeButton` prop.
 	return (
-		<ButtonPrimitive className={cn(buttonVariants({ className, size, variant }))} data-slot='button' {...props} />
+		<ButtonPrimitive
+			className={cn(buttonVariants({ className, size, variant }))}
+			data-slot='button'
+			nativeButton={nativeButton ?? render === undefined}
+			render={render}
+			{...props}
+		/>
 	);
 }
 
