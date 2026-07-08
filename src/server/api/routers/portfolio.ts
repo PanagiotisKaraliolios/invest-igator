@@ -3,7 +3,8 @@ import { env } from '@/env';
 import { type Currency, currencySchema } from '@/lib/currency';
 import { isValidSymbol, normalizeSymbol } from '@/lib/validation';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
-import { convertAmount, getFxMatrix, MissingFxRateError } from '@/server/fx';
+import { convertAmount, type FxMatrix, MissingFxRateError } from '@/server/fx';
+import { buildFxByDate, getFxMatrix } from '@/server/fx-history';
 import { fluxStringLiteral, influxQueryApi, measurement } from '@/server/influx';
 
 type Holding = {
@@ -201,8 +202,8 @@ export const portfolioRouter = createTRPCRouter({
 				}
 			}
 
-			// Get FX for conversion to target currency (current snapshot)
-			const fx = await getFxMatrix();
+			// Per-date FX (forward-filled) so each valuation/transaction converts at its own date.
+			const fxByDate = await buildFxByDate(toIso(inceptionDate), toIso(toDate));
 
 			// Track latest transaction currency per symbol for valuation conversion
 			const latestTxCurrencyBySymbol = new Map<string, { currency: Currency; date: Date }>();
@@ -232,6 +233,7 @@ export const portfolioRouter = createTRPCRouter({
 			// Helper: value of a position vector at a date
 			function navOnDate(dateIso: string, qtyBySymbol: Map<string, number>): number {
 				let total = 0;
+				const fx: FxMatrix = fxByDate.get(dateIso) ?? {};
 				for (const [sym, qty] of qtyBySymbol) {
 					const p = priceBySymbolDate.get(sym)?.get(dateIso);
 					if (!p || qty <= 0) continue;
@@ -295,11 +297,12 @@ export const portfolioRouter = createTRPCRouter({
 					// Convert the cash flow to target currency. On a missing FX rate, flag the
 					// symbol and skip this flow's contribution (treat as 0) rather than crashing.
 					try {
-						const valueInTarget = convertAmount(transactionValue, transactionCurrency, target, fx);
+						const txFx: FxMatrix = fxByDate.get(day) ?? {};
+						const valueInTarget = convertAmount(transactionValue, transactionCurrency, target, txFx);
 						let feeInTarget = 0;
 						if (t.fee) {
 							const feeCurrency = (t.feeCurrency as string) ?? transactionCurrency;
-							feeInTarget = convertAmount(t.fee, feeCurrency, target, fx);
+							feeInTarget = convertAmount(t.fee, feeCurrency, target, txFx);
 						}
 						// External flow from investor to portfolio (positive = contribution, negative = withdrawal)
 						// BUY: you contribute cash to acquire assets; SELL: you withdraw cash from the portfolio
@@ -413,8 +416,16 @@ export const portfolioRouter = createTRPCRouter({
 				where: { userId }
 			});
 
-			// Get FX matrix for conversions
-			const fx = await getFxMatrix();
+			// Cost basis converts at each transaction's date; current market value converts at the latest rate.
+			const structToIso = (d: Date) =>
+				`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+			const todayIso = structToIso(new Date());
+			let minTxDate: Date | null = null;
+			for (const t of txs) {
+				if (t.date && (!minTxDate || t.date < minTxDate)) minTxDate = t.date;
+			}
+			const fxByDate = await buildFxByDate(minTxDate ? structToIso(minTxDate) : todayIso, todayIso);
+			const fxLatest = await getFxMatrix();
 
 			const bySymbol = new Map<string, { symbol: string; quantity: number; totalCostInTarget: number }>();
 			const latestTxCurrencyBySymbol = new Map<string, { currency: Currency; date: Date }>();
@@ -433,11 +444,12 @@ export const portfolioRouter = createTRPCRouter({
 				// still accumulate the quantity but skip the cost contribution (flag instead).
 				let costAdjustment = 0;
 				try {
-					const valueInTarget = convertAmount(transactionValue, transactionCurrency, target, fx);
+					const txFx: FxMatrix = t.date ? (fxByDate.get(structToIso(new Date(t.date))) ?? {}) : fxLatest;
+					const valueInTarget = convertAmount(transactionValue, transactionCurrency, target, txFx);
 					let feeInTarget = 0;
 					if (t.fee) {
 						const feeCurrency = (t.feeCurrency as string) ?? transactionCurrency;
-						feeInTarget = convertAmount(t.fee, feeCurrency, target, fx);
+						feeInTarget = convertAmount(t.fee, feeCurrency, target, txFx);
 					}
 					// For buys: add cost, for sells: subtract proceeds
 					costAdjustment = sign === 1 ? valueInTarget + feeInTarget : -(valueInTarget - feeInTarget);
@@ -498,7 +510,7 @@ export const portfolioRouter = createTRPCRouter({
 					let priceInTarget = price;
 					let unconverted = costUnconverted.has(h.symbol);
 					try {
-						priceInTarget = convertAmount(price, marketCurrency, target, fx);
+						priceInTarget = convertAmount(price, marketCurrency, target, fxLatest);
 					} catch (e) {
 						if (e instanceof MissingFxRateError) {
 							unconverted = true;
