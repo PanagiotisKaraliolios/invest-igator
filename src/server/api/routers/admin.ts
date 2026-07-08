@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { env } from '@/env';
 import { auth } from '@/lib/auth';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
+import { db } from '@/server/db';
 
 /**
  * Admin Router
@@ -32,17 +33,29 @@ const AUDIT_ACTIONS = {
 } as const;
 
 /**
+ * Authoritative role + ban lookup, straight from Postgres.
+ *
+ * `ctx.session` may be served from Better Auth's signed session cookie (cookieCache),
+ * so `session.user.role`/`banned` can be up to `cookieCache.maxAge` stale. Privilege
+ * decisions must never honor a stale role — otherwise a just-demoted admin could keep
+ * admin powers (impersonation, banning, audit logs) for the length of that window.
+ * Admin routes are rare, so this extra indexed read costs nothing at scale.
+ */
+async function assertCurrentRole(userId: string, allowed: readonly string[]) {
+	const current = await db.user.findUnique({ select: { banned: true, role: true }, where: { id: userId } });
+	if (!current || current.banned || !allowed.includes(current.role)) {
+		throw new TRPCError({
+			code: 'FORBIDDEN',
+			message: allowed.includes('admin') ? 'Admin access required' : 'Superadmin access required'
+		});
+	}
+}
+
+/**
  * Middleware to check if user is an admin (admin or superadmin)
  */
 const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
-	const userRole = ctx.session.user.role;
-
-	if (userRole !== 'superadmin' && userRole !== 'admin') {
-		throw new TRPCError({
-			code: 'FORBIDDEN',
-			message: 'Admin access required'
-		});
-	}
+	await assertCurrentRole(ctx.session.user.id, ['admin', 'superadmin']);
 	return next({ ctx });
 });
 
@@ -50,12 +63,7 @@ const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
  * Middleware to check if user is a superadmin
  */
 const superadminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
-	if (ctx.session.user.role !== 'superadmin') {
-		throw new TRPCError({
-			code: 'FORBIDDEN',
-			message: 'Superadmin access required'
-		});
-	}
+	await assertCurrentRole(ctx.session.user.id, ['superadmin']);
 	return next({ ctx });
 });
 

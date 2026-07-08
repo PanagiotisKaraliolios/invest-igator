@@ -47,19 +47,31 @@ async function cached<T>(
 		if (row && Date.now() - row.computedAt.getTime() < CACHE_TTL_MS) {
 			return row.payload as unknown as T;
 		}
-	} catch {
-		// cache read failed — fall through and compute fresh
+	} catch (e) {
+		// Never fail a request because the cache is unreadable — recompute. But log it:
+		// a persistent read failure is an invisible perf cliff otherwise.
+		console.error('[portfolio-cache] read failed', e);
 	}
 	const result = await compute();
 	try {
 		const payload = result as unknown as Prisma.InputJsonValue;
+		const computedAt = new Date();
 		await db.portfolioCache.upsert({
-			create: { currency, day, kind, payload, userId },
-			update: { computedAt: new Date(), payload },
+			create: { computedAt, currency, day, kind, payload, userId },
+			update: { computedAt, payload },
 			where
 		});
-	} catch {
-		// persisting is best-effort; return the fresh result regardless
+		// Bound growth: nothing else prunes this table. Drop this user's rows that can no
+		// longer be served — older than the TTL, or written under a previous PAYLOAD_VERSION.
+		await db.portfolioCache.deleteMany({
+			where: { computedAt: { lt: new Date(computedAt.getTime() - CACHE_TTL_MS) }, userId }
+		});
+	} catch (e) {
+		// Persisting is best-effort. Two instances racing the same key hit a unique
+		// violation (P2002) — benign. Anything else is real and must not stay silent.
+		if ((e as { code?: unknown } | null)?.code !== 'P2002') {
+			console.error('[portfolio-cache] write failed', e);
+		}
 	}
 	return result;
 }
