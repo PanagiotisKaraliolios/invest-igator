@@ -31,7 +31,7 @@ export type WatchlistItemMinAggregateOutputType = {
   displaySymbol: string | null
   description: string | null
   type: string | null
-  currency: $Enums.Currency | null
+  currency: string | null
   createdAt: Date | null
   starred: boolean | null
 }
@@ -43,7 +43,7 @@ export type WatchlistItemMaxAggregateOutputType = {
   displaySymbol: string | null
   description: string | null
   type: string | null
-  currency: $Enums.Currency | null
+  currency: string | null
   createdAt: Date | null
   starred: boolean | null
 }
@@ -178,7 +178,7 @@ export type WatchlistItemGroupByOutputType = {
   displaySymbol: string | null
   description: string | null
   type: string | null
-  currency: $Enums.Currency
+  currency: string
   createdAt: Date
   starred: boolean
   _count: WatchlistItemCountAggregateOutputType | null
@@ -211,7 +211,7 @@ export type WatchlistItemWhereInput = {
   displaySymbol?: Prisma.StringNullableFilter<"WatchlistItem"> | string | null
   description?: Prisma.StringNullableFilter<"WatchlistItem"> | string | null
   type?: Prisma.StringNullableFilter<"WatchlistItem"> | string | null
-  currency?: Prisma.EnumCurrencyFilter<"WatchlistItem"> | $Enums.Currency
+  currency?: Prisma.StringFilter<"WatchlistItem"> | string
   createdAt?: Prisma.DateTimeFilter<"WatchlistItem"> | Date | string
   starred?: Prisma.BoolFilter<"WatchlistItem"> | boolean
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
@@ -241,7 +241,7 @@ export type WatchlistItemWhereUniqueInput = Prisma.AtLeast<{
   displaySymbol?: Prisma.StringNullableFilter<"WatchlistItem"> | string | null
   description?: Prisma.StringNullableFilter<"WatchlistItem"> | string | null
   type?: Prisma.StringNullableFilter<"WatchlistItem"> | string | null
-  currency?: Prisma.EnumCurrencyFilter<"WatchlistItem"> | $Enums.Currency
+  currency?: Prisma.StringFilter<"WatchlistItem"> | string
   createdAt?: Prisma.DateTimeFilter<"WatchlistItem"> | Date | string
   starred?: Prisma.BoolFilter<"WatchlistItem"> | boolean
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
@@ -272,7 +272,7 @@ export type WatchlistItemScalarWhereWithAggregatesInput = {
   displaySymbol?: Prisma.StringNullableWithAggregatesFilter<"WatchlistItem"> | string | null
   description?: Prisma.StringNullableWithAggregatesFilter<"WatchlistItem"> | string | null
   type?: Prisma.StringNullableWithAggregatesFilter<"WatchlistItem"> | string | null
-  currency?: Prisma.EnumCurrencyWithAggregatesFilter<"WatchlistItem"> | $Enums.Currency
+  currency?: Prisma.StringWithAggregatesFilter<"WatchlistItem"> | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"WatchlistItem"> | Date | string
   starred?: Prisma.BoolWithAggregatesFilter<"WatchlistItem"> | boolean
 }
@@ -283,7 +283,7 @@ export type WatchlistItemCreateInput = {
   displaySymbol?: string | null
   description?: string | null
   type?: string | null
-  currency?: $Enums.Currency
+  currency?: string
   createdAt?: Date | string
   starred?: boolean
   user: Prisma.UserCreateNestedOneWithoutWatchlistInput
@@ -296,7 +296,7 @@ export type WatchlistItemUncheckedCreateInput = {
   displaySymbol?: string | null
   description?: string | null
   type?: string | null
-  currency?: $Enums.Currency
+  currency?: string
   createdAt?: Date | string
   starred?: boolean
 }
@@ -307,7 +307,7 @@ export type WatchlistItemUpdateInput = {
   displaySymbol?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   starred?: Prisma.BoolFieldUpdateOperationsInput | boolean
   user?: Prisma.UserUpdateOneRequiredWithoutWatchlistNestedInput
@@ -320,7 +320,7 @@ export type WatchlistItemUncheckedUpdateInput = {
   displaySymbol?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   starred?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
@@ -332,7 +332,7 @@ export type WatchlistItemCreateManyInput = {
   displaySymbol?: string | null
   description?: string | null
   type?: string | null
-  currency?: $Enums.Currency
+  currency?: string
   createdAt?: Date | string
   starred?: boolean
 }
@@ -343,7 +343,7 @@ export type WatchlistItemUpdateManyMutationInput = {
   displaySymbol?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   starred?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
@@ -355,7 +355,7 @@ export type WatchlistItemUncheckedUpdateManyInput = {
   displaySymbol?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   starred?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
@@ -459,7 +459,7 @@ export type WatchlistItemCreateWithoutUserInput = {
   displaySymbol?: string | null
   description?: string | null
   type?: string | null
-  currency?: $Enums.Currency
+  currency?: string
   createdAt?: Date | string
   starred?: boolean
 }
@@ -470,7 +470,7 @@ export type WatchlistItemUncheckedCreateWithoutUserInput = {
   displaySymbol?: string | null
   description?: string | null
   type?: string | null
-  currency?: $Enums.Currency
+  currency?: string
   createdAt?: Date | string
   starred?: boolean
 }
@@ -511,7 +511,7 @@ export type WatchlistItemScalarWhereInput = {
   displaySymbol?: Prisma.StringNullableFilter<"WatchlistItem"> | string | null
   description?: Prisma.StringNullableFilter<"WatchlistItem"> | string | null
   type?: Prisma.StringNullableFilter<"WatchlistItem"> | string | null
-  currency?: Prisma.EnumCurrencyFilter<"WatchlistItem"> | $Enums.Currency
+  currency?: Prisma.StringFilter<"WatchlistItem"> | string
   createdAt?: Prisma.DateTimeFilter<"WatchlistItem"> | Date | string
   starred?: Prisma.BoolFilter<"WatchlistItem"> | boolean
 }
@@ -522,7 +522,7 @@ export type WatchlistItemCreateManyUserInput = {
   displaySymbol?: string | null
   description?: string | null
   type?: string | null
-  currency?: $Enums.Currency
+  currency?: string
   createdAt?: Date | string
   starred?: boolean
 }
@@ -533,7 +533,7 @@ export type WatchlistItemUpdateWithoutUserInput = {
   displaySymbol?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   starred?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
@@ -544,7 +544,7 @@ export type WatchlistItemUncheckedUpdateWithoutUserInput = {
   displaySymbol?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   starred?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
@@ -555,7 +555,7 @@ export type WatchlistItemUncheckedUpdateManyWithoutUserInput = {
   displaySymbol?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  currency?: Prisma.EnumCurrencyFieldUpdateOperationsInput | $Enums.Currency
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   starred?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
@@ -636,7 +636,7 @@ export type $WatchlistItemPayload<ExtArgs extends runtime.Types.Extensions.Inter
     displaySymbol: string | null
     description: string | null
     type: string | null
-    currency: $Enums.Currency
+    currency: string
     createdAt: Date
     starred: boolean
   }, ExtArgs["result"]["watchlistItem"]>
@@ -1069,7 +1069,7 @@ export interface WatchlistItemFieldRefs {
   readonly displaySymbol: Prisma.FieldRef<"WatchlistItem", 'String'>
   readonly description: Prisma.FieldRef<"WatchlistItem", 'String'>
   readonly type: Prisma.FieldRef<"WatchlistItem", 'String'>
-  readonly currency: Prisma.FieldRef<"WatchlistItem", 'Currency'>
+  readonly currency: Prisma.FieldRef<"WatchlistItem", 'String'>
   readonly createdAt: Prisma.FieldRef<"WatchlistItem", 'DateTime'>
   readonly starred: Prisma.FieldRef<"WatchlistItem", 'Boolean'>
 }

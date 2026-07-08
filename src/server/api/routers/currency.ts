@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers';
-import { z } from 'zod';
+import { currencySchema } from '@/lib/currency';
 import { protectedProcedure } from '@/server/api/trpc';
 
 /**
@@ -45,17 +45,15 @@ export const currencyProcedures = {
 	 * @example
 	 * await api.currency.setCurrency.mutate('EUR');
 	 */
-	setCurrency: protectedProcedure
-		.input(z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']))
-		.mutation(async ({ ctx, input }) => {
-			await ctx.db.user.update({
-				data: { currency: input },
-				select: { id: true },
-				where: { id: ctx.session.user.id }
-			});
-			// Mirror to cookie for SSR picks
-			const jar = await cookies();
-			jar.set('ui-currency', input, { maxAge: 60 * 60 * 24 * 365, path: '/', sameSite: 'lax' });
-			return { ok: true } as const;
-		})
+	setCurrency: protectedProcedure.input(currencySchema).mutation(async ({ ctx, input }) => {
+		await ctx.db.user.update({
+			data: { currency: input },
+			select: { id: true },
+			where: { id: ctx.session.user.id }
+		});
+		// Mirror to cookie for SSR picks
+		const jar = await cookies();
+		jar.set('ui-currency', input, { maxAge: 60 * 60 * 24 * 365, path: '/', sameSite: 'lax' });
+		return { ok: true } as const;
+	})
 };

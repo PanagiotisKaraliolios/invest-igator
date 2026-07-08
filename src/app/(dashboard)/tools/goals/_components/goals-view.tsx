@@ -16,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
-import { type Currency, formatCurrency, supportedCurrencies } from '@/lib/currency';
+import { type Currency, currencySchema, formatCurrency, supportedCurrencies } from '@/lib/currency';
 import { cn } from '@/lib/utils';
 import { api, type RouterOutputs } from '@/trpc/react';
 
@@ -25,7 +25,7 @@ type Goal = RouterOutputs['goals']['list'][number];
 const schema = z.object({
 	note: z.string().optional(),
 	targetAmount: z.coerce.number().gt(0, 'Target amount must be greater than 0'),
-	targetCurrency: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']).default('USD'),
+	targetCurrency: currencySchema.default('USD'),
 	targetDate: z.string().optional(),
 	title: z.string().min(1, 'Title is required')
 });

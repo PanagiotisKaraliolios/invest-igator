@@ -23,15 +23,3 @@ export const Theme = {
 } as const
 
 export type Theme = (typeof Theme)[keyof typeof Theme]
-
-
-export const Currency = {
-  EUR: 'EUR',
-  USD: 'USD',
-  GBP: 'GBP',
-  HKD: 'HKD',
-  CHF: 'CHF',
-  RUB: 'RUB'
-} as const
-
-export type Currency = (typeof Currency)[keyof typeof Currency]

@@ -7,9 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { type Currency, SUPPORTED_CURRENCIES } from '@/lib/currency';
 import { api } from '@/trpc/react';
-
-type Currency = 'EUR' | 'USD' | 'GBP' | 'HKD' | 'CHF' | 'RUB';
 
 export function FxRatesPanel() {
 	const [baseFilter, setBaseFilter] = useState<Currency | undefined>();
@@ -93,12 +92,11 @@ export function FxRatesPanel() {
 							<SelectItem onClick={() => setBaseFilter(undefined)} value='all'>
 								All Base Currencies
 							</SelectItem>
-							<SelectItem value='USD'>USD</SelectItem>
-							<SelectItem value='EUR'>EUR</SelectItem>
-							<SelectItem value='GBP'>GBP</SelectItem>
-							<SelectItem value='HKD'>HKD</SelectItem>
-							<SelectItem value='CHF'>CHF</SelectItem>
-							<SelectItem value='RUB'>RUB</SelectItem>
+							{SUPPORTED_CURRENCIES.map((c) => (
+								<SelectItem key={c} value={c}>
+									{c}
+								</SelectItem>
+							))}
 						</SelectContent>
 					</Select>
 				</div>
@@ -111,12 +109,11 @@ export function FxRatesPanel() {
 							<SelectItem onClick={() => setQuoteFilter(undefined)} value='all'>
 								All Quote Currencies
 							</SelectItem>
-							<SelectItem value='USD'>USD</SelectItem>
-							<SelectItem value='EUR'>EUR</SelectItem>
-							<SelectItem value='GBP'>GBP</SelectItem>
-							<SelectItem value='HKD'>HKD</SelectItem>
-							<SelectItem value='CHF'>CHF</SelectItem>
-							<SelectItem value='RUB'>RUB</SelectItem>
+							{SUPPORTED_CURRENCIES.map((c) => (
+								<SelectItem key={c} value={c}>
+									{c}
+								</SelectItem>
+							))}
 						</SelectContent>
 					</Select>
 				</div>

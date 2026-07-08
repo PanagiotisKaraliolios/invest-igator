@@ -24,9 +24,9 @@ model Transaction {
   side          TransactionSide
   quantity      Float
   price         Float
-  priceCurrency Currency        @default(USD)
+  priceCurrency String          @default("USD")
   fee           Float?
-  feeCurrency   Currency? // optional; if null, treat as priceCurrency
+  feeCurrency   String? // optional; if null, treat as priceCurrency
   note          String?
   createdAt     DateTime        @default(now())
 
@@ -85,7 +85,7 @@ model User {
   banReason              String? // Admin plugin: reason for ban
   banExpires             DateTime? // Admin plugin: when ban expires
   theme                  Theme              @default(LIGHT)
-  currency               Currency           @default(USD)
+  currency               String             @default("USD")
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt
   accounts               Account[]
@@ -150,15 +150,6 @@ enum Theme {
   DARK
 }
 
-enum Currency {
-  EUR
-  USD
-  GBP
-  HKD
-  CHF
-  RUB
-}
-
 model WatchlistItem {
   id            String   @id @default(cuid())
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -167,7 +158,7 @@ model WatchlistItem {
   displaySymbol String?
   description   String?
   type          String?
-  currency      Currency @default(USD)
+  currency      String   @default("USD")
   createdAt     DateTime @default(now())
   starred       Boolean  @default(false)
 
@@ -179,8 +170,8 @@ model WatchlistItem {
 // Store latest FX rates by base->quote with timestamp
 model FxRate {
   id        String   @id @default(cuid())
-  base      Currency
-  quote     Currency
+  base      String
+  quote     String
   rate      Float
   fetchedAt DateTime @default(now())
 
@@ -195,7 +186,7 @@ model Goal {
   userId         String
   title          String
   targetAmount   Float
-  targetCurrency Currency  @default(USD)
+  targetCurrency String    @default("USD")
   targetDate     DateTime?
   note           String?
   createdAt      DateTime  @default(now())

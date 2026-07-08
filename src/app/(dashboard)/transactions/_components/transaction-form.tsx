@@ -13,7 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useDebounce } from '@/hooks/use-debounce';
-import { supportedCurrencies } from '@/lib/currency';
+import { currencySchema, supportedCurrencies } from '@/lib/currency';
 import { cn } from '@/lib/utils';
 import { api, type RouterOutputs } from '@/trpc/react';
 
@@ -27,10 +27,10 @@ type SymbolSuggestionsHandle = {
 const schema = z.object({
 	date: z.string().min(1),
 	fee: z.string().optional(),
-	feeCurrency: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']).optional(),
+	feeCurrency: currencySchema.optional(),
 	note: z.string().optional(),
 	price: z.coerce.number().gt(0),
-	priceCurrency: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']).default('USD'),
+	priceCurrency: currencySchema.default('USD'),
 	quantity: z.coerce.number().gt(0),
 	side: z.enum(['BUY', 'SELL']),
 	symbol: z.string().min(1)

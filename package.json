@@ -82,6 +82,7 @@
 		"check": "biome check ./src",
 		"check:unsafe": "biome check --write --unsafe ./src",
 		"check:write": "biome check --write ./src",
+		"currency:backfill": "bun run src/server/jobs/backfill-currency.ts",
 		"db:generate": "prisma migrate dev",
 		"db:migrate": "prisma migrate deploy",
 		"db:mock": "bun prisma/mock.ts",

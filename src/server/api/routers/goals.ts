@@ -1,9 +1,7 @@
-import type { Currency } from '@prisma/generated';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
+import { type Currency, currencySchema } from '@/lib/currency';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
-
-const supportedCurrencies: Currency[] = ['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB'];
 
 /**
  * Goals router - manages user financial goals.
@@ -47,7 +45,7 @@ export const goalsRouter = createTRPCRouter({
 			z.object({
 				note: z.string().optional(),
 				targetAmount: z.number().positive('Target amount must be greater than 0'),
-				targetCurrency: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']).default('USD'),
+				targetCurrency: currencySchema.default('USD'),
 				targetDate: z.string().optional(), // YYYY-MM-DD (client uses <input type="date">)
 				title: z.string().min(1, 'Title is required')
 			})
@@ -137,7 +135,7 @@ export const goalsRouter = createTRPCRouter({
 				id: z.string().min(1),
 				note: z.string().nullable().optional(),
 				targetAmount: z.number().positive().optional(),
-				targetCurrency: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']).optional(),
+				targetCurrency: currencySchema.optional(),
 				targetDate: z.string().nullable().optional(),
 				title: z.string().min(1).optional()
 			})

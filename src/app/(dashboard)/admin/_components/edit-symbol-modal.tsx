@@ -16,10 +16,11 @@ import {
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { currencySchema, SUPPORTED_CURRENCIES } from '@/lib/currency';
 import { api } from '@/trpc/react';
 
 const editSymbolSchema = z.object({
-	currency: z.enum(['EUR', 'USD', 'GBP', 'HKD', 'CHF', 'RUB']),
+	currency: currencySchema,
 	description: z.string().optional(),
 	displaySymbol: z.string().optional(),
 	type: z.string().optional()
@@ -140,12 +141,11 @@ export function EditSymbolModal({ symbol, onClose }: EditSymbolModalProps) {
 								<SelectValue placeholder='Select currency' />
 							</SelectTrigger>
 							<SelectContent>
-								<SelectItem value='USD'>USD</SelectItem>
-								<SelectItem value='EUR'>EUR</SelectItem>
-								<SelectItem value='GBP'>GBP</SelectItem>
-								<SelectItem value='HKD'>HKD</SelectItem>
-								<SelectItem value='CHF'>CHF</SelectItem>
-								<SelectItem value='RUB'>RUB</SelectItem>
+								{SUPPORTED_CURRENCIES.map((c) => (
+									<SelectItem key={c} value={c}>
+										{c}
+									</SelectItem>
+								))}
 							</SelectContent>
 						</Select>
 						<FieldError errors={[errors.currency]} />

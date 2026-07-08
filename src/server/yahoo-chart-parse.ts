@@ -1,3 +1,4 @@
+import { normalizeYahooCurrency } from '@/server/currency-normalize';
 import type { DailyBar } from '@/server/influx';
 
 export type ChartStatus = 'found' | 'empty' | 'not-found';
@@ -60,7 +61,7 @@ export function classifyChartResponse(json: YahooChartResponse): {
 		return { bars: [], capitalGains: [], dividends: [], splits: [], status: 'not-found' };
 	}
 
-	const currency = res.meta?.currency;
+	const { currency, scale } = normalizeYahooCurrency(res.meta?.currency);
 	const quote = res.indicators?.quote?.[0];
 	const gmtoffset = res.meta?.gmtoffset;
 	const bars: DailyBar[] = [];
@@ -76,10 +77,10 @@ export function classifyChartResponse(json: YahooChartResponse): {
 			if (o == null || h == null || l == null || c == null) continue;
 			if ([o, h, l, c].some((n) => Number.isNaN(Number(n)))) continue;
 			bars.push({
-				close: Number(c),
-				high: Number(h),
-				low: Number(l),
-				open: Number(o),
+				close: Number(c) * scale,
+				high: Number(h) * scale,
+				low: Number(l) * scale,
+				open: Number(o) * scale,
 				time: toDateStringFromEpochSec(ts, gmtoffset ?? 0),
 				volume: Math.max(0, Math.round(Number(v ?? 0)))
 			});
@@ -94,7 +95,7 @@ export function classifyChartResponse(json: YahooChartResponse): {
 		const amount = Number(ev.amount ?? Number.NaN);
 		const dateSec = ev.date ?? Number(key);
 		if (!Number.isFinite(amount) || !Number.isFinite(dateSec)) continue;
-		dividends.push({ amount, date: toDateStringFromEpochSec(dateSec, gmtoffset ?? 0) });
+		dividends.push({ amount: amount * scale, date: toDateStringFromEpochSec(dateSec, gmtoffset ?? 0) });
 	}
 	dividends.sort((a, b) => a.date.localeCompare(b.date));
 
@@ -130,7 +131,7 @@ export function classifyChartResponse(json: YahooChartResponse): {
 		const amount = Number(ev.amount ?? Number.NaN);
 		const dateSec = ev.date ?? Number(key);
 		if (!Number.isFinite(amount) || !Number.isFinite(dateSec)) continue;
-		capitalGains.push({ amount, date: toDateStringFromEpochSec(dateSec, gmtoffset ?? 0) });
+		capitalGains.push({ amount: amount * scale, date: toDateStringFromEpochSec(dateSec, gmtoffset ?? 0) });
 	}
 	capitalGains.sort((a, b) => a.date.localeCompare(b.date));
 
