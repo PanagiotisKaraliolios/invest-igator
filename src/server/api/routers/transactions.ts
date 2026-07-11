@@ -1,6 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { type Currency, currencySchema, SUPPORTED_CURRENCIES } from '@/lib/currency';
+import { parseIsoDateUtc } from '@/lib/date';
 import { isValidSymbol as isValidSymbolFormat, normalizeSymbol, symbolSchema } from '@/lib/validation';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
 import { sleep } from '@/server/jobs/yahoo-lib';
@@ -412,8 +413,8 @@ export const transactionsRouter = createTRPCRouter({
 					const noteRaw = byColumn('note').trim();
 					const dateRaw = byColumn('date').trim();
 					if (!dateRaw) throw new Error('Date is required.');
-					const date = new Date(`${dateRaw}T00:00:00Z`);
-					if (Number.isNaN(date.getTime())) {
+					const date = parseIsoDateUtc(dateRaw);
+					if (!date) {
 						throw new Error(`Invalid date "${dateRaw}".`);
 					}
 
@@ -639,8 +640,8 @@ export const transactionsRouter = createTRPCRouter({
 						message: `Unsupported price currency "${item.priceCurrency}".`
 					});
 				}
-				const date = new Date(`${item.date}T00:00:00Z`);
-				if (Number.isNaN(date.getTime())) {
+				const date = parseIsoDateUtc(item.date);
+				if (!date) {
 					throw new TRPCError({
 						code: 'BAD_REQUEST',
 						message: `Invalid date "${item.date}".`
