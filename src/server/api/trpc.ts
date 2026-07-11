@@ -42,8 +42,9 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
 			const apiKey = opts.headers.get('x-api-key');
 
 			if (apiKey) {
-				// Extract identifying info for lookup, e.g., start/prefix
-				const keyStart = apiKey.slice(0, 6); // or include prefix length if required
+				// Identifying lookup shortcut. Must match generateApiKey's stored `start`,
+				// which is a fixed `key.slice(0, 6)` (prefix included, no extra length).
+				const keyStart = apiKey.slice(0, 6);
 
 				const candidateApiKeys = await db.apiKey.findMany({
 					include: { user: true },
