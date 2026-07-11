@@ -133,6 +133,66 @@ describe('buildFullSeries', () => {
 		expect(full[2]!.nav).toBe(1100); // 10 × 110
 	});
 
+	test('values an unpriced-buy position at cost — no crater to 0, no spurious gain', () => {
+		// Everything is $10 and stays $10 → the true time-weighted return is 0% throughout.
+		// AAPL is priced every day; NEWCO is bought on day 2 but its first market bar only
+		// appears on day 3 (ingestion pending, or bought at/before its first listed bar).
+		//
+		// navOnDate values NEWCO at its last transaction price on day 2, so the position
+		// enters NAV the same day its purchase enters `flow`. That keeps the daily return at
+		// 0% instead of (a) cratering to -100% when the buy is in flow but not NAV, or
+		// (b) spiking to +100% when NEWCO is dropped from NAV and then reappears without a
+		// matching flow once a bar arrives. Extends to day 4 to prove the level is not
+		// permanently shifted either way.
+		const { full, unconvertedSymbols } = buildFullSeries({
+			fxByDate: emptyFx,
+			inceptionDate: day(2024, 1, 1),
+			latestTxCurrencyBySymbol: new Map([
+				['AAPL', { currency: 'USD' as Currency, date: day(2024, 1, 1) }],
+				['NEWCO', { currency: 'USD' as Currency, date: day(2024, 1, 2) }]
+			]),
+			priceBySymbolDate: new Map([
+				[
+					'AAPL',
+					new Map([
+						['2024-01-01', 10],
+						['2024-01-02', 10],
+						['2024-01-03', 10],
+						['2024-01-04', 10]
+					])
+				],
+				// No bar on 2024-01-02, the day NEWCO is bought; first bar is 2024-01-03.
+				[
+					'NEWCO',
+					new Map([
+						['2024-01-03', 10],
+						['2024-01-04', 10]
+					])
+				]
+			]),
+			symbolCurrencies: new Map([
+				['AAPL', 'USD'],
+				['NEWCO', 'USD']
+			]),
+			target: 'USD' as Currency,
+			toDate: day(2024, 1, 4),
+			txs: [
+				tx({ date: day(2024, 1, 1), price: 10, quantity: 100, symbol: 'AAPL' }),
+				tx({ date: day(2024, 1, 2), price: 10, quantity: 100, symbol: 'NEWCO' })
+			]
+		});
+
+		// Valuing at cost is not an FX failure, so nothing is flagged unconverted.
+		expect(unconvertedSymbols).toEqual([]);
+		// NEWCO is in NAV at cost from its buy day (day 2) onward.
+		expect(full.map((p) => p.nav)).toEqual([1000, 2000, 2000, 2000]);
+		// A flat, correct 0% return every day — no crater, no +100% spike, no level shift.
+		for (const p of full) {
+			expect(p.twrIndex).toBeCloseTo(100, 6);
+			expect(p.mwrIndex).toBeCloseTo(100, 6);
+		}
+	});
+
 	test('returns an empty series when there are no dates', () => {
 		const { full, unconvertedSymbols } = buildFullSeries({
 			fxByDate: emptyFx,
