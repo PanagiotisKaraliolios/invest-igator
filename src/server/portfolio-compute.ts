@@ -155,17 +155,40 @@ export function buildFullSeries(params: {
 		target
 	} = params;
 	const unconvertedSymbols = new Set<string>();
+	// Most recent transaction price (in its own currency) per symbol, updated as the day
+	// loop advances. Lets navOnDate value a position on days it has no market bar yet.
+	const lastTxPriceBySymbol = new Map<string, { currency: Currency; price: number }>();
 
-	// Helper: value of a position vector at a date
+	// Helper: value of a position vector at a date.
+	//
+	// A held symbol with no market bar for the day — bought at/before its first listed
+	// bar, or ingestion still pending — is valued at the price of its most recent
+	// transaction so NAV stays consistent with the cash flow that acquired it. Without
+	// this the position is absent from NAV while its purchase sits in `flow`, which
+	// craters the daily return, then reappears as a spurious gain the day a bar arrives.
 	function navOnDate(dateIso: string, qtyBySymbol: Map<string, number>): number {
 		let total = 0;
 		const fx: FxMatrix = fxByDate.get(dateIso) ?? {};
 		for (const [sym, qty] of qtyBySymbol) {
-			const p = priceBySymbolDate.get(sym)?.get(dateIso);
-			if (!p || qty <= 0) continue;
-			const marketCurrency = symbolCurrencies.get(sym) ?? latestTxCurrencyBySymbol.get(sym)?.currency ?? 'USD';
+			if (qty <= 0) continue;
+			const marketPrice = priceBySymbolDate.get(sym)?.get(dateIso);
+			let price: number;
+			let currency: string;
+			if (marketPrice) {
+				price = marketPrice;
+				currency = symbolCurrencies.get(sym) ?? latestTxCurrencyBySymbol.get(sym)?.currency ?? 'USD';
+			} else {
+				// No usable market price. Fall back to the price we last transacted at (its
+				// currency), which is exactly what `flow` was booked at — keeping NAV and the
+				// cash flow on the same basis. qty > 0 implies a prior buy, so `cost` exists;
+				// the guard is defensive.
+				const cost = lastTxPriceBySymbol.get(sym);
+				if (!cost) continue;
+				price = cost.price;
+				currency = cost.currency;
+			}
 			try {
-				total += qty * convertAmount(p, marketCurrency, target, fx);
+				total += qty * convertAmount(price, currency, target, fx);
 			} catch (e) {
 				if (e instanceof MissingFxRateError) {
 					unconvertedSymbols.add(sym);
@@ -216,6 +239,10 @@ export function buildFullSeries(params: {
 			// accounting is currency-independent, so it must happen regardless of FX.
 			const prevQty = qtyBySymbol.get(up) ?? 0;
 			qtyBySymbol.set(up, prevQty + (sign === 1 ? t.quantity : -t.quantity));
+			// Remember this transaction's price so navOnDate can value the position on days
+			// it has no market bar yet (keeps NAV consistent with this cash flow). The flow
+			// itself is always booked — it never needed a market price, only an FX rate.
+			lastTxPriceBySymbol.set(up, { currency: transactionCurrency, price: t.price });
 			// Convert the cash flow to target currency. On a missing FX rate, flag the
 			// symbol and skip this flow's contribution (treat as 0) rather than crashing.
 			try {
