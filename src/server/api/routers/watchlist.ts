@@ -298,7 +298,15 @@ export const watchlistRouter = createTRPCRouter({
 				if (!bucket) continue;
 				const t = String(r._time);
 				if (!t) continue;
-				bucket.push({ date: t.slice(0, 10), value: Number(r._value) });
+				// Windows before a symbol's first bar have no previous value to carry
+				// forward, so `fill(usePrevious: true)` leaves them null. `Number(null)`
+				// is 0, which would fabricate a real 0-price point and drop the chart to
+				// the x-axis for every pre-listing day. Skip non-finite values, matching
+				// the Number.isFinite guard the sibling `events` handler already uses.
+				if (r._value === null || r._value === undefined) continue;
+				const value = Number(r._value);
+				if (!Number.isFinite(value)) continue;
+				bucket.push({ date: t.slice(0, 10), value });
 			}
 
 			for (const bucket of Object.values(series)) {
