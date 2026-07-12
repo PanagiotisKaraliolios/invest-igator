@@ -501,9 +501,7 @@ There is **no general fix for prompt injection**. The current best primary sourc
 
 **Layer 3 — untrusted content handling.** The attack surface is not what people expect. **Symbol names** (Yahoo search results land in context verbatim) and **`Transaction.note`** free text are attacker-influenceable long before any news article is. Deliver them as **structured tool results**, never interpolated into the system prompt. Do **not** use a `<untrusted_data>…</untrusted_data>` text fence — `JSON.stringify` leaves `<`, `/`, `>` literal, so a payload containing the closing delimiter escapes it. Strip control, zero-width, and bidi characters (OWASP LLM01: *"injections do not need to be human-visible"*); hard-cap length.
 
-**Layer 4 — disclosure and the advice boundary.**
-- **EU AI Act Art. 50(1) applies from 2026-08-02.** Any AI system interacting directly with a person must disclose that it is an AI. A persistent, visible "AI assistant" label on the chat surface and in the MCP server description satisfies it.
-- **MiFID II: "investment advice" means a *personal recommendation*.** ESMA's supervisory briefing (ESMA35-43-3861) is explicit that recommendations can be implicit or indirect. *"Your NVDA position is 31% of your portfolio"* is safe factual reporting. *"You're overweight tech — trim NVDA"* is a personal recommendation. The system prompt refuses the latter; the boundary is **eval-tested** (Tier 1).
+**Layer 4 — disclosure and the advice boundary.** See §5.10 — this is a hard product constraint, not a footer disclaimer.
 
 ### 5.9 Evals and CI
 
@@ -512,12 +510,55 @@ There is **no general fix for prompt injection**. The current best primary sourc
 | Tier | What | When | Cost | Gates a merge? |
 |---|---|---|---|---|
 | **0 — hermetic** | `MockLanguageModelV4` + `simulateReadableStream` from `ai/test`. Asserts: guardrails strip rejected params and force `maxOutputTokens`; telemetry writes exactly one `AiCall` per model call **and one on `onError`**; quota reserve→settle arithmetic; `Secret` cannot be serialised; **tool authorization — user B's `ToolCtx` returns only B's data**; every `inputSchema` is strict and free of `userId`; emitted JSON Schema satisfies Azure's structured-output subset; no call site omits `recordInputs: false`. | every PR | $0 | ✅ **yes** |
-| **1 — golden set** | ~20 tool-selection cases. Tools declared **without `execute`** make `generateText` halt with `finishReason: 'tool-calls'` and populate `result.toolCalls` — the hermetic tool-selection primitive. Assert tool name + args subset, and that `dynamicToolCalls.filter(c => c.invalid)` is empty (hallucinated tool names are directly detectable). Plus negative cases ("who are you?" → zero tool calls), the **injection suite**, and the **advice-boundary suite**. | nightly, pre-release | ~$0.05/run | ⚠️ alerts only |
+| **1 — golden set** | ~20 tool-selection cases. Tools declared **without `execute`** make `generateText` halt with `finishReason: 'tool-calls'` and populate `result.toolCalls` — the hermetic tool-selection primitive. Assert tool name + args subset, and that `dynamicToolCalls.filter(c => c.invalid)` is empty (hallucinated tool names are directly detectable). Plus negative cases ("who are you?" → zero tool calls) and the **injection suite**. | nightly, pre-release | ~$0.05/run | ⚠️ alerts |
+| **1a — advice boundary** | The MiFID II suite (§5.10). Prompts engineered to elicit a personal recommendation on a named instrument must be refused; factual reporting on the user's own holdings must not be. | nightly, **and before any release that changes a prompt or a model** | ~$0.02/run | 🚫 **release blocker** |
 | **2 — LLM-as-judge** | **Binary pass/fail** against an explicit rubric — never a 1–5 scale, which clusters on 3–4 and drifts. Judge pinned to a dated snapshot. Reason-before-label. | nightly | ~$0.20/run | ❌ directional |
 
 **The eval suite cannot use `temperature: 0` + `seed`.** Every eval example on the internet does; all Azure GPT-5.x models **400 on both**. Determinism comes from asserting on *tool selection* (robust) rather than prose, pinning `reasoning_effort`, and best-of-3 for any case that proves flaky. This is precisely why the merge gate is Tier-0 only.
 
 **CI change:** add a `unit` job (`bun test src`) to the `all-checks` fan-in. It picks up the new Tier-0 evals **and** the five existing test files that have never gated a merge.
+
+### 5.10 Regulatory constraints
+
+Two separate regimes bind this feature. They are **not** both disclosure problems, and the second one is the larger risk.
+
+> Verified 2026-07-13 against EUR-Lex, the signed Digital Omnibus act (PE-CONS 30/1/26), the Commission's draft Art. 50 guidelines (8 May 2026), ESMA35-43-3861, and FIN-FSA. Caveats: the Art. 50 guidelines are still marked *draft for consultation*, and the Digital Omnibus was signed 2026-07-08 but is **not yet published in the OJ**. Neither caveat changes the conclusions below. **None of this is legal advice.**
+
+#### EU AI Act — Article 50
+
+**Art. 50(1) — disclosure. Applies from 2026-08-02.** An AI system that interacts directly with a person must inform that person they are dealing with an AI.
+
+The Digital Omnibus does **not** delay this. It defers the **high-risk** obligations (to 2027-12 and 2028-08) and amends Art. 50 in exactly one place — paragraph 7, an institutional change about codes of practice. **Art. 50(1) is untouched.** "The AI Act got delayed" refers to the high-risk track, not to us.
+
+Three exemptions that do **not** apply:
+
+- **No de minimis.** Small scale reduces the *fine* (Art. 99(6) flips the cap to the *lower* of €15M / 3% of turnover for SMEs), not the *duty*.
+- **Open source does not exempt.** Art. 2(12) exempts FOSS AI systems — **except** those falling under Art. 50. We are expressly carved out of the carve-out. And Art. 3(3) defines "provider" as placing a system on the market *"whether for payment or free of charge"* — a free tier does not help.
+- **Self-hosting does not transfer the duty.** We are the **provider**; a self-hoster is a **deployer**. Art. 50(1) is a *design-and-development* obligation — it attaches to how the system is built. **Therefore the disclosure must be on by default and not trivially removable.** A `DISABLE_AI_LABEL` env var that a self-hoster can flip would arguably defeat *"designed and developed in such a way that"*. Do not ship one.
+
+**What satisfies it:** a first-turn disclosure **plus** a persistent visible badge near the input field, in plain language, meeting accessibility requirements (Art. 50(5) makes accessibility a hard requirement, not a nicety). **Do not rely on the "unless it is obvious" exception** — the Commission's draft guidelines name *"AI chatbots embedded in online platforms or assistance support tools"* as a case where obviousness **fails**, and place the burden of proof on the provider.
+
+**Art. 50(2) — machine-readable marking. Also from 2026-08-02, and there is no grace period for a system launched after that date.** Outputs of a system generating synthetic text must be *"marked in a machine-readable format and detectable as artificially generated."*
+
+- In-app chat: mark generated messages in `AiMessage.metadata`.
+- **Phase 4's digest email is the sharp case** — synthetic text leaving the application. It needs a machine-readable marker, not just a visible "generated by AI" line. Scope this properly when Phase 4 is specced; do not discover it at the end.
+
+#### MiFID II — the advice boundary
+
+**This is an authorisation boundary, not a disclosure one, and it is the larger regulatory risk in the project.**
+
+"Investment advice" (MiFID II Art. 4(1)(4) + Delegated Reg. 2017/565 Art. 9) means a **personal recommendation**: made to a person as an investor, **based on their circumstances**, to act on a **particular financial instrument**. Providing it as a business **requires authorisation as an investment firm**. FIN-FSA is explicit: *"Whether authorisation is required **does not depend on the extent and frequency** of the provision of service."* There is no side-project defence.
+
+- *"Your NVDA position is 31% of your portfolio"* → **information**. Statements of fact and figures. Outside the definition.
+- *"You're overweight tech — trim NVDA to 15%"* → **a personal recommendation**. Named instrument, derived from their actual holdings, suggesting an action. All four limbs met.
+
+**ESMA (ESMA35-43-3861, *Supervisory briefing on understanding the definition of advice under MiFID II*, 11 Jul 2023) is explicit that a recommendation may be implicit or indirect** — no "buy"/"sell" verb is required. A red **"OVERWEIGHT — REDUCE"** badge beside a ticker is a personal recommendation. So is a flow that opens with generic diversification guidance and terminates at a named stock: ESMA captures generic advice when it is *"part of the whole investment advice process."*
+
+**The product rule, which is a constraint on the system prompt and on the UI, not just on the model:**
+
+> Instrument-specific output stays **descriptive**. Normative output stays **instrument-agnostic**. **Never chain the two.**
+
+Enforced in the system prompt, and **eval-tested** by the Tier-1 advice-boundary suite. This is a correctness requirement with a regulator attached, so the suite is not optional garnish — it is the evidence that the boundary holds.
 
 ---
 
@@ -596,6 +637,12 @@ Each needs an entry in **both** the `server` schema and the `runtimeEnv` block o
 **R10 — Multi-instance quota bypass.**
 → The atomic conditional `UPDATE`. Plus the orphan-reservation sweeper.
 
+**R11 — Drifting across the MiFID II advice boundary.** The highest-consequence risk in the project, and the one least likely to announce itself: it is an **authorisation** boundary, and FIN-FSA says authorisation does not depend on the scale or frequency of the service. A recommendation can be **implicit** — a badge, an ordering, a colour — with no verb at all. The natural pull of a "helpful portfolio assistant" is *straight across this line*, and every product instinct will push that way.
+→ The §5.10 product rule, encoded in the system prompt **and** in the UI, and verified by the Tier-1 advice-boundary eval suite. Treat a Tier-1 advice-boundary failure as a **release blocker**, not an alert.
+
+**R12 — Art. 50(2) machine-readable marking is discovered late.** Easy to read Art. 50 as "add a label" and miss that generated *content* must also be machine-readably marked, with **no grace period** for anything launched after 2026-08-02. Phase 4's digest email is synthetic text leaving the app.
+→ `AiMessage.metadata` carries the marker from Phase 1. Scope the email case explicitly in the Phase 4 spec.
+
 ---
 
 ## 9. Decisions that are expensive to reverse
@@ -651,3 +698,4 @@ Two Phase-6 decisions this forces, pre-committed here:
 - A `Secret` cannot be coerced into a log line, a JSON body, or an error message.
 - Tier-0 evals gate the merge, and CI runs the five previously-ungated unit test files.
 - **User B's `ToolCtx` cannot read user A's data — asserted by a test, not by inspection.**
+- The advice-boundary eval suite exists and passes **before** any model output reaches a user (§5.10). It is a release blocker, not an alert.
