@@ -157,9 +157,16 @@ scripts/fetch-model-prices.ts              refreshes the price snapshot         
 
 ---
 
-### Task 0: Spike — does `ai@7` run on Bun 1.3 + Next 16.2 Turbopack + Docker?
+### Task 0a: Spike — does `ai@7` run on Bun 1.3 + Next 16.2 Turbopack + Docker? (no Azure needed)
 
 **This is a spike, not TDD.** It gates every other task. It produces a written go/no-go and leaves no code behind except that record.
+
+**The spike is split in two.** The risk that could actually invalidate this plan is *"`ai@7` is ESM-only, `engines: node>=22`, and nobody has run it on Bun 1.3 + Next 16 Turbopack + React Compiler, or inside our Docker image."* **That risk has nothing to do with Azure.** `MockLanguageModelV4` from `ai/test` drives the exact same `generateText` code path — provider construction, the middleware chain, usage accounting — minus the HTTP hop. So:
+
+- **Task 0a (this task, no credentials required):** prove the *stack* works, against a mock model.
+- **Task 0b (needs a live Azure resource):** prove the *Azure transport* works — the `baseURL` `/v1` footgun, reasoning-model 400s, `apiVersion`, real token accounting.
+
+0a unblocks Tasks 1–12, every one of which tests against mocks. 0b blocks only Task 13's live save-probe, the Tier-1 evals, and shipping.
 
 **Files:**
 - Create (throwaway, deleted in Step 7): `src/app/api/ai-spike/route.ts`
@@ -168,7 +175,7 @@ scripts/fetch-model-prices.ts              refreshes the price snapshot         
 
 **Interfaces:**
 - Consumes: nothing. The route reads `process.env` directly, **not** `env` from `src/env.js`, so it does not depend on Task 1 and can be deleted without unwinding anything.
-- Produces: a recorded **GO** / **NO-GO**. Every subsequent task assumes GO.
+- Produces: a recorded **GO** / **NO-GO** for the stack. Tasks 1–12 assume GO.
 
 **Explicit PASS criteria — all five must hold:**
 
@@ -176,9 +183,9 @@ scripts/fetch-model-prices.ts              refreshes the price snapshot         
 |---|---|---|---|
 | P1 | Install | `bun add --exact ai@7.0.22 @ai-sdk/azure@4.0.11` | exit 0, no `engine`/ESM error |
 | P2 | Typecheck | `bun run typecheck` | exit 0 with the spike route present |
-| P3 | Turbopack dev | `bun run dev` + `curl` | HTTP 200, `text` non-empty, `usage.outputTokens > 0` |
+| P3 | Turbopack dev | `bun run dev` + `curl` | HTTP 200, `mode: "mock"`, `text === "OK"`, `usage.outputTokens > 0` |
 | P4 | Docker build | `docker build -t invest-igator:spike .` | exit 0 |
-| P5 | Docker run | `docker run` + `curl` | HTTP 200, `text` non-empty, `usage.outputTokens > 0` |
+| P5 | Docker run | `docker run` + `curl` | HTTP 200, `mode: "mock"`, `text === "OK"`, `usage.outputTokens > 0` |
 
 Anything else is **NO-GO** and triggers the fallback ladder in Step 6.
 
@@ -186,26 +193,17 @@ Anything else is **NO-GO** and triggers the fallback ladder in Step 6.
 
 ---
 
-- [ ] **Step 1: Provision Azure and set the spike env**
+- [ ] **Step 1: Nothing to provision — confirm you are on the mock leg**
 
-Azure OpenAI is self-serve — no access form. In the Azure portal create an *Azure OpenAI* resource, then under *Deployments* create a deployment of model `gpt-5.4-mini`. Name the deployment something distinguishable from the model (e.g. `chat-mini`) — that difference is exactly the trap the whole `modelId` vs `resolvedModel` split exists for, and the spike should exercise it.
+This task needs **no Azure account, no API key, and no network egress to Azure.** The route in Step 3 selects its model at request time: if the `AZURE_OPENAI_*` vars are absent it uses `MockLanguageModelV4` and reports `mode: "mock"`; if they are present it uses the real provider and reports `mode: "azure"`. Task 0b is the same route with the env set.
 
-Add to `.env` (gitignored, and also excluded by `.dockerignore` — never commit these, and note the Docker build cannot see them, which is why Step 5 passes them with `-e`):
-
-```sh
-AZURE_OPENAI_RESOURCE_NAME=my-aoai-resource   # the resource NAME, not a URL
-AZURE_OPENAI_API_KEY=<key from portal>
-AZURE_OPENAI_CHAT_DEPLOYMENT=chat-mini        # the DEPLOYMENT name = the SDK "model id"
-AZURE_OPENAI_CHAT_MODEL=gpt-5.4-mini          # the REAL model — what we price on
-```
-
-Sanity-check the resource name is not a URL:
+Confirm the mock leg is what you'll get:
 
 ```bash
-grep -E '^AZURE_OPENAI_RESOURCE_NAME=' /home/panos/workspace/invest-igator/.env | grep -q 'https\?://' \
-  && echo 'FAIL: put the resource NAME here, not the endpoint URL' \
-  || echo 'ok: resource name looks like a name'
+cd /home/panos/workspace/invest-igator
+grep -c '^AZURE_OPENAI' .env 2>/dev/null || echo 0
 ```
+Expected: `0`. If it prints anything else, the Azure vars are already set — go and run **Task 0b** instead; it subsumes this one.
 
 - [ ] **Step 2: Install the two spike deps (P1)**
 
@@ -235,28 +233,56 @@ Create `src/app/api/ai-spike/route.ts`:
 
 ```ts
 import { createAzure } from '@ai-sdk/azure';
-import { generateText } from 'ai';
+import { generateText, type LanguageModel } from 'ai';
+import { MockLanguageModelV4 } from 'ai/test';
 
 // The spike must exercise the Node-ish server runtime the real chat route will use.
 export const runtime = 'nodejs';
 // Prevents Next from trying to prerender this at build time (no Azure key in Docker build).
 export const dynamic = 'force-dynamic';
 
-export async function GET(): Promise<Response> {
+/**
+ * Task 0a runs this with no AZURE_OPENAI_* env -> the mock leg. That still drags the whole
+ * `ai@7` package graph through Turbopack, the React Compiler build, and the Docker runner,
+ * and still exercises generateText's provider/middleware/usage plumbing. It is the stack
+ * test. Task 0b sets the env and gets the azure leg, which is the transport test.
+ */
+function pickModel(): { model: LanguageModel; mode: 'azure' | 'mock'; deployment: string } {
 	const resourceName = process.env.AZURE_OPENAI_RESOURCE_NAME;
 	const apiKey = process.env.AZURE_OPENAI_API_KEY;
 	const deployment = process.env.AZURE_OPENAI_CHAT_DEPLOYMENT;
 
-	if (!resourceName || !apiKey || !deployment) {
-		return Response.json({ error: 'missing AZURE_OPENAI_* env' }, { status: 500 });
+	if (resourceName && apiKey && deployment) {
+		// apiKey XOR tokenProvider — passing both throws at construction.
+		// apiVersion is deliberately NOT passed: it defaults to the literal string 'v1'.
+		// baseURL is deliberately NOT passed: the SDK builds it and appends /v1{path} itself.
+		const azure = createAzure({ apiKey, resourceName });
+		// The DEPLOYMENT NAME is the model id on Azure.
+		return { deployment, mode: 'azure', model: azure(deployment) };
 	}
 
-	// apiKey XOR tokenProvider — passing both throws at construction.
-	// apiVersion is deliberately NOT passed: it defaults to the literal string 'v1'.
-	// baseURL is deliberately NOT passed: the SDK builds it and appends /v1{path} itself.
-	const azure = createAzure({ apiKey, resourceName });
+	// v7 usage: every key is REQUIRED but typed `| undefined`. A `?`-optional mock does not compile.
+	const model = new MockLanguageModelV4({
+		doGenerate: async () => ({
+			content: [{ text: 'OK', type: 'text' as const }],
+			finishReason: 'stop' as const,
+			usage: {
+				inputTokens: 7,
+				inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0, noCacheTokens: 7 },
+				outputTokens: 1,
+				outputTokenDetails: { reasoningTokens: 0, textTokens: 1 },
+				totalTokens: 8
+			},
+			warnings: []
+		})
+	});
+	return { deployment: 'mock', mode: 'mock', model };
+}
 
+export async function GET(): Promise<Response> {
+	const { deployment, mode, model } = pickModel();
 	const startedAt = Date.now();
+
 	try {
 		const result = await generateText({
 			// v7: `instructions`, NOT `system`.
@@ -264,8 +290,7 @@ export async function GET(): Promise<Response> {
 			// gpt-5.x are reasoning models: reasoning tokens are charged against this budget,
 			// so a tiny value yields empty text. 256 leaves room for a word to come out.
 			maxOutputTokens: 256,
-			// The DEPLOYMENT NAME is the model id on Azure.
-			model: azure(deployment),
+			model,
 			prompt: 'Say OK.'
 		});
 
@@ -279,6 +304,7 @@ export async function GET(): Promise<Response> {
 			bun: 'Bun' in globalThis,
 			deployment,
 			latencyMs: Date.now() - startedAt,
+			mode,
 			nodeVersion: process.version,
 			text: result.text,
 			usage: {
@@ -291,10 +317,12 @@ export async function GET(): Promise<Response> {
 		// Deliberately NOT JSON.stringify(error) — provider errors embed the request config,
 		// including the auth header. This is the R8 leak, and the spike is not exempt.
 		const message = error instanceof Error ? error.message : 'unknown error';
-		return Response.json({ error: message, latencyMs: Date.now() - startedAt }, { status: 502 });
+		return Response.json({ error: message, latencyMs: Date.now() - startedAt, mode }, { status: 502 });
 	}
 }
 ```
+
+> **If `MockLanguageModelV4` is not exported from `ai/test`** (the name is from the v7 fact sheet but has not been executed against the shipped tarball), find the real export before improvising: `ls node_modules/ai/dist | grep -i test` and `grep -oE 'declare class Mock[A-Za-z0-9]+' node_modules/ai/dist/test/index.d.ts`. Use whatever it actually names. **Do not delete the mock leg and fall back to requiring Azure** — that defeats the entire point of Task 0a. If `ai/test` has no usable mock at all, report `NEEDS_CONTEXT` and stop.
 
 - [ ] **Step 4: P2 + P3 — typecheck, then Turbopack dev**
 
@@ -316,15 +344,15 @@ curl -sS -w '\nHTTP %{http_code}\n' http://localhost:3000/api/ai-spike
 ```
 Expected:
 ```json
-{"bun":true,"deployment":"chat-mini","latencyMs":1234,"nodeVersion":"v24.x.x",
- "text":"OK","usage":{"inputTokens":21,"outputTokens":9,"totalTokens":30}}
+{"bun":true,"deployment":"mock","latencyMs":3,"mode":"mock","nodeVersion":"v24.x.x",
+ "text":"OK","usage":{"inputTokens":7,"outputTokens":1,"totalTokens":8}}
 HTTP 200
 ```
-**P3 passes iff:** HTTP 200 **and** `text` is non-empty **and** `usage.outputTokens > 0`.
+**P3 passes iff:** HTTP 200 **and** `mode` is `"mock"` **and** `text` is `"OK"` **and** `usage.outputTokens > 0`.
 
-If `text` is `""` but `outputTokens > 0`, the reasoning budget ate the response — raise `maxOutputTokens` to 1024 and retry. That is a **PASS** with a note, not a failure: it confirms the transport works.
+`mode: "mock"` is part of the pass condition on purpose. If it says `"azure"`, someone has `AZURE_OPENAI_*` set and this is silently Task 0b — which is fine, but record it as 0b, not 0a.
 
-If you get a 404 with `/v1/v1/` in the message, someone passed a `baseURL` ending in `/v1`. If you get a 400 naming `temperature`/`max_tokens`/`seed`, someone added a sampling param — GPT-5.x rejects all of them. Neither is a stack failure (see F4).
+A 502 here is a **real stack failure** (the mock cannot fail for network reasons) — read the error and go to Step 6.
 
 - [ ] **Step 5: P4 + P5 — Docker build and run**
 
@@ -338,25 +366,20 @@ Expected: exit 0. `bun.lock` is intentionally *not* in `.dockerignore`, so the d
 
 If Turbopack fails to bundle `ai` or `@ai-sdk/azure` (a `Module not found` / `require is not defined` / `Cannot find module 'node:...'` at build), that is **fallback F1**.
 
-Now run it. Two things the draft of this step must get right, or it fails for reasons that have nothing to do with the SDK:
+Now run it. Three things this step must get right, or it fails for reasons that have nothing to do with the SDK:
 
-1. The `AZURE_OPENAI_*` values live in `.env`, which is **not** exported into your shell and **not** in the Docker context. `-e VAR="$VAR"` therefore passes an *empty string*. Source `.env` first.
+1. **Pass no `AZURE_OPENAI_*` at all.** This is the mock leg; the container must not see them, or it silently becomes 0b.
 2. `docker/entrypoint.sh` **skips** migrations entirely when `DATABASE_URL` is unset (`else echo "DATABASE_URL not set; skipping migrations and seed."`) — it does not "fail soft" through them. Leaving `DATABASE_URL` unset is therefore correct and quiet; the route touches no DB.
 3. Port `3311` is already claimed by the `invest-igator` service in `docker-compose.yml`. Use `3312` so the spike does not collide with a running stack.
 4. `NODE_ENV=production` in the runner image means Better Auth would reject a short/absent secret if anything pulls it in at boot. There is no `src/middleware.ts` today, so nothing should — but a ≥32-char dummy costs nothing and removes an entire class of red herring.
 
 ```bash
 cd /home/panos/workspace/invest-igator
-set -a; . ./.env; set +a   # exports AZURE_OPENAI_* into this shell
-
 docker rm -f ai-spike 2>/dev/null || true
 docker run --rm -d --name ai-spike -p 3312:3000 \
   -e SKIP_ENV_VALIDATION=1 \
   -e BETTER_AUTH_SECRET=spike-time-dummy-secret-not-for-production \
   -e BETTER_AUTH_URL=http://localhost:3000 \
-  -e AZURE_OPENAI_RESOURCE_NAME="$AZURE_OPENAI_RESOURCE_NAME" \
-  -e AZURE_OPENAI_API_KEY="$AZURE_OPENAI_API_KEY" \
-  -e AZURE_OPENAI_CHAT_DEPLOYMENT="$AZURE_OPENAI_CHAT_DEPLOYMENT" \
   invest-igator:spike
 
 sleep 8
@@ -364,9 +387,9 @@ curl -sS -w '\nHTTP %{http_code}\n' http://localhost:3312/api/ai-spike
 docker logs ai-spike | tail -30
 docker stop ai-spike
 ```
-**P5 passes iff:** HTTP 200, `text` non-empty, `usage.outputTokens > 0` — same bar as P3.
+**P5 passes iff:** HTTP 200, `mode: "mock"`, `text === "OK"`, `usage.outputTokens > 0` — same bar as P3.
 
-If the response is `{"error":"missing AZURE_OPENAI_* env"}` with HTTP 500, you skipped the `set -a; . ./.env` line. That is an operator error, not a NO-GO.
+⚠️ **The `ai/test` subpath must survive the Docker build.** The runner stage copies `node_modules` wholesale, so it should — but `MockLanguageModelV4` being importable in dev and missing at runtime is exactly the class of failure P5 exists to catch. If the container 502s with `Cannot find module 'ai/test'` while dev passed, that is **fallback F2**, not F3.
 
 - [ ] **Step 6: If any gate fails — the fallback ladder, in order**
 
@@ -399,36 +422,56 @@ Not a stack failure. Fix the Azure config (resource name vs URL; deployment name
 # Phase 0 Spike Result — `ai@7` on Bun 1.3 + Next 16.2 Turbopack + Docker
 
 **Date:** 2026-07-13
+
+## Part A — the stack (Task 0a, mock model, no Azure)
+
 **Verdict:** GO            <!-- GO | GO-WITH-FALLBACK(F1|F2) | NO-GO(F3) -->
 **Fallback applied:** none <!-- or: F1 serverExternalPackages -->
 
 Stack under test: Bun 1.3.x, Next 16.2.10 (Turbopack, reactCompiler: true),
 `ai@7.0.22`, `@ai-sdk/azure@4.0.11`, `oven/bun:1.3-debian`.
+Model: `MockLanguageModelV4` from `ai/test` — no network, no credentials.
 
 | Gate | Result | Evidence |
 |---|---|---|
 | P1 install (`bun add --exact`) | PASS | `ai@7.0.22`, `@ai-sdk/azure@4.0.11` pinned literally in package.json; no engine error |
 | P2 `bun run typecheck` | PASS | exit 0 |
-| P3 `bun run dev` (Turbopack) → `GET /api/ai-spike` | PASS | HTTP 200, text `"OK"`, outputTokens 9, 1.2s |
+| P3 `bun run dev` (Turbopack) → `GET /api/ai-spike` | PASS | HTTP 200, `mode: "mock"`, text `"OK"`, outputTokens 1 |
 | P4 `docker build` | PASS | exit 0 |
-| P5 `docker run` (port 3312) → `GET /api/ai-spike` | PASS | HTTP 200, text `"OK"`, outputTokens 9, 1.4s |
+| P5 `docker run` (port 3312) → `GET /api/ai-spike` | PASS | HTTP 200, `mode: "mock"`, text `"OK"`, outputTokens 1 |
 
 Observed: `process.version` reports `v24.x.x` under Bun, so `engines: node>=22` is satisfied
 in practice. `'Bun' in globalThis` is true inside the Next server runtime.
 
+**What this does and does not prove.** It proves `ai@7` — ESM-only, `engines: node>=22` —
+installs, typechecks, bundles through Turbopack with the React Compiler on, and executes
+`generateText` end-to-end inside the production Docker image under Bun. That was the risk
+that could have invalidated the plan. It proves **nothing** about Azure; see Part B.
+
 ## Confirmed in passing
-- `azure('<deployment>')` — the deployment name is the SDK model id. The deployment
-  (`chat-mini`) is deliberately named differently from the model (`gpt-5.4-mini`),
-  proving the `modelId` / `resolvedModel` split in the ledger is load-bearing, not academic.
-- `apiVersion` left unset → defaults to the literal `'v1'`. No date passed anywhere.
-- No sampling params sent. GPT-5.x 400s on `temperature`/`top_p`/`seed`/`max_tokens`.
 - `typeof Bun` does not typecheck under this repo's `types: ["@playwright/test"]`;
   `'Bun' in globalThis` does. Worth remembering for every later server file.
+- v7 `LanguageModelUsage` really does require `inputTokenDetails` / `outputTokenDetails`
+  as present objects — a `?`-optional mock does not compile. Every later test fixture
+  must carry them.
+
+## Part B — the Azure transport (Task 0b)
+
+**Verdict:** NOT RUN <!-- PASS | FAIL(F4) — fill in when Azure is provisioned -->
+
+<!-- When run, record:
+| P6 `bun run dev` with AZURE_OPENAI_* set → mode "azure" | PASS | HTTP 200, real tokens |
+Confirmed: azure('<deployment>') — the deployment name is the SDK model id, and the
+deployment is named differently from the model, proving the modelId/resolvedModel split
+is load-bearing rather than academic. apiVersion left unset -> defaults to literal 'v1'.
+No sampling params sent; GPT-5.x 400s on temperature/top_p/seed/max_tokens.
+-->
 
 ## Decision
-Tasks 1–11 proceed as specced. The throwaway route `src/app/api/ai-spike/route.ts`
-is deleted; `package.json` / `bun.lock` are reverted so Task 1 owns the dependency
-commit in full.
+Part A is GO, so Tasks 1–12 proceed as specced — all of them test against mocks.
+Task 13's live save-probe and the Tier-1 evals wait on Part B.
+The throwaway route `src/app/api/ai-spike/route.ts` is deleted; `package.json` /
+`bun.lock` are reverted so Task 1 owns the dependency commit in full.
 
 <!-- If NO-GO(F3): state here that Tasks 6 and 7 switch to src/server/ai/azure-rest.ts,
      and that Tasks 3, 5, 8, 9, 10, 11 are unaffected because none of them import from 'ai'. -->
@@ -450,10 +493,103 @@ git status --short   # expect ONLY the new docs/ file
 ```bash
 cd /home/panos/workspace/invest-igator
 git add docs/superpowers/specs/2026-07-13-ai-layer-phase0-spike-result.md
-git commit -m "docs(ai): record Phase 0 spike result — ai@7 on Bun 1.3 + Next 16 Turbopack + Docker"
+git commit -m "docs(ai): record Phase 0 spike result (Part A) — ai@7 runs on Bun 1.3 + Next 16 Turbopack + Docker"
 ```
 
-**Do not start Task 1 until this file says GO or GO-WITH-FALLBACK.**
+**Do not start Task 1 until Part A says GO or GO-WITH-FALLBACK.**
+
+---
+
+### Task 0b: Spike — does the Azure transport work? (needs a live Azure resource)
+
+**Blocked until an Azure OpenAI resource exists.** Not on the critical path: Tasks 1–12 all test against mocks and proceed without this. It blocks Task 13's live save-probe, the Tier-1 evals, and shipping.
+
+**Files:**
+- Re-create (throwaway, deleted in Step 5): `src/app/api/ai-spike/route.ts` — the *same file* as Task 0a Step 3, verbatim. It already contains both legs; setting the env is what selects the Azure one.
+- Modify: `docs/superpowers/specs/2026-07-13-ai-layer-phase0-spike-result.md` — fill in Part B.
+
+**Interfaces:**
+- Consumes: Task 0a's GO verdict. Task 1's `AZURE_OPENAI_*` env entries (this can run any time after Task 1).
+- Produces: a **PASS**/**FAIL** on the Azure transport, and the confirmed answers to the four Azure footguns below.
+
+- [ ] **Step 1: Provision Azure**
+
+Azure OpenAI is self-serve — there is no access application form any more. In the Azure portal create an **Azure OpenAI** resource, then under **Deployments** create a deployment of model `gpt-5.4-mini`.
+
+**Name the deployment something different from the model** — e.g. deployment `chat-mini`, model `gpt-5.4-mini`. That difference is the entire reason `AiCall` carries both `modelId` and `resolvedModel`, and the spike should exercise it rather than accidentally hide it behind matching names.
+
+Do **not** deploy `gpt-5.5` (0 TPM below quota tier 5) or any `gpt-5.6-*` (preview, unpriced).
+
+Add to `.env` (gitignored, and excluded by `.dockerignore` — never commit these):
+
+```sh
+AZURE_OPENAI_RESOURCE_NAME=my-aoai-resource   # the resource NAME, not a URL
+AZURE_OPENAI_API_KEY=<key from portal>
+AZURE_OPENAI_CHAT_DEPLOYMENT=chat-mini        # the DEPLOYMENT name = the SDK "model id"
+AZURE_OPENAI_CHAT_MODEL=gpt-5.4-mini          # the REAL model — what we price on
+```
+
+Sanity-check the resource name is a name and not a URL — pasting the endpoint here is the single most common setup error:
+
+```bash
+cd /home/panos/workspace/invest-igator
+grep -E '^AZURE_OPENAI_RESOURCE_NAME=' .env | grep -q 'https\?://' \
+  && echo 'FAIL: put the resource NAME here, not the endpoint URL' \
+  || echo 'ok: resource name looks like a name'
+```
+
+- [ ] **Step 2: Re-create the spike route**
+
+Recreate `src/app/api/ai-spike/route.ts` exactly as written in **Task 0a, Step 3**. Do not modify it — `pickModel()` already takes the Azure branch as soon as the three env vars are present.
+
+- [ ] **Step 3: Run it against Azure (P6)**
+
+```bash
+cd /home/panos/workspace/invest-igator
+bun run dev
+```
+In a second shell:
+```bash
+curl -sS -w '\nHTTP %{http_code}\n' http://localhost:3000/api/ai-spike
+```
+
+Expected:
+```json
+{"bun":true,"deployment":"chat-mini","latencyMs":1234,"mode":"azure","nodeVersion":"v24.x.x",
+ "text":"OK","usage":{"inputTokens":21,"outputTokens":9,"totalTokens":30}}
+HTTP 200
+```
+
+**P6 passes iff:** HTTP 200 **and** `mode` is `"azure"` **and** `text` is non-empty **and** `usage.outputTokens > 0`.
+
+If `mode` is still `"mock"`, the process did not see the env — Bun auto-loads `.env`, so a stale dev server is the usual cause. Restart it.
+
+If `text` is `""` but `outputTokens > 0`, the reasoning budget ate the whole response — raise `maxOutputTokens` to 1024 and retry. That is a **PASS with a note**, not a failure: it confirms the transport works, and it is worth recording, because it means the guardrail middleware's `maxOutputTokens` floor matters more than it looks.
+
+- [ ] **Step 4: Diagnose a failure — the four Azure footguns**
+
+None of these is a stack failure (Task 0a already proved the stack). They are configuration, and each has a specific fingerprint:
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| 404, path contains `/v1/v1/` | A `baseURL` ending in `/v1` was passed. The SDK appends `/v1{path}` itself. | Don't pass `baseURL`; pass `resourceName`. |
+| 404, "deployment not found" | `AZURE_OPENAI_CHAT_DEPLOYMENT` holds the *model* name, not the *deployment* name. | Use the deployment name from the portal. |
+| 400 naming `temperature` / `top_p` / `seed` / `max_tokens` | A sampling param reached a reasoning model. GPT-5.x rejects all of them. | The route sends none. If you see this, something added one — that is exactly what the Task 6 guardrail middleware exists to strip. |
+| 401 | Key is wrong, or belongs to a different resource. | Re-copy from the portal. |
+
+Record whichever you hit — each one is a live confirmation of a design decision in the spec, and worth writing down rather than silently fixing.
+
+- [ ] **Step 5: Fill in Part B, delete the route, commit**
+
+Edit `docs/superpowers/specs/2026-07-13-ai-layer-phase0-spike-result.md`: replace **Part B**'s `**Verdict:** NOT RUN` with `PASS` (or `FAIL(F4)` plus what you hit), and uncomment the confirmation block, filling in what you actually observed.
+
+```bash
+cd /home/panos/workspace/invest-igator
+rm -rf src/app/api/ai-spike
+git status --short   # expect ONLY the modified docs/ file
+git add docs/superpowers/specs/2026-07-13-ai-layer-phase0-spike-result.md
+git commit -m "docs(ai): record Phase 0 spike result (Part B) — live Azure transport verified"
+```
 
 ---
 
