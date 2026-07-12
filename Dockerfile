@@ -49,6 +49,13 @@ RUN SKIP_ENV_VALIDATION=1 \
 	CLOUDFLARE_ACCOUNT_ID=dummy \
 	CLOUDFLARE_BUCKET_NAME=dummy \
 	CLOUDFLARE_SECRET_ACCESS_KEY=dummy \
+	AZURE_OPENAI_RESOURCE_NAME=dummy \
+	AZURE_OPENAI_API_KEY=dummy \
+	AZURE_OPENAI_CHAT_DEPLOYMENT=dummy \
+	AZURE_OPENAI_CHAT_MODEL=gpt-5.4-mini \
+	AI_CRED_KEYS='{"k1":"aW52ZXN0LWlnYXRvci1idWlsZC1kdW1teS1rZXktMzI="}' \
+	AI_CRED_ACTIVE_KID=k1 \
+	AI_API_KEY_PEPPER=build-time-dummy-pepper-at-least-32-chars \
 	bun run build
 
 FROM oven/bun:1.3-debian AS runner

@@ -14,6 +14,14 @@ export const PERMISSION_SCOPES = {
 		actions: ['read', 'write'] as const,
 		description: 'Admin operations (requires admin role)'
 	},
+	ai: {
+		// CAPABILITY, not a resource. Answers "may this key spend platform LLM quota?",
+		// never "may this caller read this data?". It is deliberately absent from the
+		// `Scope` union in src/server/ai/tools/types.ts and is never an AppTool.requiredScope —
+		// a key can hold every read scope and still be barred from costing us money.
+		actions: ['use'] as const,
+		description: 'Use AI features (spends platform LLM quota)'
+	},
 	apiKeys: {
 		actions: ['read', 'write', 'delete'] as const,
 		description: 'API key management'

@@ -28,9 +28,16 @@ export const env = createEnv({
 	 * middlewares) or client-side so we need to destruct manually.
 	 */
 	runtimeEnv: {
+		AI_API_KEY_PEPPER: process.env.AI_API_KEY_PEPPER,
+		AI_CRED_ACTIVE_KID: process.env.AI_CRED_ACTIVE_KID,
+		AI_CRED_KEYS: process.env.AI_CRED_KEYS,
 		APP_NAME: process.env.APP_NAME,
 		AUTH_DISCORD_ID: process.env.AUTH_DISCORD_ID,
 		AUTH_DISCORD_SECRET: process.env.AUTH_DISCORD_SECRET,
+		AZURE_OPENAI_API_KEY: process.env.AZURE_OPENAI_API_KEY,
+		AZURE_OPENAI_CHAT_DEPLOYMENT: process.env.AZURE_OPENAI_CHAT_DEPLOYMENT,
+		AZURE_OPENAI_CHAT_MODEL: process.env.AZURE_OPENAI_CHAT_MODEL,
+		AZURE_OPENAI_RESOURCE_NAME: process.env.AZURE_OPENAI_RESOURCE_NAME,
 		BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
 		BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
 		CLOUDFLARE_ACCESS_KEY_ID: process.env.CLOUDFLARE_ACCESS_KEY_ID,
@@ -63,9 +70,29 @@ export const env = createEnv({
 	 * isn't built with invalid env vars.
 	 */
 	server: {
+		/**
+		 * AI layer. Every var here is OPTIONAL: the app must boot with none of them set.
+		 * AI features degrade; they do not crash the app.
+		 */
+		// HMAC pepper for O(1) ApiKey lookup (Phase 2). `openssl rand -base64 32`.
+		AI_API_KEY_PEPPER: z.string().min(32).optional(),
+		// Which key in AI_CRED_KEYS seals NEW rows. Retired kids stay in the ring, decrypt-only.
+		AI_CRED_ACTIVE_KID: z.string().optional(),
+		// BYOK keyring: {"k1":"<base64 32 bytes>"}. Parsed lazily in src/server/ai/crypto.ts —
+		// a module-eval JSON.parse throw here would break `next build` when the var is absent.
+		AI_CRED_KEYS: z.string().optional(),
 		APP_NAME: z.string().default('Invest-igator'),
 		AUTH_DISCORD_ID: z.string(),
 		AUTH_DISCORD_SECRET: z.string(),
+		AZURE_OPENAI_API_KEY: z.string().optional(),
+		// The DEPLOYMENT name. This is the string passed to azure() as the SDK "model id".
+		AZURE_OPENAI_CHAT_DEPLOYMENT: z.string().optional(),
+		// The REAL model. This is what we PRICE on — never price on the deployment name.
+		// Defaulted, not optional: a missing value here would silently yield UNKNOWN_MODEL rows.
+		AZURE_OPENAI_CHAT_MODEL: z.string().default('gpt-5.4-mini'),
+		// The resource NAME, not a URL. The SDK builds the endpoint and appends /v1{path} itself;
+		// a value ending in /v1 yields /v1/v1/... -> 404.
+		AZURE_OPENAI_RESOURCE_NAME: z.string().optional(),
 		BETTER_AUTH_SECRET: process.env.NODE_ENV === 'production' ? z.string() : z.string().optional(),
 		BETTER_AUTH_URL: z.string().default('http://localhost:3000'),
 		CLOUDFLARE_ACCESS_KEY_ID: z.string(),
