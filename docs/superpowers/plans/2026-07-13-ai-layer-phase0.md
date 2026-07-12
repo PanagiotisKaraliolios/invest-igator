@@ -44,8 +44,14 @@ ai                        7.0.22
 @ai-sdk/google            4.0.12
 @ai-sdk/openai-compatible 3.0.7
 @ai-sdk/provider-utils    5.0.7
+@ai-sdk/provider          4.0.3    # types only — see below
 ```
 `@ai-sdk/react` is on its own major (`4.0.23`) and hard-pins `ai@7.0.22`. **There is no `@ai-sdk/react@7`.** (Phase 1, not this plan.)
+
+**On `@ai-sdk/provider`:** it arrives transitively anyway, but pin it explicitly, because `ai` does **not** re-export the provider-spec types and a mock that needs to name them has nowhere else to get them. Two rules, and they point in opposite directions — do not collapse them into one:
+
+- **`LanguageModelMiddleware` → import from `'ai'`, never from `'@ai-sdk/provider'`.** The provider package's version requires `specificationVersion: 'v4'` and will not compile; `ai` re-exports a relaxed alias.
+- **`LanguageModelV4Usage` / `LanguageModelV4FinishReason` → import from `'@ai-sdk/provider'`, because `ai` does not export them at all.** These are the `doGenerate` return types, needed only by test fixtures.
 
 **Do not install `ai-elements`.** Its registry declares 24 shadcn `registryDependencies`, all of which already exist here as **Base UI** components — the CLI would offer to overwrite them with **Radix** versions, and this repo has *zero* Radix. (Phase 1 concern; noted here so nobody reaches for it.)
 
@@ -54,7 +60,31 @@ ai                        7.0.22
 - Type-only imports **must** be `import type { X } from 'y'`.
 - `import { wrapLanguageModel, type LanguageModelMiddleware } from 'ai'` — from `'ai'`, **never** from `'@ai-sdk/provider'` (that one requires `specificationVersion: 'v4'` and will not compile).
 
-**`LanguageModelUsage` keys are required but typed `| undefined`** — *not* optional `?` keys. A test mock written with `?`-optional keys **will not typecheck**:
+### ⚠️ There are TWO usage types, and they are not the same shape
+
+**This is the single highest-value finding from the Task 0a spike, and it invalidates the naive mock fixture.** Verified against the shipped `.d.ts`, not from memory.
+
+**1. The PROVIDER-SPEC shape — `LanguageModelV4Usage` (from `@ai-sdk/provider`).** This is what `doGenerate` **returns**, so **this is what every `MockLanguageModelV4` fixture must produce.** Token counts are **nested**, and there is **no `totalTokens`** (the facade computes it):
+
+```ts
+type LanguageModelV4Usage = {
+  inputTokens:  { total: number | undefined; noCache: number | undefined;
+                  cacheRead: number | undefined; cacheWrite: number | undefined };
+  outputTokens: { total: number | undefined; text: number | undefined;
+                  reasoning: number | undefined };
+  raw?: JSONObject;
+};
+```
+And `finishReason` in `doGenerate` is an **object**, not a string:
+```ts
+type LanguageModelV4FinishReason = {
+  unified: 'stop' | 'length' | 'content-filter' | 'tool-calls' | 'error' | 'other';
+  raw: string | undefined;
+};
+```
+
+**2. The FACADE shape — `LanguageModelUsage` (from `ai`).** This is what `result.usage` and the telemetry event's `e.usage` **give back**, so this is what **the ledger reads** (Task 7) and what `TokenUsage` in the locked contract maps from. Token counts are **flat, with `*Details` siblings**. Keys are required but typed `| undefined` — a `?`-optional mock will not typecheck:
+
 ```ts
 type LanguageModelUsage = {
   inputTokens: number | undefined;
@@ -65,6 +95,41 @@ type LanguageModelUsage = {
   raw?: JSONObject;   // the only genuinely optional key
 };
 ```
+
+**The mapping the SDK performs between them:**
+
+| provider (`doGenerate` returns) | facade (`result.usage` / `e.usage`) |
+|---|---|
+| `inputTokens.total` | `inputTokens` |
+| `inputTokens.noCache` | `inputTokenDetails.noCacheTokens` |
+| `inputTokens.cacheRead` | `inputTokenDetails.cacheReadTokens` |
+| `inputTokens.cacheWrite` | `inputTokenDetails.cacheWriteTokens` |
+| `outputTokens.total` | `outputTokens` |
+| `outputTokens.text` | `outputTokenDetails.textTokens` |
+| `outputTokens.reasoning` | `outputTokenDetails.reasoningTokens` |
+| — | `totalTokens` *(computed)* |
+
+**Canonical mock fixture. Copy this verbatim; do not hand-write one from the facade shape:**
+
+```ts
+import { MockLanguageModelV4 } from 'ai/test';
+
+const model = new MockLanguageModelV4({
+	doGenerate: async () => ({
+		content: [{ text: 'OK', type: 'text' as const }],
+		finishReason: { raw: undefined, unified: 'stop' as const },
+		usage: {
+			inputTokens: { cacheRead: 0, cacheWrite: 0, noCache: 7, total: 7 },
+			outputTokens: { reasoning: 0, text: 1, total: 1 }
+		},
+		warnings: []
+	})
+});
+```
+
+`ai/test` really does export `MockLanguageModelV4` (confirmed in the shipped `.d.ts`, alongside `MockProviderV4`, `MockEmbeddingModelV4`, and the V3 variants).
+
+**`generateText().usage` is a plain object; `streamText().usage` is `PromiseLike`.** Awaiting the former is harmless but TypeScript flags it as `TS80007` ("`await` has no effect"). Task 7's telemetry must not assume a uniform `await` across the two.
 
 **Azure specifics that will otherwise cost a day:**
 - `azure('my-deployment')` — **the deployment name is the model id.** It is *not* the model. Price on `resolvedModel`, never on `modelId`.
@@ -261,17 +326,17 @@ function pickModel(): { model: LanguageModel; mode: 'azure' | 'mock'; deployment
 		return { deployment, mode: 'azure', model: azure(deployment) };
 	}
 
-	// v7 usage: every key is REQUIRED but typed `| undefined`. A `?`-optional mock does not compile.
+	// doGenerate returns the PROVIDER-SPEC shape (LanguageModelV4Usage): token counts are
+	// NESTED and there is no totalTokens. It is NOT the flat facade shape that result.usage
+	// hands back. See "There are TWO usage types" in Global Constraints — getting this wrong
+	// is a TS2322, and it is the mistake this plan originally shipped.
 	const model = new MockLanguageModelV4({
 		doGenerate: async () => ({
 			content: [{ text: 'OK', type: 'text' as const }],
-			finishReason: 'stop' as const,
+			finishReason: { raw: undefined, unified: 'stop' as const },
 			usage: {
-				inputTokens: 7,
-				inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0, noCacheTokens: 7 },
-				outputTokens: 1,
-				outputTokenDetails: { reasoningTokens: 0, textTokens: 1 },
-				totalTokens: 8
+				inputTokens: { cacheRead: 0, cacheWrite: 0, noCache: 7, total: 7 },
+				outputTokens: { reasoning: 0, text: 1, total: 1 }
 			},
 			warnings: []
 		})
@@ -788,8 +853,11 @@ bun add --exact \
   @ai-sdk/anthropic@4.0.12 \
   @ai-sdk/google@4.0.12 \
   @ai-sdk/openai-compatible@3.0.7 \
-  @ai-sdk/provider-utils@5.0.7
+  @ai-sdk/provider-utils@5.0.7 \
+  @ai-sdk/provider@4.0.3
 ```
+
+`@ai-sdk/provider` arrives transitively regardless, but pin it explicitly: `ai` does **not** re-export `LanguageModelV4Usage` or `LanguageModelV4FinishReason` (the `doGenerate` return types), and Task 12's mock fixtures have to name them. Relying on a transitive resolution for a type you import by path is how a minor SDK bump silently breaks your test suite.
 
 `--exact` is not optional: without it Bun writes `^7.0.22`, and a caret on a package whose v5→v6→v7 renames are silent compile breaks is a time bomb. Verify the pins are literal:
 
@@ -8273,6 +8341,7 @@ Two bugs the earlier draft shipped and this version fixes:
 // src/server/ai/evals/support.ts
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { extname, join } from 'node:path';
+import type { LanguageModelV4FinishReason, LanguageModelV4Usage } from '@ai-sdk/provider';
 import { expect } from 'bun:test';
 import { MockLanguageModelV4 } from 'ai/test';
 
@@ -8294,17 +8363,24 @@ export type RecordingModel = {
 };
 
 /**
- * v7 `LanguageModelUsage`: every key is REQUIRED and typed `| undefined`, and the two
- * detail objects are not optional. A mock that omits them does not compile under
- * `strict`, so we spell the whole shape out once here.
+ * The PROVIDER-SPEC usage shape (`LanguageModelV4Usage`) — what `doGenerate` RETURNS.
+ * Token counts are NESTED and there is no `totalTokens`; the SDK computes the flat facade
+ * shape (`LanguageModelUsage`, with `inputTokenDetails`/`outputTokenDetails`) from this and
+ * hands THAT back on `result.usage` and on the telemetry event.
+ *
+ * These are two different types. Writing the facade shape here is a TS2322 — and it is the
+ * mistake this plan originally shipped, caught by the Task 0a spike compiling against the
+ * real .d.ts. See "There are TWO usage types" in Global Constraints.
+ *
+ * Typed explicitly so the literals do not widen (an inline `async () => ({...})` widens
+ * `unified: 'stop'` to `string` and fails to assign).
  */
-const MOCK_USAGE = {
-	inputTokenDetails: { cacheReadTokens: undefined, cacheWriteTokens: undefined, noCacheTokens: 11 },
-	inputTokens: 11,
-	outputTokenDetails: { reasoningTokens: undefined, textTokens: 7 },
-	outputTokens: 7,
-	totalTokens: 18
+const MOCK_USAGE: LanguageModelV4Usage = {
+	inputTokens: { cacheRead: undefined, cacheWrite: undefined, noCache: 11, total: 11 },
+	outputTokens: { reasoning: undefined, text: 7, total: 7 }
 };
+
+const MOCK_FINISH: LanguageModelV4FinishReason = { raw: 'stop', unified: 'stop' };
 
 /**
  * A MockLanguageModelV4 that records the params it was actually handed.
@@ -8320,7 +8396,7 @@ export function recordingModel(): RecordingModel {
 			params = options as unknown as RecordedParams;
 			return {
 				content: [{ text: 'ok', type: 'text' as const }],
-				finishReason: 'stop' as const,
+				finishReason: MOCK_FINISH,
 				usage: MOCK_USAGE,
 				warnings: []
 			};
