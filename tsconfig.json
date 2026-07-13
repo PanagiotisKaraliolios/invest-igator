@@ -43,7 +43,8 @@
   },
   "exclude": [
     "node_modules",
-    "src/**/*.test.ts"
+    "src/**/*.test.ts",
+    "prisma/**/*.test.ts"
   ],
   "include": [
     "next-env.d.ts",
