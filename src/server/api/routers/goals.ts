@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { type Currency, currencySchema } from '@/lib/currency';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
+import { listGoalRecords } from '@/server/services/goals';
 
 /**
  * Goals router - manages user financial goals.
@@ -75,15 +76,7 @@ export const goalsRouter = createTRPCRouter({
 	 * goals.forEach(goal => console.log(goal.title, goal.targetAmount));
 	 */
 	list: protectedProcedure.query(async ({ ctx }) => {
-		const userId = ctx.session.user.id;
-		return ctx.db.goal.findMany({
-			orderBy: [
-				// upcoming target dates first, then most recent created
-				{ targetDate: 'asc' },
-				{ createdAt: 'desc' }
-			],
-			where: { userId }
-		});
+		return listGoalRecords(ctx.session.user.id);
 	}),
 
 	/**

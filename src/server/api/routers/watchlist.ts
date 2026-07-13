@@ -5,6 +5,7 @@ import { isValidSymbol, normalizeSymbol, symbolSchema } from '@/lib/validation';
 import { createTRPCRouter, withPermissions } from '@/server/api/trpc';
 import { fluxStringLiteral, influxQueryApi, measurement } from '@/server/influx';
 import { ingestYahooSymbol } from '@/server/jobs/yahoo-lib';
+import { listWatchlistItems } from '@/server/services/watchlist';
 import { searchYahooSymbols, symbolExistsOnYahoo } from '@/server/yahoo-search';
 
 /**
@@ -317,11 +318,7 @@ export const watchlistRouter = createTRPCRouter({
 	 * items.forEach(item => console.log(item.symbol, item.starred));
 	 */
 	list: withPermissions('watchlist', 'read').query(async ({ ctx }) => {
-		const userId = ctx.session.user.id;
-		return ctx.db.watchlistItem.findMany({
-			orderBy: [{ starred: 'desc' }, { createdAt: 'desc' }],
-			where: { userId }
-		});
+		return listWatchlistItems(ctx.session.user.id);
 	}),
 
 	/**
