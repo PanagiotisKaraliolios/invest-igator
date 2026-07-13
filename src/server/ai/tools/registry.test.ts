@@ -344,12 +344,46 @@ describe('THE SECURITY MODEL', () => {
 				additionalProperties: false,
 				tool: t.name
 			});
+
+			// The JSON Schema shape above is NOT sufficient on its own: in zod v4,
+			// `z.toJSONSchema` reports `additionalProperties: false` for a PLAIN `z.object()`
+			// too, identically to `z.strictObject()` — verified directly, not assumed (see the
+			// negative control below). Only the RUNTIME parse behaviour actually distinguishes
+			// them: `z.object()` silently STRIPS an unknown key (`safeParse` still succeeds,
+			// minus the key); only `z.strictObject()` rejects it outright. Prove the real
+			// behaviour, for every tool whose schema accepts an empty input.
+			if (t.inputSchema.safeParse({}).success) {
+				const probed = t.inputSchema.safeParse({ __unrecognised_probe_key__: true });
+				expect({ ok: probed.success, tool: t.name }).toEqual({ ok: false, tool: t.name });
+			}
 		}
 	});
 
 	test('a userId smuggled into model input fails the schema outright', () => {
 		const parsed = byName('transactions.search').inputSchema.safeParse({ userId: 'user-a' });
 		expect(parsed.success).toBe(false);
+	});
+
+	// Gives the "no userId key" check above teeth: proves a schema that DOES leak `userId`
+	// in its properties is actually caught, not just that our seven tools happen to pass today.
+	test('NEGATIVE CONTROL: a schema with userId in its properties would be caught by the no-userId check above', () => {
+		const bad = z.object({ userId: z.string() });
+		expect(collectPropertyNames(z.toJSONSchema(bad), [])).toContain('userId');
+	});
+
+	// Gives the RUNTIME half of the "strictObject" check above teeth: proves the JSON-Schema
+	// `additionalProperties` shape is NOT what distinguishes strict from plain in zod v4 — the
+	// two are byte-identical there — and that `safeParse` is where they actually diverge.
+	test('NEGATIVE CONTROL: a plain z.object silently strips an unknown key; only z.strictObject rejects it', () => {
+		const probe = { __unrecognised_probe_key__: true };
+		const loose = z.object({ userId: z.string().optional() });
+		const strict = z.strictObject({ userId: z.string().optional() });
+
+		expect(z.toJSONSchema(loose).additionalProperties).toBe(false); // identical to strict's — no signal here
+		expect(z.toJSONSchema(strict).additionalProperties).toBe(false);
+
+		expect(loose.safeParse(probe).success).toBe(true); // silently stripped, NOT rejected
+		expect(strict.safeParse(probe).success).toBe(false); // rejected — this is what our tools rely on
 	});
 
 	test("user B's ToolCtx returns B's transactions, never A's", async () => {
