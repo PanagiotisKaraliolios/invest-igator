@@ -61,13 +61,12 @@ jobs:
       # `bun test src` collects every *.test.ts file, and several (e.g.
       # portfolio-compute.test.ts) transitively import the REAL '@/env' — so every
       # required var needs a value here, not just DATABASE_URL, or env.js throws at
-      # collection time and takes the whole run down with it.
+      # collection time and takes the whole run down with it. The AZURE_OPENAI_* vars are
+      # NOT here: they are optional (BYOK-only deployments must boot without them), so the
+      # unit suite must pass without them too — that is the whole point of this job.
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/investigator
       AUTH_DISCORD_ID: test-id
       AUTH_DISCORD_SECRET: test-secret
-      AZURE_OPENAI_API_KEY: test-key
-      AZURE_OPENAI_CHAT_DEPLOYMENT: test-deployment
-      AZURE_OPENAI_RESOURCE_NAME: test-resource
       CLOUDFLARE_ACCESS_KEY_ID: test-key-id
       CLOUDFLARE_ACCOUNT_ID: test-account-id
       CLOUDFLARE_BUCKET_NAME: test-bucket

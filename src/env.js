@@ -71,10 +71,13 @@ export const env = createEnv({
 	 */
 	server: {
 		/**
-		 * AI layer. The BYOK keyring vars (AI_CRED_*, AI_API_KEY_PEPPER) are OPTIONAL: BYOK
-		 * degrades without them. The Azure OpenAI platform vars below are REQUIRED: the
-		 * platform model is not optional, so a missing key fails at boot, not on the first
-		 * user's first chat message.
+		 * AI layer. EVERY AI var is OPTIONAL, including the Azure OpenAI platform vars: the
+		 * app must boot with none of them set — AI features degrade (no platform model
+		 * and/or no BYOK), they do not crash the app. `platformModel()` in
+		 * `src/server/ai/registry.ts` throws its own clear, actionable error — lazily, only
+		 * when someone actually asks for the platform model — if Azure isn't configured;
+		 * that is the right place to enforce "the platform model must exist", not env
+		 * parsing, which the whole app (including BYOK-only deployments) depends on at boot.
 		 */
 		// HMAC pepper for O(1) ApiKey lookup (Phase 2). `openssl rand -base64 32`.
 		AI_API_KEY_PEPPER: z.string().min(32).optional(),
@@ -86,17 +89,17 @@ export const env = createEnv({
 		APP_NAME: z.string().default('Invest-igator'),
 		AUTH_DISCORD_ID: z.string(),
 		AUTH_DISCORD_SECRET: z.string(),
-		// Platform provider (Azure OpenAI). REQUIRED — not optional: the platform model must
-		// exist, so a missing key has to fail at boot, not on the first user's first chat message.
-		AZURE_OPENAI_API_KEY: z.string(),
+		// Platform provider (Azure OpenAI). OPTIONAL: an app with no Azure config is a
+		// perfectly valid app that simply has no platform LLM — a BYOK-only user still works.
+		AZURE_OPENAI_API_KEY: z.string().optional(),
 		// The DEPLOYMENT name. This is the string passed to azure() as the SDK "model id".
-		AZURE_OPENAI_CHAT_DEPLOYMENT: z.string(),
+		AZURE_OPENAI_CHAT_DEPLOYMENT: z.string().optional(),
 		// The REAL model. This is what we PRICE on — never price on the deployment name.
 		// Defaulted, not optional: a missing value here would silently yield UNKNOWN_MODEL rows.
 		AZURE_OPENAI_CHAT_MODEL: z.string().default('gpt-5.4-mini'),
 		// The resource NAME, not a URL. The SDK builds the endpoint and appends /v1{path} itself;
 		// a value ending in /v1 yields /v1/v1/... -> 404.
-		AZURE_OPENAI_RESOURCE_NAME: z.string(),
+		AZURE_OPENAI_RESOURCE_NAME: z.string().optional(),
 		BETTER_AUTH_SECRET: process.env.NODE_ENV === 'production' ? z.string() : z.string().optional(),
 		BETTER_AUTH_URL: z.string().default('http://localhost:3000'),
 		CLOUDFLARE_ACCESS_KEY_ID: z.string(),
