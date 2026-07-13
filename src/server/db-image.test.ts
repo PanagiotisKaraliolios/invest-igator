@@ -64,6 +64,17 @@ describe('CI actually runs these tests', () => {
 	test('ci.yml has a unit job that runs bun run test:unit and all-checks depends on it', async () => {
 		const ci = await Bun.file(join(REPO_ROOT, '.github/workflows/ci.yml')).text();
 		expect(ci).toContain('bun run test:unit');
-		expect(ci).toContain('needs: [lint, typecheck, unit, build, e2e]');
+		expect(ci).toContain('needs: [lint, typecheck, unit, build, e2e, db_tests]');
+	});
+
+	// Task 8 adds `db_tests`: the ONLY job that ever runs `prisma/ai-quota.test.ts`'s multi-replica
+	// concurrency test. A pin-drift guard is worthless if the job proving it never runs, and a
+	// concurrency test that CI never executes proves nothing about production.
+	test('ci.yml has a db_tests job that runs bun run test:db and is not pull_request-only', async () => {
+		const ci = await Bun.file(join(REPO_ROOT, '.github/workflows/ci.yml')).text();
+		expect(ci).toContain('bun run test:db');
+
+		const dbTestsJob = ci.slice(ci.indexOf('\n  db_tests:'), ci.indexOf('\n  migration-check:'));
+		expect(dbTestsJob).not.toContain("if: github.event_name == 'pull_request'");
 	});
 });

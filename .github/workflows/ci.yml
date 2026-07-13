@@ -205,6 +205,52 @@ jobs:
         if: always()
         run: docker stop postgres && docker rm postgres
 
+  db_tests:
+    name: Database Integration Tests
+    runs-on: ubuntu-latest
+    # NOT guarded to pull_request — unlike migration-check below. This job is the ONLY thing that
+    # ever runs `prisma/ai-quota.test.ts`'s multi-replica concurrency test; skipping it on push to
+    # main would leave the property this task exists to guarantee completely ungated.
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/investigator
+      SKIP_ENV_VALIDATION: '1'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: bun run postinstall
+
+      - name: Start PostgreSQL
+        run: |
+          docker run -d \
+            --name postgres \
+            -e POSTGRES_USER=postgres \
+            -e POSTGRES_PASSWORD=postgres \
+            -e POSTGRES_DB=investigator \
+            -p 5432:5432 \
+            pgvector/pgvector:0.8.5-pg16
+          # Wait for PostgreSQL to be ready
+          timeout 30 bash -c 'until docker exec postgres pg_isready -U postgres; do sleep 1; done'
+
+      - name: Apply migrations
+        run: bun run db:migrate
+
+      - name: Run database integration tests
+        run: bun run test:db
+
+      - name: Stop PostgreSQL
+        if: always()
+        run: docker stop postgres && docker rm postgres
+
   migration-check:
     name: Migration Check
     runs-on: ubuntu-latest
@@ -251,7 +297,7 @@ jobs:
   all-checks:
     name: All Checks Passed
     if: always()
-    needs: [lint, typecheck, unit, build, e2e]
+    needs: [lint, typecheck, unit, build, e2e, db_tests]
     runs-on: ubuntu-latest
     steps:
       - name: Check all job statuses
@@ -260,7 +306,8 @@ jobs:
              [[ "${{ needs.typecheck.result }}" != "success" ]] || \
              [[ "${{ needs.unit.result }}" != "success" ]] || \
              [[ "${{ needs.build.result }}" != "success" ]] || \
-             [[ "${{ needs.e2e.result }}" != "success" ]]; then
+             [[ "${{ needs.e2e.result }}" != "success" ]] || \
+             [[ "${{ needs.db_tests.result }}" != "success" ]]; then
             echo "One or more checks failed"
             exit 1
           fi
