@@ -41,7 +41,12 @@ mock.module('@/server/db', () => ({
 	}
 }));
 
+// Surgical: spread the REAL module's exports rather than replacing the whole thing. A blanket
+// `mock.module('@/server/ai/crypto', () => ({ open }))` drops `Secret`/`seal`, which broke
+// crypto.test.ts when both files ran in the same bun process without `--isolate`.
+const actualCrypto = await import('@/server/ai/crypto');
 mock.module('@/server/ai/crypto', () => ({
+	...actualCrypto,
 	open: () => ({ expose: () => 'sk-byok-plaintext' })
 }));
 

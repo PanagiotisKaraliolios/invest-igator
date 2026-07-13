@@ -5,7 +5,7 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 
 import { open } from '@/server/ai/crypto';
-import { applyGuardrails, type WrappableModel } from '@/server/ai/guardrails';
+import { applyGuardrails, markUnguarded, type Unguarded } from '@/server/ai/guardrails';
 import { platformModel, type ResolvedModel } from '@/server/ai/registry';
 import { db } from '@/server/db';
 
@@ -78,6 +78,13 @@ function toByokConfig(row: {
  * and appends `/v1{path}` ITSELF. A user who pastes an endpoint ending in `/v1` gets
  * `/v1/v1/responses` -> 404, which looks exactly like a broken key. Normalise at save
  * time AND here.
+ *
+ * The Azure Portal's "Target URI" field hands users a FULL deployment URL —
+ * `.../openai/deployments/<name>/chat/completions?api-version=...` — not a bare endpoint.
+ * Anything after the `/openai` path segment is deployment/operation routing the SDK derives
+ * itself, so truncate the path there. AI Foundry's `/models` form (and a bare host) has no
+ * `/openai` segment at all — append one rather than passing the URL through untouched, which
+ * is the same 404-that-looks-like-a-broken-key failure this function exists to prevent.
  */
 export function normaliseAzureBaseUrl(raw: string): string {
 	let url: URL;
@@ -93,7 +100,12 @@ export function normaliseAzureBaseUrl(raw: string): string {
 	while (path.endsWith('/v1')) {
 		path = path.slice(0, -'/v1'.length).replace(/\/+$/, '');
 	}
-	url.pathname = path === '' ? '/openai' : path;
+
+	const segments = path.split('/').filter((segment) => segment.length > 0);
+	const openaiIndex = segments.findIndex((segment) => segment.toLowerCase() === 'openai');
+	path = openaiIndex === -1 ? `${path}/openai` : `/${segments.slice(0, openaiIndex + 1).join('/')}`;
+
+	url.pathname = path;
 
 	return url.toString().replace(/\/+$/, '');
 }
@@ -126,12 +138,15 @@ function requireModelId(cfg: ByokConfig): string {
 }
 
 /**
- * Builds the raw (UNGUARDED) provider model — callers MUST wrap it with applyGuardrails().
- * Per-request construction is effectively free: there is no vendor SDK object and no socket
- * pool — all HTTP goes through the global undici pool. NEVER pass a custom `fetch` that
- * builds a new Agent per instance.
+ * Builds the raw provider model. Per-request construction is effectively free: there is no
+ * vendor SDK object and no socket pool — all HTTP goes through the global undici pool. NEVER
+ * pass a custom `fetch` that builds a new Agent per instance.
+ *
+ * Returns an `Unguarded` wrapper, NOT a `LanguageModel` — passing the result straight to
+ * `generateText`/`streamText` as `model:` is a TYPE ERROR, not just against doc-comment advice.
+ * `applyGuardrails()` is the only function that can turn it into something they accept.
  */
-export function buildByokModel(cfg: ByokConfig, apiKey: string): WrappableModel {
+export function buildByokModel(cfg: ByokConfig, apiKey: string): Unguarded {
 	const modelId = requireModelId(cfg);
 	const optionalBaseUrl = orNull(cfg.baseURL);
 
@@ -145,28 +160,28 @@ export function buildByokModel(cfg: ByokConfig, apiKey: string): WrappableModel 
 				...(apiVersion !== null ? { apiVersion } : {})
 			});
 			// For Azure the DEPLOYMENT NAME is the model id.
-			return azure(orNull(cfg.deployment) ?? modelId);
+			return markUnguarded(azure(orNull(cfg.deployment) ?? modelId));
 		}
 		case 'OPENAI': {
 			const openai = createOpenAI({
 				apiKey,
 				...(optionalBaseUrl !== null ? { baseURL: optionalBaseUrl } : {})
 			});
-			return openai(modelId);
+			return markUnguarded(openai(modelId));
 		}
 		case 'ANTHROPIC': {
 			const anthropic = createAnthropic({
 				apiKey,
 				...(optionalBaseUrl !== null ? { baseURL: optionalBaseUrl } : {})
 			});
-			return anthropic(modelId);
+			return markUnguarded(anthropic(modelId));
 		}
 		case 'GOOGLE': {
 			const google = createGoogleGenerativeAI({
 				apiKey,
 				...(optionalBaseUrl !== null ? { baseURL: optionalBaseUrl } : {})
 			});
-			return google(modelId);
+			return markUnguarded(google(modelId));
 		}
 		case 'OPENAI_COMPATIBLE': {
 			const compatible = createOpenAICompatible({
@@ -174,7 +189,7 @@ export function buildByokModel(cfg: ByokConfig, apiKey: string): WrappableModel 
 				baseURL: requireBaseUrl(cfg),
 				name: 'byok'
 			});
-			return compatible(modelId);
+			return markUnguarded(compatible(modelId));
 		}
 	}
 }

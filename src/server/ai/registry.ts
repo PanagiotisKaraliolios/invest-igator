@@ -12,6 +12,8 @@ export {
 	GUARDRAIL_STACK,
 	guardrails,
 	MAX_OUTPUT_TOKENS,
+	MAX_STEPS,
+	type Unguarded,
 	type WrappableModel
 } from '@/server/ai/guardrails';
 
