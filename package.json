@@ -102,6 +102,7 @@
 		"ingest:yahoo": "bun run src/server/jobs/ingest-yahoo.ts",
 		"postinstall": "prisma generate",
 		"preview": "next build && next start",
+		"prices:fetch": "bun run scripts/fetch-model-prices.ts",
 		"start": "next start",
 		"test:e2e": "bunx playwright test",
 		"test:e2e:headed": "bunx playwright test --headed",
