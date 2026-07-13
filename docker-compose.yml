@@ -46,6 +46,11 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-investigator}
     volumes:
       - pgdata:/var/lib/postgresql/data
+    # Published so `bun run test:db` / `bun run db:migrate` work against the compose stack
+    # without a dev hand-finding the container IP (`docker inspect`). `.env`'s DATABASE_URL
+    # points at localhost:5432, which is only reachable if this is published.
+    ports:
+      - '5432:5432'
     healthcheck:
       test:
         - CMD-SHELL

@@ -24,6 +24,24 @@ export const MAX_OUTPUT_TOKENS = 4096;
  */
 export const MAX_STEPS = 8;
 
+/**
+ * Hard ceiling on how many tokens a SINGLE tool-call result may contribute once it is
+ * serialized back into the conversation. Tool results are appended to the conversation and
+ * RE-SENT AS INPUT on every subsequent step — they are exactly as dangerous to quota sizing as
+ * model output, but the request-level ceiling in `quota.ts` (`estimateRequestCeilingNanoUsd`)
+ * only bounds growth correctly if this cap is actually enforced by whatever appends tool
+ * results to the conversation (Task 10). If a tool result is allowed to exceed this, the quota
+ * reservation for the whole request is UNSOUND — the actual cost of resending an oversized
+ * result on every remaining step can exceed the reserved ceiling.
+ *
+ * 8192 — 2x `MAX_OUTPUT_TOKENS`. Tool results are typically JSON, which is denser than prose
+ * (~4 chars/token is a common rule of thumb), so this is roughly a 32 KB budget per result —
+ * enough for a normal API response, but small enough that `MAX_STEPS` of them can't quietly
+ * blow through a reservation. Task 10 MUST truncate (or paginate/summarize) any tool result
+ * larger than this before it is appended to the conversation.
+ */
+export const MAX_TOOL_RESULT_TOKENS = 8192;
+
 export function clampMaxOutputTokens(requested: number | undefined): number {
 	if (requested === undefined || !Number.isFinite(requested) || requested <= 0) {
 		return MAX_OUTPUT_TOKENS;

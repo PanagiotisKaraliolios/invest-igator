@@ -1,7 +1,16 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { MAX_OUTPUT_TOKENS, MAX_STEPS } from '../src/server/ai/guardrails';
+import { MAX_OUTPUT_TOKENS, MAX_STEPS, MAX_TOOL_RESULT_TOKENS } from '../src/server/ai/guardrails';
 import { estimateCeilingNanoUsd, price } from '../src/server/ai/pricing/price';
-import { QuotaExceededError, ensureQuotaRow, reserve, settle, sweepOrphanedReservations } from '../src/server/ai/quota';
+import {
+	ensureQuotaRow,
+	estimateRequestCeilingNanoUsd,
+	ORPHAN_AGE_MS,
+	QuotaExceededError,
+	REQUEST_TIMEOUT_MS,
+	reserve,
+	settle,
+	sweepOrphanedReservations
+} from '../src/server/ai/quota';
 import { db } from '../src/server/db';
 
 /**
@@ -143,6 +152,67 @@ describe('settle', () => {
 		expect(q.reservedNanoUsd).toBe(0n);
 	});
 
+	test('settle(r, null) bills the FULL ceiling, not zero — an unpriced model must never be free', async () => {
+		// price() returns null (never 0n) for a model absent from the snapshot. A caller who does
+		// `settle(r, call.costNanoUsd ?? 0n)` would release the ceiling and bill nothing: unlimited
+		// free platform inference for any unpriced model. settle() must resolve null to the ceiling
+		// itself, inside the function, so no caller can get this wrong.
+		await setLimit(10_000n);
+		const r = await reserve(userId, 7_000n, 'req-unpriced-model');
+		await settle(r, null);
+
+		const q = await db.aiQuota.findUniqueOrThrow({ where: { userId } });
+		expect(q.spentNanoUsd).toBe(7_000n); // the full ceiling, not 0n
+		expect(q.reservedNanoUsd).toBe(0n);
+	});
+
+	test('settle() is NOT idempotent on the spend leg — calling it twice double-bills (pinned current behaviour)', async () => {
+		// The ceiling is only ever released ONCE (claimed via settledAt IS NULL), but nothing stops
+		// a second call from adding actualNanoUsd to spentNanoUsd again. settle() must be called at
+		// most once per reservation (documented loudly in its docstring) — this test pins today's
+		// behaviour so a future change either fixes it deliberately or this test catches the drift.
+		await setLimit(10_000n);
+		const r = await reserve(userId, 5_000n, 'req-double-settle');
+		await settle(r, 2_000n);
+		await settle(r, 2_000n);
+
+		const q = await db.aiQuota.findUniqueOrThrow({ where: { userId } });
+		expect(q.spentNanoUsd).toBe(4_000n); // billed twice — settle() must be called at most once
+		expect(q.reservedNanoUsd).toBe(0n); // the ceiling itself was only released once
+	});
+
+	test("settle() ignores a tampered reservation.userId — it derives the real owner from the database via id, not the caller's field", async () => {
+		// If settle() trusted `reservation.userId` for its billing target, a Reservation whose
+		// `userId` field had been corrupted (or simply mismatched by a caller bug) would debit an
+		// unrelated user's quota for an amount the caller controls — a griefing vector needing only
+		// knowledge of a valid reservation `id`, not that user's credentials.
+		await setLimit(10_000n);
+		const other = await db.user.create({ data: {} });
+		await ensureQuotaRow(other.id);
+		await db.aiQuota.update({
+			data: { limitNanoUsd: 10_000n, reservedNanoUsd: 0n, spentNanoUsd: 0n },
+			where: { userId: other.id }
+		});
+
+		const r = await reserve(userId, 3_000n, 'req-owner');
+		const tampered = { ...r, userId: other.id }; // same id, forged userId
+
+		await settle(tampered, 1_000n);
+
+		// The unrelated user must be completely untouched by the forged call...
+		const otherQ = await db.aiQuota.findUniqueOrThrow({ where: { userId: other.id } });
+		expect(otherQ.spentNanoUsd).toBe(0n);
+		expect(otherQ.reservedNanoUsd).toBe(0n);
+
+		// ...and the REAL owner must be billed exactly as if userId had never been tampered with.
+		const ownerQ = await db.aiQuota.findUniqueOrThrow({ where: { userId } });
+		expect(ownerQ.spentNanoUsd).toBe(1_000n);
+		expect(ownerQ.reservedNanoUsd).toBe(0n);
+
+		await db.aiQuota.delete({ where: { userId: other.id } });
+		await db.user.delete({ where: { id: other.id } });
+	});
+
 	test('settling a reservation the sweeper already released bills the spend, but does NOT release the ceiling twice', async () => {
 		await setLimit(10_000n);
 		const r = await reserve(userId, 5_000n, 'req-1');
@@ -190,6 +260,36 @@ describe('sweepOrphanedReservations', () => {
 		expect(await sweepOrphanedReservations()).toBe(0);
 		expect((await db.aiQuota.findUniqueOrThrow({ where: { userId } })).reservedNanoUsd).toBe(1_000n);
 	});
+
+	test('sweeping the SAME orphan twice only releases its ceiling ONCE', async () => {
+		// The mutation this guards against: deleting `AND "settledAt" IS NULL` from the `orphaned`
+		// CTE. Without that guard, a row's `createdAt` stays < cutoff forever once it is stale, so
+		// EVERY subsequent sweep would re-match it and re-decrement reservedNanoUsd by its ceiling
+		// again — a genuine double-release that would eventually drive reservedNanoUsd to 0 even
+		// while other, real reservations are still held (masked here only because of the
+		// GREATEST(0, ...) floor, which is a different, already-tested guard).
+		await setLimit(10_000n);
+		const stale = await reserve(userId, 3_000n, 'req-stale');
+		const fresh = await reserve(userId, 2_000n, 'req-fresh'); // must survive both sweeps untouched
+
+		await db.aiQuotaReservation.update({
+			data: { createdAt: new Date(Date.now() - 20 * 60 * 1000) },
+			where: { id: stale.id }
+		});
+
+		expect(await sweepOrphanedReservations()).toBe(1); // first sweep: releases the stale one
+
+		const afterFirst = await db.aiQuota.findUniqueOrThrow({ where: { userId } });
+		expect(afterFirst.reservedNanoUsd).toBe(2_000n); // only req-fresh's ceiling remains
+
+		// stale.createdAt is STILL < cutoff — a settledAt-blind sweep would match it again.
+		expect(await sweepOrphanedReservations()).toBe(0); // second sweep: nothing left to claim
+
+		const afterSecond = await db.aiQuota.findUniqueOrThrow({ where: { userId } });
+		expect(afterSecond.reservedNanoUsd).toBe(2_000n); // unchanged — NOT re-decremented
+
+		expect((await db.aiQuotaReservation.findUniqueOrThrow({ where: { id: fresh.id } })).settledAt).toBeNull();
+	});
 });
 
 describe('THE MULTI-REPLICA BYPASS TEST', () => {
@@ -224,35 +324,27 @@ describe('THE MULTI-REPLICA BYPASS TEST', () => {
 });
 
 describe('sizing a reservation for a whole multi-step tool-calling request', () => {
-	test('a request-level ceiling sized off MAX_STEPS survives an 8-step tool loop maxed at MAX_OUTPUT_TOKENS every step', async () => {
-		// The inherited warning from Task 6: MAX_OUTPUT_TOKENS bounds ONE provider call, not a
-		// request. With `stopWhen`, one request can issue up to MAX_STEPS provider calls, each
-		// independently clamped to MAX_OUTPUT_TOKENS — so a request can legally cost up to
-		// MAX_STEPS * MAX_OUTPUT_TOKENS output tokens. Reserving a single-call ceiling for a whole
-		// request is the "reserve 1K, model returns 8K" bug, one level up. This proves a request-sized
-		// reservation survives the worst case, and that a naive single-call reservation would not.
-		const model = 'gpt-5.4-mini';
-		const estimatedInputTokens = 1_000; // the initial conversation, before any tool round-trips
+	// The inherited warning from Task 6: MAX_OUTPUT_TOKENS bounds ONE provider call, not a
+	// request. With `stopWhen`, one request can issue up to MAX_STEPS provider calls. What C1
+	// fixed: the ORIGINAL formula modeled conversation growth from model OUTPUT alone. But a
+	// tool-calling loop also appends each STEP'S TOOL RESULT to the conversation, and that result
+	// is re-sent as input on every subsequent step exactly like model output is — tool results
+	// appeared nowhere in the old formula. `estimateRequestCeilingNanoUsd` (quota.ts) is the fix:
+	// it charges every prior step for BOTH MAX_OUTPUT_TOKENS AND MAX_TOOL_RESULT_TOKENS of growth.
+	const model = 'gpt-5.4-mini';
+	const estimatedInputTokens = 1_000; // the initial conversation, before any tool round-trips
 
-		// Conservative sizing for the WHOLE request. Output: bounded tightly by MAX_STEPS *
-		// MAX_OUTPUT_TOKENS (every step independently clamped by the guardrail). Input: compounds
-		// too, since each step re-sends the growing conversation — step i's input can include up to
-		// (i - 1) prior steps' worth of MAX_OUTPUT_TOKENS. Bounding EVERY step's input by the full
-		// MAX_STEPS * MAX_OUTPUT_TOKENS (not just the steps that precede it) over-estimates, but is
-		// simple and safe — it can only over-reserve, never under-reserve.
-		const requestOutputCeiling = MAX_STEPS * MAX_OUTPUT_TOKENS;
-		const requestInputCeiling = MAX_STEPS * (estimatedInputTokens + requestOutputCeiling);
-		const requestCeiling = estimateCeilingNanoUsd(model, requestInputCeiling, requestOutputCeiling);
-
-		await setLimit(requestCeiling); // exactly enough room for the whole request, no more
-		const reservation = await reserve(userId, requestCeiling, 'req-8-step-loop');
-
-		// Simulate the worst case this ceiling must survive: MAX_STEPS provider calls, each maxed at
-		// MAX_OUTPUT_TOKENS output, each step's input inflated by every PRIOR step's max output (the
-		// growing-conversation resend).
-		let totalActualNanoUsd = 0n;
+	/**
+	 * Simulates the actual cost of a MAX_STEPS request where each step (except the last, which has
+	 * no following step to re-send into) produces `toolResultTokensAt(step)` tokens of tool result.
+	 * Both that result and the step's own MAX_OUTPUT_TOKENS output persist in the conversation and
+	 * are re-sent as input on every subsequent step — mirroring how a real tool-calling loop grows.
+	 */
+	function simulateActualNanoUsd(toolResultTokensAt: (step: number) => number): bigint {
+		let total = 0n;
+		let priorGrowth = 0;
 		for (let step = 0; step < MAX_STEPS; step++) {
-			const stepInputTokens = estimatedInputTokens + step * MAX_OUTPUT_TOKENS;
+			const stepInputTokens = estimatedInputTokens + priorGrowth;
 			const stepCost = price(model, {
 				cacheReadTokens: null,
 				cacheWriteTokens: null,
@@ -260,21 +352,82 @@ describe('sizing a reservation for a whole multi-step tool-calling request', () 
 				outputTokens: MAX_OUTPUT_TOKENS
 			});
 			expect(stepCost).not.toBeNull();
-			totalActualNanoUsd += stepCost?.nanoUsd ?? 0n;
+			total += stepCost?.nanoUsd ?? 0n;
+			priorGrowth += MAX_OUTPUT_TOKENS + toolResultTokensAt(step);
 		}
+		return total;
+	}
 
-		// THE property this whole task exists to guarantee: actual cost never exceeds the reserved
-		// ceiling, even across a full MAX_STEPS tool loop maxed out every step.
-		expect(totalActualNanoUsd <= requestCeiling).toBe(true);
+	/**
+	 * THE ORIGINAL (pre-C1) formula, reconstructed here — NOT reintroduced into quota.ts — purely
+	 * so this suite can prove it is insufficient. It models conversation growth from model output
+	 * alone; tool results appear nowhere in it. This is the exact blind spot C1 closed.
+	 */
+	function legacyOutputOnlyCeiling(): bigint {
+		const requestOutputCeiling = MAX_STEPS * MAX_OUTPUT_TOKENS;
+		const requestInputCeiling = MAX_STEPS * (estimatedInputTokens + requestOutputCeiling);
+		return estimateCeilingNanoUsd(model, requestInputCeiling, requestOutputCeiling);
+	}
 
-		// And the bug this closes is real: a reservation sized for a SINGLE call is blown through
-		// many times over by the actual cost of the 8-step loop.
-		const naiveSingleCallCeiling = estimateCeilingNanoUsd(model, estimatedInputTokens, MAX_OUTPUT_TOKENS);
-		expect(totalActualNanoUsd > naiveSingleCallCeiling).toBe(true);
+	test('no tool calls: the real ceiling survives MAX_STEPS at MAX_OUTPUT_TOKENS output every step', async () => {
+		const ceiling = estimateRequestCeilingNanoUsd(model, estimatedInputTokens);
+		const actual = simulateActualNanoUsd(() => 0);
+		expect(actual <= ceiling).toBe(true);
 
-		await settle(reservation, totalActualNanoUsd);
+		await setLimit(ceiling);
+		const reservation = await reserve(userId, ceiling, 'req-no-tools');
+		await settle(reservation, actual);
 		const q = await db.aiQuota.findUniqueOrThrow({ where: { userId } });
-		expect(q.spentNanoUsd).toBe(totalActualNanoUsd);
+		expect(q.spentNanoUsd).toBe(actual);
 		expect(q.reservedNanoUsd).toBe(0n);
+	});
+
+	test('a MAX_TOOL_RESULT_TOKENS tool result on EVERY step stays within the real ceiling — the legacy output-only formula does NOT survive this', async () => {
+		const ceiling = estimateRequestCeilingNanoUsd(model, estimatedInputTokens);
+		const actual = simulateActualNanoUsd(() => MAX_TOOL_RESULT_TOKENS);
+
+		// THE property C1 exists to guarantee: actual cost never exceeds the real ceiling, even
+		// with a worst-case tool result appended on every step.
+		expect(actual <= ceiling).toBe(true);
+
+		// And the bug is real: the legacy formula never budgeted for tool results at all, so this
+		// exact worst case blows through it. (Before the fix, this was RED against the real
+		// `estimateRequestCeilingNanoUsd` too — see the C1 fix-wave report.)
+		expect(actual > legacyOutputOnlyCeiling()).toBe(true);
+
+		await setLimit(ceiling);
+		const reservation = await reserve(userId, ceiling, 'req-max-tool-result-every-step');
+		await settle(reservation, actual);
+		const q = await db.aiQuota.findUniqueOrThrow({ where: { userId } });
+		expect(q.spentNanoUsd).toBe(actual);
+		expect(q.reservedNanoUsd).toBe(0n);
+	});
+
+	test('one MAX_TOOL_RESULT_TOKENS result at step 0, re-sent on every later step, stays within the real ceiling', async () => {
+		const ceiling = estimateRequestCeilingNanoUsd(model, estimatedInputTokens);
+		const actual = simulateActualNanoUsd((step) => (step === 0 ? MAX_TOOL_RESULT_TOKENS : 0));
+		expect(actual <= ceiling).toBe(true);
+
+		await setLimit(ceiling);
+		const reservation = await reserve(userId, ceiling, 'req-one-fat-result-early');
+		await settle(reservation, actual);
+		const q = await db.aiQuota.findUniqueOrThrow({ where: { userId } });
+		expect(q.spentNanoUsd).toBe(actual);
+		expect(q.reservedNanoUsd).toBe(0n);
+	});
+
+	test('a naive SINGLE-CALL ceiling is still blown through many times over by the 8-step loop, even with zero tool results', async () => {
+		const naiveSingleCallCeiling = estimateCeilingNanoUsd(model, estimatedInputTokens, MAX_OUTPUT_TOKENS);
+		const actual = simulateActualNanoUsd(() => 0);
+		expect(actual > naiveSingleCallCeiling).toBe(true);
+	});
+});
+
+describe('REQUEST_TIMEOUT_MS vs ORPHAN_AGE_MS', () => {
+	test('the request timeout is comfortably below the sweeper orphan age, so a request is guaranteed dead before it can be swept out from under itself', () => {
+		// If this ever inverted, a request still legitimately running would have its reservation
+		// released by the sweeper while it is still spending provider money — a second request
+		// could then reserve and spend the same budget, breaking the limitNanoUsd cap entirely.
+		expect(REQUEST_TIMEOUT_MS).toBeLessThan(ORPHAN_AGE_MS);
 	});
 });
