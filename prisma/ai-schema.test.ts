@@ -40,7 +40,10 @@ describe('AI layer schema round-trip', () => {
 		const row = await db.aiProviderCredential.findUniqueOrThrow({ where: { id: created.id } });
 		// Prisma 7 hands Bytes back as Uint8Array, NOT Buffer — Task 6 must Buffer.from() it
 		// before calling open(). Assert the runtime shape so that contract cannot silently drift.
+		// Buffer is a subclass of Uint8Array, so toBeInstanceOf(Uint8Array) alone would also
+		// pass for a Buffer — explicitly rule that out too.
 		expect(row.iv).toBeInstanceOf(Uint8Array);
+		expect(Buffer.isBuffer(row.iv)).toBe(false);
 		expect(row.kid).toBe('k1');
 		expect(Buffer.from(row.iv).byteLength).toBe(12);
 		expect(Buffer.from(row.authTag).byteLength).toBe(16);
@@ -205,6 +208,31 @@ describe('AI layer schema round-trip', () => {
 	test('deleting the user cascades credentials/quota/chats but SetNulls AiCall', async () => {
 		const tmpId = `${userId}-tmp`;
 		await db.user.create({ data: { email: `${tmpId}@example.test`, id: tmpId, name: 'tmp' } });
+
+		const credential = await db.aiProviderCredential.create({
+			data: {
+				authTag: Buffer.alloc(16, 0x02),
+				ciphertext: Buffer.from('not-really-ciphertext', 'utf8'),
+				defaultModelId: 'gpt-5.4-mini',
+				deployment: 'my-deployment',
+				iv: Buffer.alloc(12, 0x01),
+				kid: 'k1',
+				provider: 'AZURE',
+				resourceName: 'my-resource',
+				userId: tmpId
+			}
+		});
+
+		const chat = await db.aiChat.create({ data: { title: 'tmp chat', userId: tmpId } });
+		const message = await db.aiMessage.create({
+			data: {
+				chatId: chat.id,
+				id: `msg-${chat.id}`,
+				parts: [{ text: 'hello', type: 'text' }],
+				role: 'assistant'
+			}
+		});
+
 		await db.aiQuota.create({
 			data: { limitNanoUsd: 1n, periodStart: new Date(), userId: tmpId }
 		});
@@ -226,6 +254,9 @@ describe('AI layer schema round-trip', () => {
 
 		await db.user.delete({ where: { id: tmpId } });
 
+		expect(await db.aiProviderCredential.findUnique({ where: { id: credential.id } })).toBeNull();
+		expect(await db.aiChat.findUnique({ where: { id: chat.id } })).toBeNull();
+		expect(await db.aiMessage.findUnique({ where: { id: message.id } })).toBeNull();
 		expect(await db.aiQuota.findUnique({ where: { userId: tmpId } })).toBeNull();
 		const kept = await db.aiCall.findUniqueOrThrow({ where: { id: call.id } });
 		expect(kept.userId).toBeNull(); // aggregate spend survives; the PII linkage does not
