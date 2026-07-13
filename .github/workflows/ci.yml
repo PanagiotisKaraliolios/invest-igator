@@ -58,7 +58,28 @@ jobs:
     name: Unit Tests
     runs-on: ubuntu-latest
     env:
+      # `bun test src` collects every *.test.ts file, and several (e.g.
+      # portfolio-compute.test.ts) transitively import the REAL '@/env' — so every
+      # required var needs a value here, not just DATABASE_URL, or env.js throws at
+      # collection time and takes the whole run down with it.
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/investigator
+      AUTH_DISCORD_ID: test-id
+      AUTH_DISCORD_SECRET: test-secret
+      AZURE_OPENAI_API_KEY: test-key
+      AZURE_OPENAI_CHAT_DEPLOYMENT: test-deployment
+      AZURE_OPENAI_RESOURCE_NAME: test-resource
+      CLOUDFLARE_ACCESS_KEY_ID: test-key-id
+      CLOUDFLARE_ACCOUNT_ID: test-account-id
+      CLOUDFLARE_BUCKET_NAME: test-bucket
+      CLOUDFLARE_SECRET_ACCESS_KEY: test-secret-key
+      EMAIL_FROM: noreply@test.local
+      EMAIL_SERVER: smtp://fake:fake@localhost:25
+      INFLUXDB_BUCKET: test-bucket
+      INFLUXDB_ORG: test-org
+      INFLUXDB_TOKEN: test-token
+      INFLUXDB_URL: http://localhost:8086
+      PASSWORD_PEPPER: test-pepper-for-ci-only
+      POLYGON_API_KEY: test-key
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -112,6 +133,9 @@ jobs:
           ALPHAVANTAGE_API_KEY: test-key
           AUTH_DISCORD_ID: test-id
           AUTH_DISCORD_SECRET: test-secret
+          AZURE_OPENAI_API_KEY: test-key
+          AZURE_OPENAI_CHAT_DEPLOYMENT: test-deployment
+          AZURE_OPENAI_RESOURCE_NAME: test-resource
           CLOUDFLARE_ACCESS_KEY_ID: test-key-id
           CLOUDFLARE_ACCOUNT_ID: test-account-id
           CLOUDFLARE_BUCKET_NAME: test-bucket
