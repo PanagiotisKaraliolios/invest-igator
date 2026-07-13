@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 /** Format a Date as a local-time `yyyy-mm-dd` string (uses local getFullYear/getMonth/getDate). */
 export function toLocalIsoDate(d: Date): string {
 	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -20,3 +22,18 @@ export function parseIsoDateUtc(value: string): Date | null {
 	if (date.toISOString().slice(0, 10) !== value) return null;
 	return date;
 }
+
+/**
+ * Zod schema for a transaction date: accepts a bare `yyyy-mm-dd` string and yields a
+ * UTC-midnight `Date`, rejecting impossible calendar dates rather than rolling them over.
+ *
+ * Every write path that accepts a user-supplied date must use this. Each entry point that
+ * hand-rolled `z.string().transform((s) => new Date(s))` instead was a way to silently
+ * store the wrong day; sharing one schema keeps a new one from drifting back.
+ */
+export const isoDateSchema = z
+	.string()
+	.refine((s) => parseIsoDateUtc(s) !== null, {
+		message: 'Invalid date — expected a real yyyy-mm-dd calendar date.'
+	})
+	.transform((s) => parseIsoDateUtc(s) as Date);
