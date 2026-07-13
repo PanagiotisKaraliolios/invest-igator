@@ -498,20 +498,27 @@ export async function computeStructure(userId: string, target: Currency, todayIs
 			const marketCurrency =
 				symbolCurrencies.get(h.symbol) ?? latestTxCurrencyBySymbol.get(h.symbol)?.currency ?? 'USD';
 			let priceInTarget = price;
-			let unconverted = costUnconverted.has(h.symbol);
+			// Whether the *current* market value can be expressed in the target
+			// currency is independent of whether some *historical cost* conversion
+			// failed. Track them separately: a decades-old transaction date with no FX
+			// rate (costUnconverted) must not zero out a holding whose current price and
+			// current FX rate both convert fine, or the holding silently drops out of
+			// totalValue and the whole portfolio total is understated.
+			let valueUnconverted = false;
 			try {
 				priceInTarget = convertAmount(price, marketCurrency, target, fxLatest);
 			} catch (e) {
 				if (e instanceof MissingFxRateError) {
-					unconverted = true;
+					valueUnconverted = true;
 				} else {
 					throw e;
 				}
 			}
-			const currentValue = unconverted ? 0 : h.quantity * priceInTarget;
+			const unconverted = valueUnconverted || costUnconverted.has(h.symbol);
+			const currentValue = valueUnconverted ? 0 : h.quantity * priceInTarget;
 			return {
 				avgCost: h.quantity > 0 ? h.totalCostInTarget / h.quantity : 0,
-				price: unconverted ? price : priceInTarget,
+				price: valueUnconverted ? price : priceInTarget,
 				quantity: h.quantity,
 				symbol: h.symbol,
 				totalCost: h.totalCostInTarget,

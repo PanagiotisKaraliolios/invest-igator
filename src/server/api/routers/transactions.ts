@@ -1,6 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { type Currency, currencySchema, SUPPORTED_CURRENCIES } from '@/lib/currency';
+import { parseIsoDateUtc } from '@/lib/date';
 import { isValidSymbol as isValidSymbolFormat, normalizeSymbol, symbolSchema } from '@/lib/validation';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
 import { sleep } from '@/server/jobs/yahoo-lib';
@@ -103,7 +104,15 @@ export const transactionsRouter = createTRPCRouter({
 	create: protectedProcedure
 		.input(
 			z.object({
-				date: z.string().transform((s) => new Date(s)),
+				date: z
+					// Same strict parse as the CSV/bulk-import paths: reject impossible dates
+					// (e.g. 2026-02-30, which `new Date` would silently roll to 2026-03-02)
+					// instead of storing the wrong day. Expects a bare yyyy-mm-dd string.
+					.string()
+					.refine((s) => parseIsoDateUtc(s) !== null, {
+						message: 'Invalid date — expected a real yyyy-mm-dd calendar date.'
+					})
+					.transform((s) => parseIsoDateUtc(s) as Date),
 				fee: z.number().optional(),
 				feeCurrency: currencySchema.optional(),
 				note: z.string().optional(),
@@ -412,8 +421,8 @@ export const transactionsRouter = createTRPCRouter({
 					const noteRaw = byColumn('note').trim();
 					const dateRaw = byColumn('date').trim();
 					if (!dateRaw) throw new Error('Date is required.');
-					const date = new Date(`${dateRaw}T00:00:00Z`);
-					if (Number.isNaN(date.getTime())) {
+					const date = parseIsoDateUtc(dateRaw);
+					if (!date) {
 						throw new Error(`Invalid date "${dateRaw}".`);
 					}
 
@@ -639,8 +648,8 @@ export const transactionsRouter = createTRPCRouter({
 						message: `Unsupported price currency "${item.priceCurrency}".`
 					});
 				}
-				const date = new Date(`${item.date}T00:00:00Z`);
-				if (Number.isNaN(date.getTime())) {
+				const date = parseIsoDateUtc(item.date);
+				if (!date) {
 					throw new TRPCError({
 						code: 'BAD_REQUEST',
 						message: `Invalid date "${item.date}".`
