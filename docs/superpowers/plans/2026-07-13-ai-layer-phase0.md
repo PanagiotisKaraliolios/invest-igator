@@ -1518,13 +1518,19 @@ guard added here (and every other unit test in the repo) would have guarded noth
 - Produces:
 ```ts
 export class Secret { constructor(v: string); expose(): string; toString(): string; toJSON(): string; }
-export type SealedBlob = { kid: string; iv: Buffer; ciphertext: Buffer; authTag: Buffer };
+export type SealedBlob = { kid: string; iv: Uint8Array; ciphertext: Uint8Array; authTag: Uint8Array };
 export function seal(plaintext: string, userId: string, provider: string): SealedBlob;
 export function open(blob: SealedBlob, userId: string, provider: string): Secret;
 ```
 Task 4 persists `SealedBlob` into `AiProviderCredential.{kid,iv,ciphertext,authTag}`. Task 6 (`resolve-model.ts`) calls `open()` and passes `Secret.expose()` to `createAzure({ apiKey })`.
 
-⚠ **Handoff contract to Task 6 (do not skip):** Prisma 7 hydrates `Bytes` columns as **`Uint8Array`**, not `Buffer`. `SealedBlob` is locked to `Buffer`, so Task 6 must rebuild the blob:
+✅ **Handoff to Task 6 — RESOLVED, no conversion needed.** Prisma 7 hydrates `Bytes` columns as **`Uint8Array`**, not `Buffer`. The original contract locked `SealedBlob` to `Buffer`, which would have forced Task 6 to wrap every field in `Buffer.from(...)` and made the Task 3 test carry an `as unknown as SealedBlob` double-cast just to prove the runtime worked. **`SealedBlob` was widened to `Uint8Array` during Task 3** (commit `4939078`). `Buffer` *is* a `Uint8Array`, so `seal()`'s output still goes straight into Prisma, and a Prisma row now goes straight into `open()` with **no conversion and no cast**. Task 6 therefore does this:
+
+```ts
+open({ authTag: row.authTag, ciphertext: row.ciphertext, iv: row.iv, kid: row.kid }, userId, provider)
+```
+
+The old, now-unnecessary form was:
 ```ts
 open({ authTag: Buffer.from(row.authTag), ciphertext: Buffer.from(row.ciphertext), iv: Buffer.from(row.iv), kid: row.kid }, userId, provider)
 ```
