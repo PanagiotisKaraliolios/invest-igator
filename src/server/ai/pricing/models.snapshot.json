@@ -21,8 +21,12 @@
 		},
 		"gemini-2.5-pro": {
 			"cacheRead": 0.125,
+			"contextThreshold": 200000,
 			"input": 1.25,
-			"output": 10
+			"output": 10,
+			"tieredCacheRead": 0.25,
+			"tieredInput": 2.5,
+			"tieredOutput": 15
 		},
 		"gemini-3.1-flash-lite": {
 			"cacheRead": 0.025,
@@ -36,8 +40,12 @@
 		},
 		"gpt-5.4": {
 			"cacheRead": 0.25,
+			"contextThreshold": 272000,
 			"input": 2.5,
-			"output": 15
+			"output": 15,
+			"tieredCacheRead": 0.5,
+			"tieredInput": 5,
+			"tieredOutput": 22.5
 		},
 		"gpt-5.4-mini": {
 			"cacheRead": 0.075,

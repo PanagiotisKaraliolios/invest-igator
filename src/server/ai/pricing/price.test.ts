@@ -112,6 +112,32 @@ describe('price', () => {
 		});
 		expect(result?.nanoUsd).toBe(1_250_000n);
 	});
+
+	// gpt-5.4's real models.dev threshold is 272_000, not the ~200k a naive reading of "long
+	// context" might assume (gemini-2.5-pro's is exactly 200_000 — the two differ). Tiered
+	// input is $5/1M, tiered output $22.5/1M (both exactly 2x base).
+	// nonCached 300_000 * 5_000_000 pico + 1_000 out * 22_500_000 pico
+	//   = 1_500_000_000_000 + 22_500_000_000 = 1_522_500_000_000 pico = 1_522_500_000 nanoUSD.
+	// Billed at the base rate this would be 640_000_000n + 15_000_000n*1000/1e6-ish — far lower;
+	// this is the case C1 describes as a 49.7%-under-bill.
+	test('a call above the long-context threshold bills at the tiered rate', () => {
+		const result = price('gpt-5.4', { ...EMPTY, inputTokens: 300_000, outputTokens: 1_000 });
+		expect(result?.nanoUsd).toBe(1_522_500_000n);
+	});
+
+	// Same model, same shape, but under the real 272_000 threshold: must stay at the base rate.
+	// 200_000 * 2_500_000 pico + 1_000 * 15_000_000 pico = 515_000_000_000 pico = 515_000_000 nanoUSD.
+	test('a call below the long-context threshold bills at the base rate', () => {
+		const result = price('gpt-5.4', { ...EMPTY, inputTokens: 200_000, outputTokens: 1_000 });
+		expect(result?.nanoUsd).toBe(515_000_000n);
+	});
+
+	// The threshold is exclusive (models.dev's tier applies once context EXCEEDS the size, not
+	// at it): exactly 272_000 tokens of input must still bill at the base rate.
+	test('a call exactly at the long-context threshold still bills at the base rate', () => {
+		const result = price('gpt-5.4', { ...EMPTY, inputTokens: 272_000, outputTokens: 0 });
+		expect(result?.nanoUsd).toBe(680_000_000n);
+	});
 });
 
 describe('estimateCeilingNanoUsd', () => {
@@ -121,10 +147,13 @@ describe('estimateCeilingNanoUsd', () => {
 	});
 
 	// Unknown model must NOT reserve zero — that lets an at-limit user through.
-	// Worst case in the snapshot: $5/1M in and $25/1M out (claude-opus-4-8).
-	// 10_000 * 5e6 + 2_000 * 25e6 = 100e9 pico = 100_000_000 nanoUSD.
+	// Worst case in the snapshot is now claude-opus-4-8's cacheWrite rate ($6.25/1M — 25% above
+	// its own $5/1M input rate, see C2) for input, and its $25/1M output rate. No tiered rate in
+	// the catalogue beats $6.25/1M on the input side (gpt-5.4 tiered input is only $5/1M).
+	// 10_000 * 6.25e6 + 2_000 * 25e6 = 62_500_000_000 + 50_000_000_000 = 112_500_000_000 pico
+	//   = 112_500_000 nanoUSD.
 	test('an unknown model falls back to the worst case in the catalogue', () => {
-		expect(estimateCeilingNanoUsd('definitely-not-a-model', 10_000, 2_000)).toBe(100_000_000n);
+		expect(estimateCeilingNanoUsd('definitely-not-a-model', 10_000, 2_000)).toBe(112_500_000n);
 	});
 
 	// The unknown-model ceiling must dominate every known model's ceiling, or the fallback
@@ -134,6 +163,80 @@ describe('estimateCeilingNanoUsd', () => {
 		for (const model of ['gpt-5.4', 'gpt-5.4-mini', 'gpt-5.4-nano', 'claude-opus-4-8']) {
 			expect(estimateCeilingNanoUsd(model, 10_000, 2_000) <= worst).toBe(true);
 		}
+	});
+
+	// C2: cacheWrite is 25% above input for every Anthropic model. A ceiling built from
+	// `rates.input` alone reserves 50_000_000n here while the real bill is 62_500_000n — a 25%
+	// breach. This is the exact scenario from the C2 bug report.
+	test('the ceiling for a cache-write-heavy call is not less than the actual bill (claude-opus-4-8)', () => {
+		const ceiling = estimateCeilingNanoUsd('claude-opus-4-8', 10_000, 0);
+		const actual = price('claude-opus-4-8', { ...EMPTY, cacheWriteTokens: 10_000, inputTokens: 10_000 });
+		expect(ceiling).toBe(62_500_000n);
+		expect(actual?.nanoUsd).toBe(62_500_000n);
+		expect((actual?.nanoUsd ?? -1n) <= ceiling).toBe(true);
+	});
+
+	// C1: a ceiling built only from the base rate reserves far less than a long-context call can
+	// actually cost. The ceiling must assume the WORST case — the tiered rate — even though the
+	// caller only estimated `estimatedInputTokens`, because it cannot know in advance whether the
+	// eventual call crosses the threshold.
+	test('the ceiling for a long-context call is not less than the actual tiered bill (gpt-5.4)', () => {
+		const ceiling = estimateCeilingNanoUsd('gpt-5.4', 300_000, 1_000);
+		const actual = price('gpt-5.4', { ...EMPTY, inputTokens: 300_000, outputTokens: 1_000 });
+		expect(ceiling).toBe(1_522_500_000n);
+		expect(actual?.nanoUsd).toBe(1_522_500_000n);
+		expect((actual?.nanoUsd ?? -1n) <= ceiling).toBe(true);
+	});
+
+	// The reservation invariant Task 8's quota depends on, as a property: for every priceable
+	// model and a battery of adversarial usage shapes (cache-write-heavy, long-context,
+	// output-heavy, and all three combined), the actual bill must never exceed the ceiling
+	// computed from the same (inputTokens, outputTokens) the caller reserved against.
+	// This is the test that would have caught both C1 and C2: before the fix, the gpt-5.4
+	// long-context shape and every cache-write shape on claude-opus-4-8 violated it.
+	test('invariant: price() never exceeds estimateCeilingNanoUsd() for any priced model and usage shape', () => {
+		const models = [
+			'gpt-5.4',
+			'gpt-5.4-mini',
+			'gpt-5.4-nano',
+			'claude-opus-4-8',
+			'claude-sonnet-4-5',
+			'claude-haiku-4-5',
+			'gemini-2.5-pro',
+			'gemini-3.5-flash',
+			'gemini-3.1-flash-lite'
+		];
+		const shapes: TokenUsage[] = [
+			{ ...EMPTY, inputTokens: 10_000, outputTokens: 2_000 }, // output-heavy, ordinary
+			{ ...EMPTY, cacheWriteTokens: 10_000, inputTokens: 10_000, outputTokens: 0 }, // cache-write-heavy
+			{ ...EMPTY, inputTokens: 300_000, outputTokens: 1_000 }, // long-context
+			{
+				...EMPTY,
+				cacheReadTokens: 100_000,
+				cacheWriteTokens: 100_000,
+				inputTokens: 300_000,
+				outputTokens: 5_000
+			}, // all-of-the-above
+			{ ...EMPTY, cacheWriteTokens: 300_000, inputTokens: 300_000, outputTokens: 0 } // long-context + cache-write-heavy
+		];
+
+		for (const model of models) {
+			for (const shape of shapes) {
+				const actual = price(model, shape);
+				const ceiling = estimateCeilingNanoUsd(model, shape.inputTokens ?? 0, shape.outputTokens ?? 0);
+				expect(actual).not.toBeNull();
+				expect((actual?.nanoUsd ?? -1n) <= ceiling).toBe(true);
+			}
+		}
+	});
+
+	// WORST_CASE (used for an unrecognised model) must dominate even a cache-write-heavy call —
+	// the same root cause as C2 also broke the unknown-model fallback, since it was built from
+	// `max(r.input)` alone.
+	test('WORST_CASE survives the invariant against a cache-write-heavy call', () => {
+		const ceiling = estimateCeilingNanoUsd('definitely-not-a-model', 10_000, 0);
+		const worstRealBill = price('claude-opus-4-8', { ...EMPTY, cacheWriteTokens: 10_000, inputTokens: 10_000 });
+		expect((worstRealBill?.nanoUsd ?? -1n) <= ceiling).toBe(true);
 	});
 });
 

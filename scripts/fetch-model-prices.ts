@@ -38,11 +38,26 @@ const WANTED: ReadonlyArray<readonly [string, string]> = [
 	['google', 'gemini-3.1-flash-lite']
 ];
 
+/**
+ * `tiers` is models.dev's long-context / tiered pricing: verified against the live payload for
+ * gpt-5.4 (both `azure` and `openai`) and `gemini-2.5-pro`, each carrying exactly one tier with
+ * `tier.size` the token threshold (272_000 for gpt-5.4, 200_000 for gemini-2.5-pro — do not
+ * assume a fixed 200k for every model). `context_over_200k` duplicates `tiers[0]` under a fixed
+ * name regardless of the model's actual threshold, so `tiers[0].tier.size` is the only reliable
+ * source of the threshold and is what we vendor.
+ */
 type RawCost = {
 	input: number;
 	output: number;
 	cache_read?: number;
 	cache_write?: number;
+	tiers?: Array<{
+		input: number;
+		output: number;
+		cache_read?: number;
+		cache_write?: number;
+		tier: { type: string; size: number };
+	}>;
 };
 type RawApi = Record<string, { models?: Record<string, { cost?: RawCost }> }>;
 
@@ -59,6 +74,22 @@ for (const [providerId, modelId] of WANTED) {
 	const entry: Record<string, number> = { input: cost.input, output: cost.output };
 	if (cost.cache_read !== undefined) entry.cacheRead = cost.cache_read;
 	if (cost.cache_write !== undefined) entry.cacheWrite = cost.cache_write;
+
+	if (cost.tiers !== undefined && cost.tiers.length > 0) {
+		// The schema below only carries a single step. If models.dev ever ships a second tier
+		// for one of our WANTED models, fail loudly rather than silently vendoring only tier 0 —
+		// that would under-reserve above the second threshold exactly like the bug this fixes.
+		if (cost.tiers.length > 1) {
+			throw new Error(`${providerId}/${modelId} has ${cost.tiers.length} tiers — schema only supports one, extend it`);
+		}
+		const tier = cost.tiers[0];
+		if (tier === undefined) throw new Error(`${providerId}/${modelId} has an empty tiers array`);
+		entry.contextThreshold = tier.tier.size;
+		entry.tieredInput = tier.input;
+		entry.tieredOutput = tier.output;
+		if (tier.cache_read !== undefined) entry.tieredCacheRead = tier.cache_read;
+		if (tier.cache_write !== undefined) entry.tieredCacheWrite = tier.cache_write;
+	}
 
 	const previous = models[modelId];
 	if (previous !== undefined && JSON.stringify(previous) !== JSON.stringify(entry)) {
