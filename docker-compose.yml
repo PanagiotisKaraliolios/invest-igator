@@ -30,7 +30,12 @@ services:
     restart: unless-stopped
   # Internal Postgres (keep if you don't already have an external DB)
   db:
-    image: postgres:16-alpine
+    # pgvector, not the alpine/musl postgres image. pgvector ships no alpine build, so
+    # adopting it later would move a populated PGDATA from musl to glibc — a collation-provider
+    # change that silently corrupts btree indexes on text columns. Same PG major (16), so the
+    # data directory is binary-compatible; only the collation needs a REINDEX.
+    # Existing volume? Read docs/runbooks/postgres-pgvector-swap.md BEFORE restarting.
+    image: pgvector/pgvector:0.8.5-pg16
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}

@@ -54,6 +54,29 @@ jobs:
       - name: Type check
         run: bun run typecheck
 
+  unit:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/investigator
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: bun run postinstall
+
+      - name: Run unit tests
+        run: bun run test:unit
+
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -131,7 +154,7 @@ jobs:
             -e POSTGRES_PASSWORD=postgres \
             -e POSTGRES_DB=investigator \
             -p 5432:5432 \
-            postgres:16-alpine
+            pgvector/pgvector:0.8.5-pg16
           # Wait for PostgreSQL to be ready
           timeout 30 bash -c 'until docker exec postgres pg_isready -U postgres; do sleep 1; done'
 
@@ -188,7 +211,7 @@ jobs:
             -e POSTGRES_PASSWORD=postgres \
             -e POSTGRES_DB=investigator \
             -p 5432:5432 \
-            postgres:16-alpine
+            pgvector/pgvector:0.8.5-pg16
           # Wait for PostgreSQL to be ready
           timeout 30 bash -c 'until docker exec postgres pg_isready -U postgres; do sleep 1; done'
 
@@ -205,13 +228,14 @@ jobs:
   all-checks:
     name: All Checks Passed
     if: always()
-    needs: [lint, typecheck, build, e2e]
+    needs: [lint, typecheck, unit, build, e2e]
     runs-on: ubuntu-latest
     steps:
       - name: Check all job statuses
         run: |
           if [[ "${{ needs.lint.result }}" != "success" ]] || \
              [[ "${{ needs.typecheck.result }}" != "success" ]] || \
+             [[ "${{ needs.unit.result }}" != "success" ]] || \
              [[ "${{ needs.build.result }}" != "success" ]] || \
              [[ "${{ needs.e2e.result }}" != "success" ]]; then
             echo "One or more checks failed"

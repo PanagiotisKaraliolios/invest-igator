@@ -1,0 +1,18 @@
+-- Enable pgvector. NO vector columns are added in Phase 0.
+--
+-- The point of doing this now is the IMAGE swap, not the extension: pgvector ships no
+-- alpine build, so postponing it to Phase 6 would move a populated PGDATA from musl to
+-- glibc, changing the libc collation provider and silently corrupting btree indexes on
+-- text columns. Ten minutes now; a data-integrity incident later.
+--
+-- IF NOT EXISTS: the migration must be a no-op on a database where an operator already
+-- ran CREATE EXTENSION by hand while following the runbook.
+--
+-- Requires superuser (pgvector is not a trusted extension). The compose `db` service runs
+-- as POSTGRES_USER (superuser), so this is satisfied. A self-hoster on a managed Postgres
+-- without superuser must have their provider enable `vector` first — see
+-- docs/runbooks/postgres-pgvector-swap.md.
+--
+-- Re-indexing is deliberately NOT done here: it cannot run inside a transaction block and
+-- Prisma wraps each migration in one. It is an operator step, in the runbook.
+CREATE EXTENSION IF NOT EXISTS vector;
