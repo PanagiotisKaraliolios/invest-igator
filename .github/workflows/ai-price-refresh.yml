@@ -1,0 +1,53 @@
+name: AI Price Refresh
+
+on:
+  schedule:
+    - cron: '0 4 * * 1' # Mondays 04:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    name: Re-fetch models.dev and open a PR on drift
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/investigator
+
+      - name: Re-fetch the price snapshot
+        run: bun run scripts/fetch-model-prices.ts
+
+      - name: Open a PR if a price moved
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: chore/ai-price-refresh
+          delete-branch: true
+          title: 'chore(ai): model prices moved on models.dev'
+          commit-message: 'chore(ai): refresh vendored model price snapshot'
+          add-paths: src/server/ai/pricing/models.snapshot.json
+          body: |
+            `models.dev` published a price change for a model we bill against.
+
+            **Read the diff as money.** Every `AiCall` row records the
+            `priceSnapshotId` that priced it, so history stays correct and
+            reproducible — merging this only changes how *future* calls are
+            priced. Nothing is retroactively re-billed.
+
+            If a model we depend on has **disappeared** from the catalogue,
+            `price()` will start returning `null` for it and those calls will
+            be logged as `UNKNOWN_MODEL` with `costNanoUsd: null` — visible on
+            the admin dashboard as "could not be priced". That is louder than a
+            silent zero, which is the whole point, but it still needs fixing.
