@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { parseIsoDateUtc, toLocalIsoDate } from './date';
+import { isoDateSchema, parseIsoDateUtc, toLocalIsoDate } from './date';
 
 describe('parseIsoDateUtc', () => {
 	test('parses a valid yyyy-mm-dd as UTC midnight', () => {
@@ -37,6 +37,36 @@ describe('parseIsoDateUtc', () => {
 		expect(d.getUTCFullYear()).toBe(2026);
 		expect(d.getUTCMonth()).toBe(6); // July, 0-indexed
 		expect(d.getUTCDate()).toBe(11);
+	});
+});
+
+describe('isoDateSchema', () => {
+	test('parses a valid yyyy-mm-dd into a UTC-midnight Date', () => {
+		const parsed = isoDateSchema.parse('2026-01-05');
+		expect(parsed).toBeInstanceOf(Date);
+		expect(parsed.toISOString()).toBe('2026-01-05T00:00:00.000Z');
+	});
+
+	test('rejects impossible dates instead of rolling them over to the wrong day', () => {
+		// The bug this guards: `z.string().transform((s) => new Date(s))` accepts
+		// '2026-02-30' and silently stores 2026-03-02. Every write path that takes a
+		// user-supplied date shares this schema, so none of them can do that.
+		for (const impossible of ['2026-02-30', '2026-04-31', '2026-13-01', '2026-02-29']) {
+			expect(isoDateSchema.safeParse(impossible).success).toBe(false);
+		}
+	});
+
+	test('rejects a full ISO datetime — callers must send a bare yyyy-mm-dd', () => {
+		expect(isoDateSchema.safeParse('2026-01-05T12:00:00Z').success).toBe(false);
+	});
+
+	test('optional() still rejects an impossible date when the field is present', () => {
+		// The `update` mutation takes `isoDateSchema.optional()`; omitting the date is
+		// fine, but supplying a bad one must not slip through the optional wrapper.
+		const optional = isoDateSchema.optional();
+		expect(optional.safeParse(undefined).success).toBe(true);
+		expect(optional.safeParse('2026-02-30').success).toBe(false);
+		expect(optional.parse('2026-01-05')?.toISOString()).toBe('2026-01-05T00:00:00.000Z');
 	});
 });
 
