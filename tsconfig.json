@@ -43,8 +43,7 @@
   },
   "exclude": [
     "node_modules",
-    "src/**/*.test.ts",
-    "bun-preload.ts"
+    "src/**/*.test.ts"
   ],
   "include": [
     "next-env.d.ts",

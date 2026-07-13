@@ -1,5 +1,3 @@
-import 'server-only';
-
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 import { inspect } from 'node:util';
 
