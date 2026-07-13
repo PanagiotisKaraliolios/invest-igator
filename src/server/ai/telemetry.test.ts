@@ -115,6 +115,29 @@ describe('scrubSecrets / safeErrorMessage — R8: secrets leak through error OBJ
 		expect(out.message).toContain('[redacted]');
 	});
 
+	// Gap: the test above interpolates a `Secret`, whose `toString()` ALREADY returns
+	// '[redacted]' (crypto.ts) — the raw key never reaches `safeErrorMessage` at all, so that
+	// test cannot catch a regression in the `message` field's OWN scrub. This is the actual
+	// at-rest path: a self-hosted OPENAI_COMPATIBLE gateway that echoes a plaintext key in a
+	// plain `Error#message` (no `Secret` involved anywhere) must still be scrubbed before the
+	// value is persisted to `AiCall.errorMessage`.
+	test('a raw credential in a bare Error#message (no Secret involved) is scrubbed, not persisted verbatim', () => {
+		const err = new Error('auth failed for sk-live-9Zq3vB7nRt2LmXwK1pQfY6x');
+		const out = safeErrorMessage(err);
+		expect(out.message).not.toContain('sk-live-9Zq3vB7nRt2LmXwK1pQfY6x');
+		expect(out.message).toContain(REDACTED_MARKER);
+	});
+
+	// Same gap, duck-typed: safeErrorMessage reads `e.message` off ANY object with a string
+	// `message` property, not just `Error` instances (provider SDKs routinely throw plain
+	// objects). The raw key must be scrubbed on that path too.
+	test('a raw credential in a duck-typed (non-Error) object message is scrubbed the same way', () => {
+		const err = { message: 'connection refused: token=sk-live-9Zq3vB7nRt2LmXwK1pQfY6x is invalid' };
+		const out = safeErrorMessage(err);
+		expect(out.message).not.toContain('sk-live-9Zq3vB7nRt2LmXwK1pQfY6x');
+		expect(out.message).toContain(REDACTED_MARKER);
+	});
+
 	test('a raw key that slipped into the message text is scrubbed anyway', () => {
 		expect(scrubSecrets('rejected: sk-abcdef0123456789 is invalid')).not.toContain('sk-abcdef0123456789');
 		expect(scrubSecrets('api-key: a1b2c3d4e5f6a7b8')).not.toContain('a1b2c3d4e5f6a7b8');
