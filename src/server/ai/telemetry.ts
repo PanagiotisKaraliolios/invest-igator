@@ -35,6 +35,7 @@ export type AiCallRow = UsageColumns & {
 	provider: string;
 	requestId: string;
 	resolvedModel: string;
+	responseId: string | null;
 	surface: AiSurfaceName;
 	userId: string | null;
 };
@@ -66,15 +67,26 @@ export const dbSink: LedgerSink = {
 };
 
 const MAX_ERROR_MESSAGE = 500;
+/** `errorCode` is a short code, not free text — a much tighter cap than the message. */
+const MAX_ERROR_CODE = 100;
+/** Tool errors get a bounded CLASSIFICATION, never free text. See C1: tools are user-scoped and
+ * their errors routinely contain positions/quantities/account numbers. */
+const MAX_TOOL_ERROR_CODE = 100;
 const REDACTED = '[redacted]';
 
 /**
  * Anything that looks like a credential is destroyed before it can be persisted. This is defence
  * in depth: `safeErrorMessage` already picks fields explicitly, so a key can only arrive here if a
  * provider interpolated it into `err.message` itself — which several of them do.
+ *
+ * The label pattern tolerates whitespace inside the label ("API key", not just "api-key") and
+ * whitespace as the separator ("api-key abc123" as well as "api-key: abc123") — self-hosted
+ * OPENAI_COMPATIBLE gateways (a first-class BYOK provider) commonly echo the caller's own key back
+ * in plain, naturally-phrased error text. Any token adjacent to a credential-ish label is redacted
+ * regardless of length; the bare-token pattern below is a backstop for unlabelled opaque tokens.
  */
 const SECRET_PATTERNS: RegExp[] = [
-	/(api[-_]?key|authorization|bearer|x-api-key)["'\s]*[:=]["'\s]*\S+/gi,
+	/(api[-_\s]?key|authorization|bearer|x-api-key)["'\s]*[:=\s]+["'\s]*\S+/gi,
 	/\bsk-[A-Za-z0-9_-]{8,}/g,
 	/\b[A-Za-z0-9_-]{24,}\b/g
 ];
@@ -93,6 +105,10 @@ export function scrubSecrets(text: string): string {
  * R8. NEVER `JSON.stringify(err)`: provider SDK errors carry the whole request config — the
  * request body (the user's portfolio) AND the request headers (their BYOK api-key). Pick the
  * fields we want by name, one at a time, and scrub what survives.
+ *
+ * `code` (and its `name` fallback) go through the SAME scrub-and-cap treatment as `message`: a
+ * provider is just as free to put a key in `err.code` ('invalid_key:sk-live-…') or `err.name`
+ * as in `err.message`, and this field lands in `AiCall.errorCode` unmodified otherwise.
  */
 export function safeErrorMessage(err: unknown): { code: string | null; message: string } {
 	if (err === null || err === undefined) {
@@ -108,8 +124,34 @@ export function safeErrorMessage(err: unknown): { code: string | null; message: 
 	const status = typeof e.statusCode === 'number' ? e.statusCode : typeof e.status === 'number' ? e.status : null;
 	const rawCode = typeof e.code === 'string' ? e.code : null;
 
-	const code = rawCode ?? (status !== null ? `HTTP_${status}` : name);
+	const rawResolvedCode = rawCode ?? (status !== null ? `HTTP_${status}` : name);
+	const code = rawResolvedCode === null ? null : scrubSecrets(rawResolvedCode).slice(0, MAX_ERROR_CODE);
 	return { code, message: scrubSecrets(message) };
+}
+
+/**
+ * C1: tools are USER-SCOPED and read a user's holdings — a tool's thrown `Error#message` routinely
+ * contains positions, symbols, quantities, and account identifiers (e.g. "no lot found: user holds
+ * 900 NVDA @ 128.40 ... account IB-U1234567"). `scrubSecrets` only destroys credential-SHAPED
+ * tokens; it does no PII scrubbing at all, so passing tool error text through it (as we do for
+ * model-call errors, which never see user data) would still leak the user's portfolio straight
+ * into `AiToolCall.errorMessage`.
+ *
+ * So: NEVER persist a tool's free-form message. Persist a bounded, non-identifying
+ * CLASSIFICATION only — the error's own `code`, falling back to its `name`, falling back to its
+ * constructor name — scrubbed (defence in depth, in case the classification itself was
+ * attacker/provider-controlled) and hard-capped. No free text ever reaches the row.
+ */
+function classifyToolError(err: unknown): string {
+	if (err === null || err === undefined) return 'unknown_error';
+	if (typeof err !== 'object') return scrubSecrets(String(err)).slice(0, MAX_TOOL_ERROR_CODE);
+
+	const e = err as Record<string, unknown>;
+	const code = typeof e.code === 'string' ? e.code : null;
+	const name = typeof e.name === 'string' ? e.name : null;
+	const ctorName = typeof e.constructor === 'function' ? e.constructor.name : null;
+	const classification = code ?? name ?? ctorName ?? 'Error';
+	return scrubSecrets(classification).slice(0, MAX_TOOL_ERROR_CODE);
 }
 
 /** Only ever read for CLASSIFICATION. It is never stored — it can echo the request. */
@@ -214,6 +256,7 @@ export function buildAiCallRow(args: {
 		provider: args.provider,
 		requestId: args.ctx.requestId,
 		resolvedModel: args.ctx.resolvedModel,
+		responseId: args.responseId,
 		surface: args.ctx.surface,
 		userId: args.ctx.userId
 	};
@@ -346,7 +389,9 @@ export function createLedgerTelemetry(sink: LedgerSink = dbSink): Telemetry {
 			// Discriminate on the tagged union instead.
 			const output = event.toolOutput;
 			const ok = output.type === 'tool-result';
-			const errorMessage = output.type === 'tool-error' ? safeErrorMessage(output.error).message : null;
+			// C1: NEVER the raw error message here — see classifyToolError's doc comment. A tool's
+			// thrown text can contain the user's positions, symbols, and account numbers.
+			const errorMessage = output.type === 'tool-error' ? classifyToolError(output.error) : null;
 
 			await safeWrite(async () =>
 				sink.writeToolCall({

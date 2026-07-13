@@ -67,6 +67,9 @@ const mockUsage = (
 /** AiCallRow.costNanoUsd is a bigint — plain JSON.stringify THROWS on it. */
 const dump = (v: unknown): string => JSON.stringify(v, (_k, x) => (typeof x === 'bigint' ? x.toString() : x));
 
+/** Mirrors telemetry.ts's private REDACTED constant — kept independent so a rename there is visible here. */
+const REDACTED_MARKER = '[redacted]';
+
 // ONE global registration for the whole file. `registerTelemetry` pushes onto a global array; a
 // second call would make every later generateText write into every earlier sink.
 let calls: AiCallRow[] = [];
@@ -117,8 +120,40 @@ describe('scrubSecrets / safeErrorMessage — R8: secrets leak through error OBJ
 		expect(scrubSecrets('api-key: a1b2c3d4e5f6a7b8')).not.toContain('a1b2c3d4e5f6a7b8');
 	});
 
-	test('messages are hard-capped', () => {
-		expect(scrubSecrets('x'.repeat(5000)).length).toBeLessThanOrEqual(500);
+	// I1: `code` (and its `name` fallback) must get the same scrub-and-cap treatment as `message` —
+	// the docstring's "scrub what survives" promise previously only applied to `message`.
+	test('err.code is scrubbed, not persisted verbatim (I1)', () => {
+		const err = Object.assign(new Error('rejected'), { code: 'invalid_key:sk-live-9Zq3vB7nRt2LmXwK1pQfY6' });
+		const out = safeErrorMessage(err);
+		expect(out.code).not.toContain('sk-live-9Zq3vB7nRt2LmXwK1pQfY6');
+	});
+
+	test('err.name is scrubbed when used as the code fallback (I1)', () => {
+		const err = Object.assign(new Error('rejected'), { name: 'Err_sk-live-9Zq3vB7nRt2LmXwK1pQfY6' });
+		const out = safeErrorMessage(err);
+		expect(out.code).not.toContain('sk-live-9Zq3vB7nRt2LmXwK1pQfY6');
+	});
+
+	// I2: short/naturally-phrased credentials. OPENAI_COMPATIBLE is a first-class BYOK provider —
+	// a user's self-hosted vLLM/LiteLLM gateway commonly echoes their own (short, self-chosen) key
+	// back in plain, space-separated error text, not colon/equals-delimited.
+	test('a short key after a space-separated "api-key" label is scrubbed (I2)', () => {
+		expect(scrubSecrets('api-key abc123DEF456ghi rejected')).not.toContain('abc123DEF456ghi');
+	});
+
+	test('a naturally-phrased "API key" (with a space) label still triggers a scrub (I2)', () => {
+		expect(scrubSecrets('Invalid API key: hunter2hunter2')).not.toContain('hunter2hunter2');
+	});
+
+	test('messages are hard-capped (I4)', () => {
+		// Many short words joined by spaces: no run of 24+ token chars and no credential-shaped
+		// substring, so nothing here matches any SECRET_PATTERN before the length cap runs — unlike
+		// 'x'.repeat(5000), which the bare-token pattern alone collapses to '[redacted]' well before
+		// the slice, letting a deleted cap hide behind it undetected.
+		const longButNoTokens = 'lorem ipsum dolor sit amet '.repeat(200); // 5400 chars
+		const scrubbed = scrubSecrets(longButNoTokens);
+		expect(scrubbed).not.toContain(REDACTED_MARKER); // sanity: confirms no pattern fired
+		expect(scrubbed.length).toBe(500);
 	});
 });
 
@@ -345,6 +380,49 @@ describe('the Telemetry integration', () => {
 		expect(row.requestId).toBe('req-tool');
 		expect(row.inputHash).toBeNull();
 		expect(row.errorMessage ?? '').not.toContain('a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6');
+	});
+
+	// C1: a tool's error text can contain the user's own PORTFOLIO — positions, quantities, and a
+	// broker account number — not just credentials. `scrubSecrets` alone does not catch this (it
+	// targets credential shapes only), so the fix is to never store the free-form message at all.
+	test('C1: a tool error containing the user portfolio never reaches the AiToolCall row', async () => {
+		await runWithAiContext(ctx({ requestId: 'req-tool-portfolio' }), async () => {
+			await generateText({
+				instructions: 'you are a test',
+				maxRetries: 0,
+				model: new MockLanguageModelV4({
+					doGenerate: async () => ({
+						content: [{ input: '{}', toolCallId: 'tc-2', toolName: 'lot', type: 'tool-call' as const }],
+						finishReason: { raw: undefined, unified: 'tool-calls' as const },
+						usage: mockUsage(10, 5),
+						warnings: []
+					})
+				}),
+				prompt: 'hello',
+				telemetry: { functionId: 'eval.telemetry', recordInputs: false, recordOutputs: false },
+				tools: {
+					lot: tool({
+						description: 'looks up a lot',
+						execute: async () => {
+							throw new Error(
+								'no lot found: user holds 900 NVDA @ 128.40 and 40 TSLA in account IB-U1234567'
+							);
+						},
+						inputSchema: z.strictObject({})
+					})
+				}
+			}).catch(() => undefined);
+		});
+
+		expect(tools.length).toBe(1);
+		const row = tools[0];
+		if (row === undefined) throw new Error('unreachable');
+		expect(row.ok).toBe(false);
+		const serialised = dump(row);
+		expect(serialised).not.toContain('NVDA');
+		expect(serialised).not.toContain('128.40');
+		expect(serialised).not.toContain('IB-U1234567');
+		expect(serialised).not.toContain('900');
 	});
 
 	test('with NO ALS context, nothing is written — a row can never be misattributed', async () => {
