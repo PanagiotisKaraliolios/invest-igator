@@ -1,7 +1,7 @@
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 import { inspect } from 'node:util';
-import { open, Secret, seal } from './crypto';
+import { open, type SealedBlob, Secret, seal } from './crypto';
 
 const KEY_1 = Buffer.alloc(32, 0x11).toString('base64');
 const KEY_2 = Buffer.alloc(32, 0x22).toString('base64');
@@ -12,6 +12,14 @@ function setKeyring(keys: Record<string, string>, activeKid: string): void {
 }
 
 beforeEach(() => {
+	setKeyring({ k1: KEY_1 }, 'k1');
+});
+
+// One test (`loads lazily`) deletes AI_CRED_* from process.env and never restored
+// it, leaving the shared Bun test process's env mutated for whatever file runs
+// next. beforeEach re-seeds it for tests in *this* file, but afterEach closes the
+// hole for every other file sharing the process.
+afterEach(() => {
 	setKeyring({ k1: KEY_1 }, 'k1');
 });
 
@@ -82,9 +90,12 @@ describe('seal/open', () => {
 		expect(() => open({ ...blob, ciphertext: ct }, 'user-a', 'AZURE')).toThrow();
 	});
 
-	// Prisma 7 hydrates Bytes as Uint8Array, NOT Buffer. This is the exact shape
-	// Task 6 will hand back to open(). Pin it here so Task 6 cannot get it wrong.
-	test('accepts a blob rebuilt from Uint8Array (the Prisma Bytes shape)', () => {
+	// Prisma 7 hydrates Bytes columns as raw Uint8Array, NOT Buffer — Task 6 will
+	// hand open() exactly this shape when reading a row back out of Postgres.
+	// This must feed the raw Uint8Arrays straight into open() (no Buffer.from
+	// round-trip) or the test only pins Node's Buffer/Uint8Array interop, not
+	// open()'s own ability to handle the Prisma Bytes → open() handoff.
+	test('accepts a blob whose fields are raw Uint8Array (the Prisma Bytes shape)', () => {
 		const blob = seal('sk-abc-123', 'user-a', 'AZURE');
 		const asRow = {
 			authTag: new Uint8Array(blob.authTag),
@@ -92,13 +103,7 @@ describe('seal/open', () => {
 			iv: new Uint8Array(blob.iv),
 			kid: blob.kid
 		};
-		const rehydrated = {
-			authTag: Buffer.from(asRow.authTag),
-			ciphertext: Buffer.from(asRow.ciphertext),
-			iv: Buffer.from(asRow.iv),
-			kid: asRow.kid
-		};
-		expect(open(rehydrated, 'user-a', 'AZURE').expose()).toBe('sk-abc-123');
+		expect(open(asRow as unknown as SealedBlob, 'user-a', 'AZURE').expose()).toBe('sk-abc-123');
 	});
 });
 
@@ -111,6 +116,65 @@ describe('AAD tenant binding', () => {
 	test('a blob sealed for one provider does not decrypt as another', () => {
 		const blob = seal('sk-abc-123', 'user-a', 'AZURE');
 		expect(() => open(blob, 'user-a', 'OPENAI')).toThrow();
+	});
+});
+
+describe('AAD encoding is injective', () => {
+	// The AAD is `${userId}|${provider}|v1` and does not escape its own `|`
+	// delimiter. Without validation, two different (userId, provider) pairs can
+	// serialize to the identical AAD string, defeating the tenant binding these
+	// fields exist to provide. Rejecting `|` and empty strings in both fields
+	// makes the encoding unambiguous without changing the `v1` format string
+	// (so no version bump / re-seal is required).
+
+	test('seal throws when userId contains the delimiter', () => {
+		expect(() => seal('sk-abc-123', 'alice|AZURE', 'AZURE')).toThrow(/delimiter/);
+	});
+
+	test('seal throws when provider contains the delimiter', () => {
+		expect(() => seal('sk-abc-123', 'alice', 'AZURE|')).toThrow(/delimiter/);
+	});
+
+	test('seal throws when userId is empty', () => {
+		expect(() => seal('sk-abc-123', '', 'AZURE')).toThrow(/userId must not be empty/);
+	});
+
+	test('seal throws when provider is empty', () => {
+		expect(() => seal('sk-abc-123', 'alice', '')).toThrow(/provider must not be empty/);
+	});
+
+	test('open throws when userId contains the delimiter', () => {
+		const blob = seal('sk-abc-123', 'alice', 'AZURE');
+		expect(() => open(blob, 'alice|AZURE', 'AZURE')).toThrow(/delimiter/);
+	});
+
+	test('open throws when provider contains the delimiter', () => {
+		const blob = seal('sk-abc-123', 'alice', 'AZURE');
+		expect(() => open(blob, 'alice', 'AZURE|')).toThrow(/delimiter/);
+	});
+
+	test('open throws when userId or provider is empty', () => {
+		const blob = seal('sk-abc-123', 'alice', 'AZURE');
+		expect(() => open(blob, '', 'AZURE')).toThrow(/userId must not be empty/);
+		expect(() => open(blob, 'alice', '')).toThrow(/provider must not be empty/);
+	});
+
+	test('seal throws on empty plaintext', () => {
+		expect(() => seal('', 'alice', 'AZURE')).toThrow(/plaintext must not be empty/);
+	});
+
+	// The reviewer's exact collision PoC: sealing ('alice|AZURE', '') and opening
+	// with ('alice', 'AZURE|') both used to serialize to AAD "alice|AZURE||v1".
+	// Neither the seal side nor the open side of the collision may succeed.
+	test('the reviewer-reported collision is now impossible', () => {
+		// seal() side: 'alice|AZURE' + '' both used to combine into the same AAD
+		// as 'alice' + 'AZURE|'. Either malformed field alone is now rejected, so
+		// the victim blob the PoC depends on can never be produced.
+		expect(() => seal('sk-victim', 'alice|AZURE', '')).toThrow();
+		// open() side: even against an unrelated, validly-sealed blob, the
+		// colliding ('alice', 'AZURE|') pair is independently rejected too.
+		const blob = seal('sk-abc-123', 'alice', 'AZURE');
+		expect(() => open(blob, 'alice', 'AZURE|')).toThrow(/delimiter/);
 	});
 });
 
@@ -164,5 +228,34 @@ describe('Secret', () => {
 		const body = JSON.stringify({ apiKey: new Secret('sk-123'), user: 'a' });
 		expect(body).not.toContain('sk-123');
 		expect(inspect({ apiKey: new Secret('sk-123') })).not.toContain('sk-123');
+	});
+
+	// The redacting methods (toString/toJSON/inspect.custom) only protect call
+	// sites that go through them. `#value` being a true private class field —
+	// NOT a TS `private value` field, which is still a plain enumerable own
+	// property at runtime — is what protects every other route: Object.values,
+	// Object.entries, spread, Object.assign, structuredClone, and `for...in`
+	// (the shape Sentry-style scrubbers walk). Pin that property directly so a
+	// well-meaning "idiomatic" refactor from `#value` to `private value` gets
+	// caught here instead of shipping a silent leak.
+	test('the plaintext is not an own enumerable property', () => {
+		const s = new Secret('sk-123');
+
+		expect(Object.getOwnPropertyNames(s)).toEqual([]);
+		expect(Object.keys(s)).toEqual([]);
+		expect(Object.values(s)).toEqual([]);
+		expect(Object.entries(s)).toEqual([]);
+		expect({ ...s }).toEqual({});
+		expect(Object.assign({}, s)).toEqual({});
+
+		const cloned = structuredClone(s);
+		expect(JSON.stringify(cloned)).not.toContain('sk-123');
+		expect(Object.keys(cloned as unknown as Record<string, unknown>)).toEqual([]);
+
+		const seen: string[] = [];
+		for (const key in s) {
+			seen.push(key);
+		}
+		expect(seen).toEqual([]);
 	});
 });

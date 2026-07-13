@@ -1,3 +1,5 @@
+import 'server-only';
+
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 import { inspect } from 'node:util';
 
@@ -46,8 +48,19 @@ let cached: { rawKeys: string; rawActive: string; ring: Keyring } | null = null;
  * Binds the ciphertext to (userId, provider). A row copied to another tenant
  * FAILS to decrypt rather than silently working. Never change this format
  * without bumping the `v1` suffix and re-sealing every row.
+ *
+ * The `|` delimiter is not escaped, so both fields must be validated as
+ * delimiter-free (and non-empty) for the encoding to stay injective — two
+ * different (userId, provider) pairs must never serialize to the same AAD.
+ * Shared by seal() and open() so neither can skip the check.
  */
-const aad = (userId: string, provider: string): Buffer => Buffer.from(`${userId}|${provider}|v1`, 'utf8');
+const aad = (userId: string, provider: string): Buffer => {
+	if (!userId) throw new Error('ai/crypto: userId must not be empty');
+	if (!provider) throw new Error('ai/crypto: provider must not be empty');
+	if (userId.includes('|')) throw new Error('ai/crypto: userId must not contain the "|" delimiter');
+	if (provider.includes('|')) throw new Error('ai/crypto: provider must not contain the "|" delimiter');
+	return Buffer.from(`${userId}|${provider}|v1`, 'utf8');
+};
 
 /** Lazy: a module-eval throw would break `next build` when the env var is absent. */
 function keyring(): Keyring {
@@ -90,6 +103,7 @@ function keyring(): Keyring {
 }
 
 export function seal(plaintext: string, userId: string, provider: string): SealedBlob {
+	if (!plaintext) throw new Error('ai/crypto: plaintext must not be empty');
 	const ring = keyring();
 	const key = ring.keys.get(ring.activeKid);
 	if (!key) throw new Error(`ai/crypto: active kid "${ring.activeKid}" missing from keyring`);
