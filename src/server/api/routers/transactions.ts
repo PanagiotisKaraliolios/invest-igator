@@ -104,7 +104,15 @@ export const transactionsRouter = createTRPCRouter({
 	create: protectedProcedure
 		.input(
 			z.object({
-				date: z.string().transform((s) => new Date(s)),
+				date: z
+					// Same strict parse as the CSV/bulk-import paths: reject impossible dates
+					// (e.g. 2026-02-30, which `new Date` would silently roll to 2026-03-02)
+					// instead of storing the wrong day. Expects a bare yyyy-mm-dd string.
+					.string()
+					.refine((s) => parseIsoDateUtc(s) !== null, {
+						message: 'Invalid date — expected a real yyyy-mm-dd calendar date.'
+					})
+					.transform((s) => parseIsoDateUtc(s) as Date),
 				fee: z.number().optional(),
 				feeCurrency: currencySchema.optional(),
 				note: z.string().optional(),
