@@ -23,7 +23,7 @@ const outputSchema = z.strictObject({
 export const watchlistListTool: AppTool<typeof inputSchema, typeof outputSchema> = {
 	annotations: { openWorldHint: false, readOnlyHint: true, title: 'List watchlist' },
 	description:
-		"The symbols on the user's watchlist, starred ones first. Use this to find out which instruments the user is tracking.",
+		"The symbols on the user's watchlist, starred ones first. Returns at most a bounded number of items; `count` is how many were returned, not how many exist — check `hasMore` before telling the user this is the whole list. Use this to find out which instruments the user is tracking.",
 	execute: async (_input, ctx) => {
 		const items = await listWatchlist(ctx.userId);
 		// `description` has no DB-level length cap, so this is a real (measured) guarantee,

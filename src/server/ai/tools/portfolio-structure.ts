@@ -31,7 +31,7 @@ const outputSchema = z.strictObject({
 export const portfolioStructureTool: AppTool<typeof inputSchema, typeof outputSchema> = {
 	annotations: { openWorldHint: false, readOnlyHint: true, title: 'Portfolio structure' },
 	description:
-		"The user's current holdings, valued in their display currency: symbol, quantity, average cost, latest price, market value and portfolio weight as a percentage. Use this for any question about what the user owns or how concentrated they are.",
+		"The user's current holdings, valued in their display currency: symbol, quantity, average cost, latest price, market value and portfolio weight as a percentage. `positions` may be a prefix of all holdings — check `truncated` before telling the user this is everything they own. Use this for any question about what the user owns or how concentrated they are.",
 	execute: async (_input, ctx) => {
 		const { items, totalValue } = await getCachedStructure(ctx.userId, ctx.currency, toLocalIsoDate(new Date()));
 		const positions = items.map((i) => ({

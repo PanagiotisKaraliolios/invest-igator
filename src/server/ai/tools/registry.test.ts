@@ -1,15 +1,22 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { countTokens } from 'gpt-tokenizer';
 import { z } from 'zod';
 import type { Currency } from '@/lib/currency';
 import { MAX_TOOL_RESULT_TOKENS } from '@/server/ai/guardrails';
 import type { AppTool, Scope, ToolCtx } from './types';
 
 /**
- * Same ~4 chars/token rule of thumb guardrails.ts documents next to MAX_TOOL_RESULT_TOKENS.
- * Used only to turn a serialized-length assertion into a token-budget assertion for these
- * tests; result-bounds.ts is the actual enforcement mechanism, this just checks its effect.
+ * A REAL BPE token count (gpt-4o / o200k_base — gpt-tokenizer's default encoding), not a proxy.
+ *
+ * This file used to estimate tokens as `JSON.stringify(value).length / 4` — the same ~4
+ * chars/token "rule of thumb" `result-bounds.ts` (wrongly) used to derive its own char budget.
+ * A test that re-uses the implementation's own estimate can never catch a mis-calibration in
+ * that estimate — which is exactly what happened: our JSON payloads (full-precision doubles,
+ * cuid ids, ISO dates) tokenize at 2.0-2.8 chars/token, not 4, so every "provably bounded" test
+ * below was green while shipping 1.2x-1.8x over `MAX_TOOL_RESULT_TOKENS`. Counting real tokens
+ * here is what makes these tests capable of catching that class of bug again.
  */
-const estimatedTokens = (value: unknown): number => Math.ceil(JSON.stringify(value).length / 4);
+const realTokens = (value: unknown): number => countTokens(JSON.stringify(value));
 
 /**
  * The declared JSON Schema `maximum` for one top-level input property. Tests that claim to
@@ -139,6 +146,21 @@ const STRUCTURE: Record<string, { items: Array<Record<string, unknown>>; totalVa
 			}
 		],
 		totalValue: 160
+	},
+	/** 2,000 positions — the C1 "portfolio.structure" scenario: no per-item content is unbounded
+	 *  here, but row COUNT alone is enough to blow the token budget without the runtime bound. */
+	'user-g': {
+		items: Array.from({ length: 2000 }, (_, i) => ({
+			avgCost: 10.5 + i * 0.013,
+			price: 12.75 + i * 0.017,
+			quantity: 3 + (i % 7),
+			symbol: `POS${i}`,
+			totalCost: 100 + i * 1.1,
+			unconverted: false,
+			value: 120 + i * 1.3,
+			weight: 1 / 2000
+		})),
+		totalValue: 250_000
 	}
 };
 
@@ -161,7 +183,15 @@ const SERIES: Record<string, { full: Array<Record<string, unknown>>; unconverted
 		],
 		unconvertedSymbols: ['ZZZZ']
 	},
-	'user-c': { full: LONG_SERIES, unconvertedSymbols: [] }
+	'user-c': { full: LONG_SERIES, unconvertedSymbols: [] },
+	/**
+	 * C2: `unconvertedSymbols` is a SECOND array `boundArrayElements` never touches — it is
+	 * measured but never shrunk. `full: []` means `window` is empty, so this ALSO exercises the
+	 * EARLY-RETURN path (portfolio-performance.ts), which historically skipped bounding
+	 * entirely. `navOnDate` marks every non-target-currency holding as unconverted on any single
+	 * FX-less day — no attacker required, a bulk CSV import reaches this.
+	 */
+	'user-h': { full: [], unconvertedSymbols: Array.from({ length: 5000 }, (_, i) => `SYM${i}`) }
 };
 
 const record = (userId: string) => {
@@ -195,6 +225,16 @@ mock.module('@/server/services/market', () => ({
 		// runtime size bound actually engages at its own configured maximum.
 		if (symbol === 'LONGHIST') {
 			return Array.from({ length: days }, (_, i) => ({ date: dayIso(i), value: 100 + i * 0.37 }));
+		}
+		// 'HUGEHIST': like LONGHIST, but each point carries a full-precision, 10-decimal value —
+		// dense enough that even the schema's OWN `days` maximum overflows the token budget, so
+		// the runtime bound is FORCED to engage (LONGHIST alone never gets there). Proves I3: the
+		// series is oldest -> newest, so truncation must drop the OLDEST days and keep the newest.
+		if (symbol === 'HUGEHIST') {
+			return Array.from({ length: days }, (_, i) => ({
+				date: dayIso(i),
+				value: Number((100 + i * Math.PI).toFixed(10))
+			}));
 		}
 		return [{ date: '2024-01-01', value: 1 }];
 	}
@@ -354,7 +394,9 @@ describe('THE SECURITY MODEL', () => {
 		const out = (await t.execute(t.inputSchema.parse({}), ctxFor('user-b'))) as {
 			mwrPct: number;
 			points: Array<{ date: string }>;
+			truncated: boolean;
 			twrPct: number;
+			unconvertedSymbolCount: number;
 			unconvertedSymbols: string[];
 		};
 		expect(t.outputSchema.safeParse(out).success).toBe(true);
@@ -362,6 +404,8 @@ describe('THE SECURITY MODEL', () => {
 		expect(out.twrPct).toBeCloseTo(10, 9);
 		expect(out.mwrPct).toBeCloseTo(5, 9);
 		expect(out.unconvertedSymbols).toEqual(['ZZZZ']);
+		expect(out.unconvertedSymbolCount).toBe(1);
+		expect(out.truncated).toBe(false); // well under both the point count and symbol count caps
 		expect(seenUserIds).toEqual(['user-b']);
 	});
 
@@ -484,7 +528,30 @@ describe("Task 8's quota reservation is only sound if these hold: every tool res
 		// At the schema's own max, LONGHIST returns exactly maxDays raw points — proving this
 		// test actually reached the real ceiling rather than some smaller value.
 		expect(out.points.length).toBeGreaterThan(0);
-		expect(estimatedTokens(out)).toBeLessThanOrEqual(MAX_TOOL_RESULT_TOKENS);
+		expect(realTokens(out)).toBeLessThanOrEqual(MAX_TOOL_RESULT_TOKENS);
+	});
+
+	/**
+	 * I3: `points` is ordered oldest -> newest. A size-based truncation that drops from the TAIL
+	 * (the pre-fix default) would silently delete the newest prices. HUGEHIST is dense enough
+	 * that the runtime bound is FORCED to engage even at the schema's own `days` maximum, so this
+	 * actually exercises the bound rather than asserting on a case where it never fires.
+	 */
+	test('market.priceHistory: when the size bound must drop days, it drops the OLDEST and keeps the NEWEST price', async () => {
+		const t = byName('market.priceHistory');
+		const maxDays = schemaMax(t.inputSchema, 'days');
+		const out = (await t.execute(t.inputSchema.parse({ days: maxDays, symbol: 'HUGEHIST' }), ctxFor('user-b'))) as {
+			points: Array<{ date: string; value: number }>;
+			truncated: boolean;
+		};
+		expect(t.outputSchema.safeParse(out).success).toBe(true);
+		expect(out.truncated).toBe(true);
+		expect(out.points.length).toBeGreaterThan(0);
+		expect(out.points.length).toBeLessThan(maxDays);
+		// The NEWEST day (dayIso(maxDays - 1)) survives; it is the OLDEST that went missing.
+		expect(out.points[out.points.length - 1]?.date).toBe(dayIso(maxDays - 1));
+		expect(out.points[0]?.date).not.toBe(dayIso(0));
+		expect(realTokens(out)).toBeLessThanOrEqual(MAX_TOOL_RESULT_TOKENS);
 	});
 
 	test('portfolio.performance: the tool rejects a `maxPoints` request anywhere near the naive 1000-point ceiling', () => {
@@ -497,11 +564,86 @@ describe("Task 8's quota reservation is only sound if these hold: every tool res
 		const maxPoints = schemaMax(t.inputSchema, 'maxPoints');
 		expect(maxPoints).toBeLessThan(1000); // the clamp is real, not cosmetic
 		const input = t.inputSchema.parse({ days: 3650, maxPoints });
-		const out = (await t.execute(input, ctxFor('user-c'))) as { points: unknown[] };
+		const out = (await t.execute(input, ctxFor('user-c'))) as {
+			points: Array<{ date: string }>;
+			truncated: boolean;
+		};
 		expect(t.outputSchema.safeParse(out).success).toBe(true);
-		// 500 raw points in the fixture, downsampled to exactly the schema's own max.
-		expect(out.points.length).toBe(maxPoints);
-		expect(estimatedTokens(out)).toBeLessThanOrEqual(MAX_TOOL_RESULT_TOKENS);
+		// 500 raw points in the fixture, downsampled to at most the schema's own max. At a real
+		// (measured, not proxy) token budget the runtime `boundArrayElements` bound now actually
+		// engages here — 250 numeric points is itself over MAX_TOOL_RESULT_TOKENS once counted
+		// with a real BPE tokenizer (this is exactly the C1 bug: the OLD ~4 chars/token proxy
+		// said this fit; it did not) — so `truncated` must be surfaced, not silently absorbed.
+		expect(out.points.length).toBeGreaterThan(0);
+		expect(out.points.length).toBeLessThanOrEqual(maxPoints);
+		expect(realTokens(out)).toBeLessThanOrEqual(MAX_TOOL_RESULT_TOKENS);
+	});
+
+	/**
+	 * I3: `points` is ordered oldest -> newest (portfolio-performance.ts). When the runtime bound
+	 * must drop points beyond what downsampling already removed, it must drop the OLDEST ones
+	 * (`keep: 'tail'`) so the most recent NAV — the one twrPct/mwrPct's true endpoints describe —
+	 * is never silently missing from the series the model actually sees.
+	 */
+	test('portfolio.performance: when the size bound must drop points, the NEWEST point always survives', async () => {
+		const t = byName('portfolio.performance');
+		const maxPoints = schemaMax(t.inputSchema, 'maxPoints');
+		const input = t.inputSchema.parse({ days: 3650, maxPoints });
+		const out = (await t.execute(input, ctxFor('user-c'))) as {
+			points: Array<{ date: string }>;
+			truncated: boolean;
+		};
+		expect(out.truncated).toBe(true); // this fixture is large enough to force the bound
+		expect(out.points[out.points.length - 1]?.date).toBe(dayIso(499));
+		expect(seenUserIds).toEqual(['user-c']);
+	});
+
+	/**
+	 * C2: `unconvertedSymbols` is a SECOND array in this tool's output that `boundArrayElements`
+	 * never shrinks — it is only ever measured as part of the envelope. Without its own cap, once
+	 * `points` is truncated to zero there is nothing left to drop, and an oversized
+	 * `unconvertedSymbols` sails through anyway. `full: []` (user-h) means `window` is empty, so
+	 * this hits the EARLY-RETURN branch specifically — the one that historically skipped bounding
+	 * entirely and returned `pointsAreDownsampled: false`, telling the model nothing was cut.
+	 */
+	test('portfolio.performance: 5,000 unconverted symbols on the early-return path still fit under MAX_TOOL_RESULT_TOKENS, capped with the true count surfaced', async () => {
+		const t = byName('portfolio.performance');
+		const out = (await t.execute(t.inputSchema.parse({}), ctxFor('user-h'))) as {
+			points: unknown[];
+			truncated: boolean;
+			unconvertedSymbolCount: number;
+			unconvertedSymbols: string[];
+		};
+		expect(t.outputSchema.safeParse(out).success).toBe(true);
+		expect(out.points).toEqual([]); // confirms this is the early-return path, not the main one
+		expect(out.unconvertedSymbolCount).toBe(5000); // the TRUE total, never lost
+		expect(out.unconvertedSymbols.length).toBeLessThan(5000); // but the array itself is capped
+		expect(out.unconvertedSymbols).toEqual(
+			Array.from({ length: out.unconvertedSymbols.length }, (_, i) => `SYM${i}`)
+		);
+		expect(out.truncated).toBe(true); // silently returning 50 of 5000 with no signal is the bug
+		expect(realTokens(out)).toBeLessThanOrEqual(MAX_TOOL_RESULT_TOKENS);
+	});
+
+	/**
+	 * C1's table also names `portfolio.structure` (2,000 positions, no unbounded per-item
+	 * content needed — row COUNT alone crosses the token budget). This tool had no runtime-size
+	 * test at all before this fix wave; the schema-level clamp tests above already exist for the
+	 * other four tools reachable via a small, model-controlled input, but `portfolio.structure`
+	 * takes no input — its size is entirely a function of how many symbols the user holds, so the
+	 * proof has to come from a large holdings fixture, not from a schema maximum.
+	 */
+	test('portfolio.structure: 2,000 positions still fit under MAX_TOOL_RESULT_TOKENS, and truncated is surfaced', async () => {
+		const t = byName('portfolio.structure');
+		const out = (await t.execute({}, ctxFor('user-g'))) as {
+			positions: Array<{ symbol: string }>;
+			truncated: boolean;
+		};
+		expect(t.outputSchema.safeParse(out).success).toBe(true);
+		expect(out.truncated).toBe(true);
+		expect(out.positions.length).toBeGreaterThan(0);
+		expect(out.positions.length).toBeLessThan(2000);
+		expect(realTokens(out)).toBeLessThanOrEqual(MAX_TOOL_RESULT_TOKENS);
 	});
 
 	test('transactions.search: the tool rejects a `limit` request anywhere near the service ceiling (200)', () => {
@@ -522,7 +664,7 @@ describe("Task 8's quota reservation is only sound if these hold: every tool res
 		expect(out.hasMore).toBe(true); // 300 real rows, far fewer actually returned
 		expect(out.count).toBeLessThan(300);
 		expect(out.transactions.length).toBe(out.count);
-		expect(estimatedTokens(out)).toBeLessThanOrEqual(MAX_TOOL_RESULT_TOKENS);
+		expect(realTokens(out)).toBeLessThanOrEqual(MAX_TOOL_RESULT_TOKENS);
 	});
 
 	test('watchlist.list: 300 items with unbounded-length descriptions still fit under MAX_TOOL_RESULT_TOKENS, and hasMore is surfaced', async () => {
@@ -531,7 +673,7 @@ describe("Task 8's quota reservation is only sound if these hold: every tool res
 		expect(t.outputSchema.safeParse(out).success).toBe(true);
 		expect(out.hasMore).toBe(true);
 		expect(out.items.length).toBeLessThan(300);
-		expect(estimatedTokens(out)).toBeLessThanOrEqual(MAX_TOOL_RESULT_TOKENS);
+		expect(realTokens(out)).toBeLessThanOrEqual(MAX_TOOL_RESULT_TOKENS);
 	});
 
 	test('goals.list: 300 goals with unbounded-length notes still fit under MAX_TOOL_RESULT_TOKENS, and hasMore is surfaced', async () => {
@@ -540,6 +682,6 @@ describe("Task 8's quota reservation is only sound if these hold: every tool res
 		expect(t.outputSchema.safeParse(out).success).toBe(true);
 		expect(out.hasMore).toBe(true);
 		expect(out.goals.length).toBeLessThan(300);
-		expect(estimatedTokens(out)).toBeLessThanOrEqual(MAX_TOOL_RESULT_TOKENS);
+		expect(realTokens(out)).toBeLessThanOrEqual(MAX_TOOL_RESULT_TOKENS);
 	});
 });

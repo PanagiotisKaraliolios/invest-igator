@@ -23,7 +23,8 @@ const outputSchema = z.strictObject({
 
 export const goalsListTool: AppTool<typeof inputSchema, typeof outputSchema> = {
 	annotations: { openWorldHint: false, readOnlyHint: true, title: 'List goals' },
-	description: "The user's financial goals: title, target amount, target currency and target date.",
+	description:
+		"The user's financial goals: title, target amount, target currency and target date. Returns at most a bounded number of goals; `count` is how many were returned, not how many exist — check `hasMore` before telling the user this is all of them.",
 	execute: async (_input, ctx) => {
 		const goals = await listGoals(ctx.userId);
 		// `note` (and `title`) have no DB-level length cap, so this is a real guarantee.

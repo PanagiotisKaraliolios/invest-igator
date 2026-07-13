@@ -34,11 +34,14 @@ export const MAX_STEPS = 8;
  * reservation for the whole request is UNSOUND — the actual cost of resending an oversized
  * result on every remaining step can exceed the reserved ceiling.
  *
- * 8192 — 2x `MAX_OUTPUT_TOKENS`. Tool results are typically JSON, which is denser than prose
- * (~4 chars/token is a common rule of thumb), so this is roughly a 32 KB budget per result —
- * enough for a normal API response, but small enough that `MAX_STEPS` of them can't quietly
- * blow through a reservation. Task 10 MUST truncate (or paginate/summarize) any tool result
- * larger than this before it is appended to the conversation.
+ * 8192 tokens. Tool results are JSON dominated by full-precision doubles, cuid ids and ISO
+ * dates — content that BPE-tokenizes at ~2-2.8 chars/token, NOT the ~4 chars/token rule of
+ * thumb that holds for English prose (measured against the gpt-4o/o200k_base encoding; see
+ * `result-bounds.ts`'s `CHARS_PER_TOKEN`, which this token ceiling is enforced through). At the
+ * conservative 2 chars/token that constant budgets on, this is roughly a 16 KB character budget
+ * per result — small enough that `MAX_STEPS` of them can't quietly blow through a reservation.
+ * Task 10 MUST truncate (or paginate/summarize) any tool result larger than this before it is
+ * appended to the conversation.
  */
 export const MAX_TOOL_RESULT_TOKENS = 8192;
 

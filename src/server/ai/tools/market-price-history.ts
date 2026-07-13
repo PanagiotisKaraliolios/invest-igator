@@ -38,17 +38,24 @@ const outputSchema = z.strictObject({
 export const marketPriceHistoryTool: AppTool<typeof inputSchema, typeof outputSchema> = {
 	annotations: { openWorldHint: false, readOnlyHint: true, title: 'Price history' },
 	description:
-		'Daily price history for one symbol over a trailing window (at most 400 days). Returns an empty series for an unknown or malformed symbol.',
+		'Daily price history for one symbol over a trailing window (at most 400 days), oldest first. Returns an empty series for an unknown or malformed symbol. If `truncated` is true, the OLDEST days within the window were dropped to fit the response budget — the most recent price is always present; treat the series as starting later than requested, not as the full window.',
 	execute: async (input) => {
 		const points = await getPriceHistory(input.symbol, input.days, input.field);
 		// Numeric-only points, but the same measured guarantee every array-returning tool
 		// uses — this is the bound a reverted/removed clamp would blow through.
-		const bounded = boundArrayElements(points, (slice) => ({
-			field: input.field,
-			points: slice,
-			symbol: input.symbol,
-			truncated: false
-		}));
+		// Points are ordered oldest -> newest (see getPriceHistory), so a size-based truncation
+		// must drop from the HEAD (oldest) and keep the tail (most recent price) — `keep: 'tail'`.
+		// Dropping from the tail (the old default) would silently delete the newest prices instead.
+		const bounded = boundArrayElements(
+			points,
+			(slice) => ({
+				field: input.field,
+				points: slice,
+				symbol: input.symbol,
+				truncated: false
+			}),
+			{ keep: 'tail' }
+		);
 		return { field: input.field, points: bounded.items, symbol: input.symbol, truncated: bounded.truncated };
 	},
 	inputSchema,
