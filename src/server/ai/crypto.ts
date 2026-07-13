@@ -1,3 +1,9 @@
+// Deliberately NO `import 'server-only'`: Ofelia runs cron jobs as `bun run
+// src/server/jobs/*.ts`, and the server-only marker throws outside a bundler that
+// resolves its `react-server` condition. Adding it crashes every cron that
+// transitively imports this module. Client-import safety already comes from the
+// `node:crypto` import (unresolvable in a browser bundle) and from Next inlining
+// only NEXT_PUBLIC_* env vars. See revert 543523c.
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 import { inspect } from 'node:util';
 
@@ -29,9 +35,9 @@ export class Secret {
 
 export type SealedBlob = {
 	kid: string;
-	iv: Buffer;
-	ciphertext: Buffer;
-	authTag: Buffer;
+	iv: Uint8Array;
+	ciphertext: Uint8Array;
+	authTag: Uint8Array;
 };
 
 type Keyring = { activeKid: string; keys: Map<string, Buffer> };

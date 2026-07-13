@@ -92,18 +92,19 @@ describe('seal/open', () => {
 
 	// Prisma 7 hydrates Bytes columns as raw Uint8Array, NOT Buffer — Task 6 will
 	// hand open() exactly this shape when reading a row back out of Postgres.
-	// This must feed the raw Uint8Arrays straight into open() (no Buffer.from
-	// round-trip) or the test only pins Node's Buffer/Uint8Array interop, not
-	// open()'s own ability to handle the Prisma Bytes → open() handoff.
+	// SealedBlob's fields are typed Uint8Array (Buffer extends Uint8Array, so
+	// seal()'s Buffer output is still assignable), so this is a real SealedBlob
+	// with no cast — it proves the Prisma Bytes → open() handoff at the type
+	// level, not just at runtime.
 	test('accepts a blob whose fields are raw Uint8Array (the Prisma Bytes shape)', () => {
 		const blob = seal('sk-abc-123', 'user-a', 'AZURE');
-		const asRow = {
+		const asRow: SealedBlob = {
 			authTag: new Uint8Array(blob.authTag),
 			ciphertext: new Uint8Array(blob.ciphertext),
 			iv: new Uint8Array(blob.iv),
 			kid: blob.kid
 		};
-		expect(open(asRow as unknown as SealedBlob, 'user-a', 'AZURE').expose()).toBe('sk-abc-123');
+		expect(open(asRow, 'user-a', 'AZURE').expose()).toBe('sk-abc-123');
 	});
 });
 
