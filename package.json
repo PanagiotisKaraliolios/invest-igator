@@ -86,6 +86,7 @@
 	},
 	"private": true,
 	"scripts": {
+		"ai:sweep": "bun run src/server/jobs/sweep-ai-reservations.ts",
 		"build": "next build",
 		"check": "biome check ./src",
 		"check:unsafe": "biome check --write --unsafe ./src",
@@ -104,6 +105,7 @@
 		"preview": "next build && next start",
 		"prices:fetch": "bun run scripts/fetch-model-prices.ts",
 		"start": "next start",
+		"test:db": "bun test prisma/ai-schema.test.ts prisma/ai-telemetry-dbsink.test.ts prisma/ai-quota.test.ts",
 		"test:e2e": "bunx playwright test",
 		"test:e2e:headed": "bunx playwright test --headed",
 		"test:e2e:install": "bunx playwright install --with-deps",
