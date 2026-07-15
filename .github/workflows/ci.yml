@@ -214,6 +214,15 @@ jobs:
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/investigator
       SKIP_ENV_VALIDATION: '1'
+      # test:db transitively imports @/server/influx (via the tool layer's market service),
+      # which constructs an InfluxDB client at module load — `new InfluxDB({ url })` throws
+      # "No url specified!" on an undefined url. SKIP_ENV_VALIDATION bypasses env.js's default,
+      # so the URL must be supplied here. These tests never query Influx; the client just needs
+      # to construct. Mirrors the dummy Influx env the build/e2e jobs already provide.
+      INFLUXDB_URL: http://localhost:8086
+      INFLUXDB_ORG: test-org
+      INFLUXDB_BUCKET: test-bucket
+      INFLUXDB_TOKEN: test-token
     steps:
       - name: Checkout
         uses: actions/checkout@v7
