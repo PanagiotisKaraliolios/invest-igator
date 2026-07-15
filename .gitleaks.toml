@@ -15,6 +15,10 @@ paths = [
   '''postman/\.postman-examples\.md''',
   '''docs/api-key-usage\.md''',
   '''README\.md''',
+  # Internal design docs (brainstorm/spec/plan/research). Full of illustrative crypto
+  # code sketches with DUMMY base64 keys — e.g. 'MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY='
+  # decodes to '0123456789abcdef…', and 'REPLACE_WITH_openssl_rand_base64_32' is a placeholder.
+  '''docs/superpowers/.*''',
   # AI-layer test fixtures: fake keys fed through the scrubber to assert it redacts them.
   '''src/server/ai/credential-config\.test\.ts''',
   '''src/server/ai/telemetry\.test\.ts''',
