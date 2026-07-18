@@ -41,7 +41,6 @@ RUN SKIP_ENV_VALIDATION=1 \
 	INFLUXDB_BUCKET=dummy \
 	INFLUXDB_TOKEN=dummy-token \
 	YAHOO_API_URL=https://query2.finance.yahoo.com/v8/finance \
-	ALPHAVANTAGE_API_KEY=dummy \
 	POLYGON_API_KEY=dummy \
 	AUTH_DISCORD_ID=dummy \
 	AUTH_DISCORD_SECRET=dummy \

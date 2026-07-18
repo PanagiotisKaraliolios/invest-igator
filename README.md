@@ -37,7 +37,7 @@ Built with Next.js App Router, tRPC v11, Prisma/PostgreSQL, shadcn/ui, and Influ
   - 🔎 Debounced search inputs (300ms) for better UX
   - 💀 Skeleton loading states for professional loading experience
   - 🎯 Active navigation indicators in sidebar
-- 🔄 **Auto-sync**: Yahoo Finance ingestion job for OHLCV and events; FX rates via Alpha Vantage
+- 🔄 **Auto-sync**: Yahoo Finance ingestion job for OHLCV and events; FX rates also sourced from Yahoo into InfluxDB
 - 🔐 **Admin interface**: comprehensive user management and audit logging
   - 👥 User management with sorting, filtering, and role-based permissions
   - 📋 Audit logs with date range filtering and action tracking
@@ -186,17 +186,15 @@ Validated in `src/env.js` via `@t3-oss/env-nextjs`. Server-side vars are require
 <details>
 <summary><b>🌐 External APIs</b></summary>
 
-- `ALPHAVANTAGE_API_URL` (default <https://www.alphavantage.co/query>)
-- `ALPHAVANTAGE_API_KEY` (required for FX ingestion)
-- `YAHOO_API_URL` (default <https://query2.finance.yahoo.com/v8/finance/chart>)
-- `POLYGON_API_URL`, `POLYGON_API_KEY` (present in schema; not currently required by code paths)
+- `YAHOO_API_URL` (base URL, default <https://query2.finance.yahoo.com/v8/finance>; code appends `/chart/<symbol>`, so do **not** include `/chart`) — FX ingestion also sources rates from Yahoo
+- `POLYGON_API_URL`, `POLYGON_API_KEY` — **required by the env schema** (`src/env.js`, `z.string()`), so the app fails validation on boot without them unless `SKIP_ENV_VALIDATION=1`; note no code path consumes them yet
 
 </details>
 
 <details>
 <summary><b>⚙️ Optional/infra</b></summary>
 
-- `CLOUDFLARE_*` (R2 image storage wiring present; optional)
+- `CLOUDFLARE_*` (R2 image storage) — the R2 *feature* is optional, but `CLOUDFLARE_ACCESS_KEY_ID`/`CLOUDFLARE_ACCOUNT_ID`/`CLOUDFLARE_BUCKET_NAME`/`CLOUDFLARE_SECRET_ACCESS_KEY` are **required by `src/env.js`** and fail validation on boot unless `SKIP_ENV_VALIDATION=1` (`CLOUDFLARE_R2_PUBLIC_URL` is the only optional one)
 - `NEXT_PUBLIC_*` for Ads/Analytics (Umami/GA/AdSense) are optional and stubbed in E2E tests
 
 </details>
@@ -216,7 +214,7 @@ Validated in `src/env.js` via `@t3-oss/env-nextjs`. Server-side vars are require
 
 **Schema**: `prisma/schema.prisma`
 
-**Relevant models**: `User`, `Account`, `Session`, `WatchlistItem`, `Transaction`, `FxRate`, `Goal`, `ApiKey` and Better Auth support tables `TwoFactor`, `Verification`, `VerificationToken`.
+**Relevant models**: `User`, `Account`, `Session`, `WatchlistItem`, `Transaction`, `Goal`, `ApiKey` and Better Auth support tables `TwoFactor`, `Verification`, `VerificationToken`. (FX rates are no longer a Postgres model — the `FxRate` table was dropped and rates now live in the InfluxDB `fx_rates` measurement.)
 
 ---
 
@@ -249,7 +247,7 @@ bun run ingest:yahoo
 - ✅ Also updates watchlist currency when available
 - ✅ Adding a symbol to your watchlist triggers a background ingest for that symbol
 
-### FX rates (Alpha Vantage)
+### FX rates (Yahoo → InfluxDB)
 
 ```sh
 bun run ingest:fx
@@ -257,7 +255,7 @@ bun run ingest:fx
 
 **What it does:**
 
-- ✅ Fetches pivoted rates through USD and upserts cross rates into `FxRate`
+- ✅ Sources daily FX from Yahoo bars and writes cross rates (pivoted through USD) into the InfluxDB `fx_rates` measurement (idempotent by measurement+tag+timestamp)
 
 ---
 
@@ -338,18 +336,22 @@ docker build -t invest-igator:local .
 
 ```sh
 docker run --rm -p 3000:3000 \
+  -e SKIP_ENV_VALIDATION=1 \
   -e DATABASE_URL=postgresql://user:pass@host:5432/db \
-  -e BETTER_AUTH_SECRET=change-me \
+  -e BETTER_AUTH_SECRET=change-me-to-a-random-32char-min-secret \
   -e PASSWORD_PEPPER=change-me \
   -e EMAIL_SERVER=smtp://user:pass@mail:587 \
   -e EMAIL_FROM=no-reply@example.com \
-  -e ALPHAVANTAGE_API_KEY=... \
-  -e INFLUXDB_URL=http://influx:8086 \
+  -e INFLUXDB_URL=http://influx.example.com:8086 \
   -e INFLUXDB_ORG=... \
   -e INFLUXDB_BUCKET=... \
   -e INFLUXDB_TOKEN=... \
   invest-igator:local
 ```
+
+> `SKIP_ENV_VALIDATION=1` is included because `src/env.js` also requires
+> `AUTH_DISCORD_ID`/`AUTH_DISCORD_SECRET`, `CLOUDFLARE_*` and `POLYGON_API_KEY`.
+> Provide those too and drop `SKIP_ENV_VALIDATION` once all vars are set.
 
 ### Docker Compose (App + Postgres + Scheduler)
 
@@ -363,13 +365,15 @@ This repo includes a Compose file that runs:
 
 ```sh
 cp .env.example .env  # if you have one; otherwise create .env from the vars above
-# Fill DATABASE_URL, BETTER_AUTH_SECRET, PASSWORD_PEPPER, INFLUXDB_*, ALPHAVANTAGE, EMAIL_*
+# Fill DATABASE_URL, BETTER_AUTH_SECRET, PASSWORD_PEPPER, INFLUXDB_*, EMAIL_*,
+# CLOUDFLARE_*, AUTH_DISCORD_*, POLYGON_API_KEY (all required by src/env.js;
+# the compose default SKIP_ENV_VALIDATION=1 lets it boot before they're all set)
 docker compose up -d
 ```
 
 **Notes:**
 
-- ⚠️ Compose expects you to point `INFLUXDB_URL` to an existing Influx instance (not included in the stack)
+- ⚠️ InfluxDB is **external by default** — point `INFLUXDB_URL` at your own instance. To run it inside the stack, uncomment the optional `influxdb` service in `docker-compose.yml` and set `INFLUXDB_URL=http://influxdb:8086`.
 - ⏰ Cron labels run `ingest-yahoo` daily at 02:15 UTC and `ingest-fx` at 06:00/18:00 UTC
 - 🔄 Migrations run automatically on container start
 
