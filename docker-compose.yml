@@ -113,7 +113,3 @@ volumes:
 networks:
   internal:
     driver: bridge
-
-x-dockge:
-  urls:
-    - https://invest-igator.karaliolios.dev

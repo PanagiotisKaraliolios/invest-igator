@@ -187,7 +187,7 @@ Validated in `src/env.js` via `@t3-oss/env-nextjs`. Server-side vars are require
 <summary><b>🌐 External APIs</b></summary>
 
 - `YAHOO_API_URL` (base URL, default <https://query2.finance.yahoo.com/v8/finance>; code appends `/chart/<symbol>`, so do **not** include `/chart`) — FX ingestion also sources rates from Yahoo
-- `POLYGON_API_URL`, `POLYGON_API_KEY` (present in schema; not currently required by code paths)
+- `POLYGON_API_URL`, `POLYGON_API_KEY` — **required by the env schema** (`src/env.js`, `z.string()`), so the app fails validation on boot without them unless `SKIP_ENV_VALIDATION=1`; note no code path consumes them yet
 
 </details>
 
