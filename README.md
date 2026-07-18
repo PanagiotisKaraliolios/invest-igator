@@ -338,11 +338,11 @@ docker build -t invest-igator:local .
 docker run --rm -p 3000:3000 \
   -e SKIP_ENV_VALIDATION=1 \
   -e DATABASE_URL=postgresql://user:pass@host:5432/db \
-  -e BETTER_AUTH_SECRET=change-me \
+  -e BETTER_AUTH_SECRET=change-me-to-a-random-32char-min-secret \
   -e PASSWORD_PEPPER=change-me \
   -e EMAIL_SERVER=smtp://user:pass@mail:587 \
   -e EMAIL_FROM=no-reply@example.com \
-  -e INFLUXDB_URL=http://<your-influx-host>:8086 \
+  -e INFLUXDB_URL=http://influx.example.com:8086 \
   -e INFLUXDB_ORG=... \
   -e INFLUXDB_BUCKET=... \
   -e INFLUXDB_TOKEN=... \
