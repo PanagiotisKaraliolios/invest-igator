@@ -186,9 +186,7 @@ Validated in `src/env.js` via `@t3-oss/env-nextjs`. Server-side vars are require
 <details>
 <summary><b>🌐 External APIs</b></summary>
 
-- `ALPHAVANTAGE_API_URL` (default <https://www.alphavantage.co/query>)
-- `ALPHAVANTAGE_API_KEY` (required for FX ingestion)
-- `YAHOO_API_URL` (default <https://query2.finance.yahoo.com/v8/finance/chart>)
+- `YAHOO_API_URL` (default <https://query2.finance.yahoo.com/v8/finance/chart>) — FX ingestion also sources rates from Yahoo
 - `POLYGON_API_URL`, `POLYGON_API_KEY` (present in schema; not currently required by code paths)
 
 </details>
@@ -343,7 +341,6 @@ docker run --rm -p 3000:3000 \
   -e PASSWORD_PEPPER=change-me \
   -e EMAIL_SERVER=smtp://user:pass@mail:587 \
   -e EMAIL_FROM=no-reply@example.com \
-  -e ALPHAVANTAGE_API_KEY=... \
   -e INFLUXDB_URL=http://influx:8086 \
   -e INFLUXDB_ORG=... \
   -e INFLUXDB_BUCKET=... \
@@ -363,13 +360,13 @@ This repo includes a Compose file that runs:
 
 ```sh
 cp .env.example .env  # if you have one; otherwise create .env from the vars above
-# Fill DATABASE_URL, BETTER_AUTH_SECRET, PASSWORD_PEPPER, INFLUXDB_*, ALPHAVANTAGE, EMAIL_*
+# Fill DATABASE_URL, BETTER_AUTH_SECRET, PASSWORD_PEPPER, INFLUXDB_*, EMAIL_*, CLOUDFLARE_*
 docker compose up -d
 ```
 
 **Notes:**
 
-- ⚠️ Compose expects you to point `INFLUXDB_URL` to an existing Influx instance (not included in the stack)
+- ⚠️ InfluxDB is **external by default** — point `INFLUXDB_URL` at your own instance. To run it inside the stack, uncomment the optional `influxdb` service in `docker-compose.yml` and set `INFLUXDB_URL=http://influxdb:8086`.
 - ⏰ Cron labels run `ingest-yahoo` daily at 02:15 UTC and `ingest-fx` at 06:00/18:00 UTC
 - 🔄 Migrations run automatically on container start
 

@@ -1,4 +1,3 @@
-version: "3.9"
 services:
   invest-igator:
     image: docker.io/mrdeathrider/invest-igator:latest
@@ -7,10 +6,13 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-investigator}
       AUTH_TRUST_HOST: "true"
-      NODE_ENV: production
       # Keep this true until all envs are properly set
       SKIP_ENV_VALIDATION: "1"
-      # IMPORTANT: do NOT override INFLUXDB_URL here; it comes from .env and points to your external Influx
+      # InfluxDB is EXTERNAL by default: INFLUXDB_URL comes from .env and points
+      # to your own Influx instance, so do NOT override it here.
+      # To run Influx *inside* this stack instead, uncomment the `influxdb`
+      # service (and its volume) at the bottom of this file and set
+      # INFLUXDB_URL=http://influxdb:8086 in your .env.
       # Ofelia will exec the ingest inside this container on a cron schedule
     labels:
       ofelia.enabled: "true"
@@ -27,6 +29,18 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      # Uncomment if you enable the internal influxdb service below:
+      # influxdb:
+      #   condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - bun -e "fetch('http://127.0.0.1:3000/').then(()=>process.exit(0)).catch(()=>process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    networks: [internal]
     restart: unless-stopped
   # Internal Postgres (keep if you don't already have an external DB)
   db:
@@ -36,15 +50,17 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-investigator}
     volumes:
+      # Named volume (portable). To use a host bind mount instead, replace with:
+      #   - /docker-containers/invest-igator/pgdata:/var/lib/postgresql/data
       - pgdata:/var/lib/postgresql/data
     healthcheck:
       test:
         - CMD-SHELL
-        - pg_isready -U ${POSTGRES_USER:-postgres} -d
-          ${POSTGRES_DB:-investigator}
+        - pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-investigator}
       interval: 5s
       timeout: 5s
       retries: 5
+    networks: [internal]
     restart: unless-stopped
   # Scheduler service to run jobs inside containers using labels above
   scheduler:
@@ -52,10 +68,50 @@ services:
     command: daemon --docker
     depends_on:
       invest-igator:
-        condition: service_started
+        condition: service_healthy
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks: [internal]
     restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # OPTIONAL: internal InfluxDB 2.x (self-contained stack).
+  # By default Influx is EXTERNAL — leave this commented and point INFLUXDB_URL
+  # in .env at your own instance. To run Influx inside this stack instead:
+  #   1. Uncomment this service and the `influxdb` volume at the bottom.
+  #   2. Uncomment the influxdb `depends_on` block under `invest-igator`.
+  #   3. Set INFLUXDB_URL=http://influxdb:8086 in your .env.
+  # The INFLUXDB_ORG / INFLUXDB_BUCKET / INFLUXDB_TOKEN below reuse the same
+  # values the app reads from .env, so first-run auto-setup matches the app.
+  # ---------------------------------------------------------------------------
+  # influxdb:
+  #   image: influxdb:2
+  #   environment:
+  #     DOCKER_INFLUXDB_INIT_MODE: setup
+  #     DOCKER_INFLUXDB_INIT_USERNAME: ${INFLUXDB_USERNAME:-admin}
+  #     DOCKER_INFLUXDB_INIT_PASSWORD: ${INFLUXDB_PASSWORD:-changeme-please}
+  #     DOCKER_INFLUXDB_INIT_ORG: ${INFLUXDB_ORG:-local-org}
+  #     DOCKER_INFLUXDB_INIT_BUCKET: ${INFLUXDB_BUCKET:-daily}
+  #     DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUXDB_TOKEN:-local-secret-token}
+  #   volumes:
+  #     - influxdb:/var/lib/influxdb2
+  #   healthcheck:
+  #     test: ["CMD", "influx", "ping"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #   networks: [internal]
+  #   restart: unless-stopped
+
 volumes:
-  pgdata: null
-networks: {}
+  pgdata:
+  # Uncomment when using the internal influxdb service above:
+  # influxdb:
+
+networks:
+  internal:
+    driver: bridge
+
+x-dockge:
+  urls:
+    - https://invest-igator.karaliolios.dev
