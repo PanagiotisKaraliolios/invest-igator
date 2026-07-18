@@ -4,7 +4,9 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-investigator}
+      # Defaults to the internal `db` service; set DATABASE_URL in .env to point
+      # at an external Postgres instead (that value wins over this default).
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-investigator}}
       AUTH_TRUST_HOST: "true"
       # Keep this true until all envs are properly set
       SKIP_ENV_VALIDATION: "1"
@@ -35,7 +37,7 @@ services:
     healthcheck:
       test:
         - CMD-SHELL
-        - bun -e "fetch('http://127.0.0.1:3000/').then(()=>process.exit(0)).catch(()=>process.exit(1))"
+        - bun -e "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))"
       interval: 15s
       timeout: 5s
       retries: 5

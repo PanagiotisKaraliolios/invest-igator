@@ -186,7 +186,7 @@ Validated in `src/env.js` via `@t3-oss/env-nextjs`. Server-side vars are require
 <details>
 <summary><b>🌐 External APIs</b></summary>
 
-- `YAHOO_API_URL` (default <https://query2.finance.yahoo.com/v8/finance/chart>) — FX ingestion also sources rates from Yahoo
+- `YAHOO_API_URL` (base URL, default <https://query2.finance.yahoo.com/v8/finance>; code appends `/chart/<symbol>`, so do **not** include `/chart`) — FX ingestion also sources rates from Yahoo
 - `POLYGON_API_URL`, `POLYGON_API_KEY` (present in schema; not currently required by code paths)
 
 </details>
@@ -341,7 +341,7 @@ docker run --rm -p 3000:3000 \
   -e PASSWORD_PEPPER=change-me \
   -e EMAIL_SERVER=smtp://user:pass@mail:587 \
   -e EMAIL_FROM=no-reply@example.com \
-  -e INFLUXDB_URL=http://influx:8086 \
+  -e INFLUXDB_URL=http://<your-influx-host>:8086 \
   -e INFLUXDB_ORG=... \
   -e INFLUXDB_BUCKET=... \
   -e INFLUXDB_TOKEN=... \
