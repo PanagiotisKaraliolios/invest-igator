@@ -37,7 +37,7 @@ Built with Next.js App Router, tRPC v11, Prisma/PostgreSQL, shadcn/ui, and Influ
   - 🔎 Debounced search inputs (300ms) for better UX
   - 💀 Skeleton loading states for professional loading experience
   - 🎯 Active navigation indicators in sidebar
-- 🔄 **Auto-sync**: Yahoo Finance ingestion job for OHLCV and events; FX rates via Alpha Vantage
+- 🔄 **Auto-sync**: Yahoo Finance ingestion job for OHLCV and events; FX rates also sourced from Yahoo into InfluxDB
 - 🔐 **Admin interface**: comprehensive user management and audit logging
   - 👥 User management with sorting, filtering, and role-based permissions
   - 📋 Audit logs with date range filtering and action tracking
@@ -194,7 +194,7 @@ Validated in `src/env.js` via `@t3-oss/env-nextjs`. Server-side vars are require
 <details>
 <summary><b>⚙️ Optional/infra</b></summary>
 
-- `CLOUDFLARE_*` (R2 image storage wiring present; optional)
+- `CLOUDFLARE_*` (R2 image storage) — the R2 *feature* is optional, but `CLOUDFLARE_ACCESS_KEY_ID`/`CLOUDFLARE_ACCOUNT_ID`/`CLOUDFLARE_BUCKET_NAME`/`CLOUDFLARE_SECRET_ACCESS_KEY` are **required by `src/env.js`** and fail validation on boot unless `SKIP_ENV_VALIDATION=1` (`CLOUDFLARE_R2_PUBLIC_URL` is the only optional one)
 - `NEXT_PUBLIC_*` for Ads/Analytics (Umami/GA/AdSense) are optional and stubbed in E2E tests
 
 </details>
@@ -214,7 +214,7 @@ Validated in `src/env.js` via `@t3-oss/env-nextjs`. Server-side vars are require
 
 **Schema**: `prisma/schema.prisma`
 
-**Relevant models**: `User`, `Account`, `Session`, `WatchlistItem`, `Transaction`, `FxRate`, `Goal`, `ApiKey` and Better Auth support tables `TwoFactor`, `Verification`, `VerificationToken`.
+**Relevant models**: `User`, `Account`, `Session`, `WatchlistItem`, `Transaction`, `Goal`, `ApiKey` and Better Auth support tables `TwoFactor`, `Verification`, `VerificationToken`. (FX rates are no longer a Postgres model — the `FxRate` table was dropped and rates now live in the InfluxDB `fx_rates` measurement.)
 
 ---
 
@@ -247,7 +247,7 @@ bun run ingest:yahoo
 - ✅ Also updates watchlist currency when available
 - ✅ Adding a symbol to your watchlist triggers a background ingest for that symbol
 
-### FX rates (Alpha Vantage)
+### FX rates (Yahoo → InfluxDB)
 
 ```sh
 bun run ingest:fx
@@ -255,7 +255,7 @@ bun run ingest:fx
 
 **What it does:**
 
-- ✅ Fetches pivoted rates through USD and upserts cross rates into `FxRate`
+- ✅ Sources daily FX from Yahoo bars and writes cross rates (pivoted through USD) into the InfluxDB `fx_rates` measurement (idempotent by measurement+tag+timestamp)
 
 ---
 
