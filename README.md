@@ -336,6 +336,7 @@ docker build -t invest-igator:local .
 
 ```sh
 docker run --rm -p 3000:3000 \
+  -e SKIP_ENV_VALIDATION=1 \
   -e DATABASE_URL=postgresql://user:pass@host:5432/db \
   -e BETTER_AUTH_SECRET=change-me \
   -e PASSWORD_PEPPER=change-me \
@@ -347,6 +348,10 @@ docker run --rm -p 3000:3000 \
   -e INFLUXDB_TOKEN=... \
   invest-igator:local
 ```
+
+> `SKIP_ENV_VALIDATION=1` is included because `src/env.js` also requires
+> `AUTH_DISCORD_ID`/`AUTH_DISCORD_SECRET`, `CLOUDFLARE_*` and `POLYGON_API_KEY`.
+> Provide those too and drop `SKIP_ENV_VALIDATION` once all vars are set.
 
 ### Docker Compose (App + Postgres + Scheduler)
 
@@ -360,7 +365,9 @@ This repo includes a Compose file that runs:
 
 ```sh
 cp .env.example .env  # if you have one; otherwise create .env from the vars above
-# Fill DATABASE_URL, BETTER_AUTH_SECRET, PASSWORD_PEPPER, INFLUXDB_*, EMAIL_*, CLOUDFLARE_*
+# Fill DATABASE_URL, BETTER_AUTH_SECRET, PASSWORD_PEPPER, INFLUXDB_*, EMAIL_*,
+# CLOUDFLARE_*, AUTH_DISCORD_*, POLYGON_API_KEY (all required by src/env.js;
+# the compose default SKIP_ENV_VALIDATION=1 lets it boot before they're all set)
 docker compose up -d
 ```
 
