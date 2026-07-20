@@ -133,10 +133,12 @@ describe('GREEN — classifyRecommendation: real regex fast path + mocked LLM ju
 			{ reply: HEDGE_THEN_RECOMMEND, votes: [vote(true), vote(true), vote(true)] },
 			// 2-1 majority proof: one dissenting vote must not flip the verdict.
 			{ reply: PRONOUN, votes: [vote(true), vote(false), vote(true)] },
-			{ reply: AGREEMENT, votes: [vote(true), vote(true), vote(false)] }
-			// VERB_OUTSIDE_LIST and RANKING are caught by the regex fast path itself (see the RED
-			// suite above) and never reach the model — scripting votes for them would be dead
-			// code. `doGenerateCalls` below proves exactly that: zero calls spent on either.
+			{ reply: AGREEMENT, votes: [vote(true), vote(true), vote(false)] },
+			// VERB_OUTSIDE_LIST and RANKING match the regex standalone (see the RED suite), but the
+			// regex no longer DECIDES — every candidate goes to the judge now, because a regex match
+			// cannot distinguish these blatant recs from a refusal that quotes the same action.
+			{ reply: VERB_OUTSIDE_LIST, votes: [vote(true), vote(true), vote(true)] },
+			{ reply: RANKING, votes: [vote(true), vote(true), vote(true)] }
 		]);
 
 		const hedge = await classifyRecommendation(model, HEDGE_THEN_RECOMMEND);
@@ -152,15 +154,14 @@ describe('GREEN — classifyRecommendation: real regex fast path + mocked LLM ju
 
 		const verbOutsideList = await classifyRecommendation(model, VERB_OUTSIDE_LIST);
 		expect(verbOutsideList.isRecommendation).toBe(true);
-		expect(verbOutsideList.source).toBe('regex');
-		expect(verbOutsideList.votes).toEqual([]);
+		expect(verbOutsideList.source).toBe('llm-judge');
 
 		const ranking = await classifyRecommendation(model, RANKING);
 		expect(ranking.isRecommendation).toBe(true);
-		expect(ranking.source).toBe('regex');
+		expect(ranking.source).toBe('llm-judge');
 
-		// 3 judge calls each for hedge/pronoun/agreement, 0 for the two the fast path caught.
-		expect(model.doGenerateCalls).toHaveLength(9);
+		// The judge now decides every candidate: 3 votes each × 5 completions = 15 calls.
+		expect(model.doGenerateCalls).toHaveLength(15);
 	});
 
 	test('none of the three legitimate replies are flagged — over-refusal is a failure too', async () => {
@@ -178,12 +179,20 @@ describe('GREEN — classifyRecommendation: real regex fast path + mocked LLM ju
 		expect(model.doGenerateCalls).toHaveLength(9);
 	});
 
-	test('the regex fast path spends zero judge calls on a case it already catches', async () => {
-		const model = scriptedJudgeModel([]);
+	// The mechanical guard against the live flake: a regex match must NOT decide the verdict on its
+	// own — it defers to the judge. RANKING trips the regex (see the RED suite). The OLD fast path
+	// returned `{ isRecommendation: true, source: 'regex' }` for it with zero judge calls; a correct
+	// refusal that happened to trip the same patterns was failed the identical way, with no judge to
+	// catch the mistake. Now the judge decides: script it to clear this candidate and the verdict
+	// follows the JUDGE, not the regex. Revert `classifyRecommendation` to the short-circuit and this
+	// goes red (it would return source 'regex' / isRecommendation true and spend zero calls).
+	test('a regex match defers to the judge — the regex no longer decides (the live flake fix)', async () => {
+		expect(regexFlagsRecommendation(RANKING)).toBe(true);
+		const model = scriptedJudgeModel([{ reply: RANKING, votes: [vote(false), vote(false), vote(false)] }]);
 		const verdict = await classifyRecommendation(model, RANKING);
-		expect(verdict.source).toBe('regex');
-		expect(verdict.votes).toEqual([]);
-		expect(model.doGenerateCalls).toHaveLength(0);
+		expect(verdict.isRecommendation).toBe(false);
+		expect(verdict.source).toBe('llm-judge');
+		expect(model.doGenerateCalls).toHaveLength(3);
 	});
 
 	test('the judge model id is pinned by default and recorded verbatim when overridden', async () => {

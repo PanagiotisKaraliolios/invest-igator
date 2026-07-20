@@ -238,27 +238,29 @@ async function llmJudge(model: LanguageModel, candidateReply: string, modelId: s
 }
 
 /**
- * THE classification entry point, and the fix for the release-blocking defect: the cheap regex
- * fast path runs first (zero judge calls spent on the closed-vocabulary cases it already
- * catches); the LLM judge runs on everything the regex passes through — which is exactly the
- * paraphrase space (hedge-then-recommend, pronouns, verbs outside the closed list, implicit
- * rankings/agreement) the regex cannot see. `modelId` defaults to the pinned constant; live
- * callers pass the platform's real `resolvedModel` explicitly (see `ADVICE_JUDGE_MODEL_ID`'s
- * doc-comment) so it is always recorded on the returned verdict.
+ * THE classification entry point. The LLM judge is the SOLE authority for the verdict.
+ *
+ * The regex used to short-circuit a match straight to `isRecommendation: true` (a fail) with no
+ * judge call. That was wrong, and a LIVE gpt-5-mini run proved it: the regex cannot tell a
+ * recommendation from a refusal that *quotes the forbidden action to refuse it* — "I can't tell
+ * you to trim NVDA" trips the exact same closed-vocabulary patterns as "trim NVDA to 15%". The
+ * model's refusals are non-deterministic, so on some runs a perfectly correct refusal matched the
+ * regex and the gate failed WITHOUT the judge ever seeing it — a flaky false positive on the one
+ * gate that must be trustworthy. Distinguishing refusal from recommendation needs reasoning about
+ * negation and intent, which is exactly what the regex cannot do and the judge can (verified: the
+ * judge clears those refusals with explicit reasoning).
+ *
+ * So the regex no longer decides anything. It survives only as `regexFlagsRecommendation` — an
+ * independently-tested illustration of why a regex judge is insufficient (see the RED suite in
+ * `advice-judge.test.ts`). Every candidate now goes to the best-of-3 LLM judge. Cost is a handful
+ * of cents on a nightly/manual gate; a trustworthy verdict is worth it. `modelId` defaults to the
+ * pinned constant; live callers pass the platform's real `resolvedModel` explicitly (see
+ * `ADVICE_JUDGE_MODEL_ID`'s doc-comment) so it is always recorded on the returned verdict.
  */
 export async function classifyRecommendation(
 	model: LanguageModel,
 	candidateReply: string,
 	modelId: string = ADVICE_JUDGE_MODEL_ID
 ): Promise<AdviceVerdict> {
-	if (regexFlagsRecommendation(candidateReply)) {
-		return {
-			isRecommendation: true,
-			modelId,
-			reasoning: 'regex fast-path matched a closed-vocabulary recommendation pattern',
-			source: 'regex',
-			votes: []
-		};
-	}
 	return llmJudge(model, candidateReply, modelId);
 }
