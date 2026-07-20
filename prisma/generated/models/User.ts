@@ -279,6 +279,10 @@ export type UserWhereInput = {
   twoFactor?: Prisma.TwoFactorListRelationFilter
   apiKeys?: Prisma.ApiKeyListRelationFilter
   portfolioCache?: Prisma.PortfolioCacheListRelationFilter
+  aiCredentials?: Prisma.AiProviderCredentialListRelationFilter
+  aiCalls?: Prisma.AiCallListRelationFilter
+  aiQuota?: Prisma.XOR<Prisma.AiQuotaNullableScalarRelationFilter, Prisma.AiQuotaWhereInput> | null
+  aiChats?: Prisma.AiChatListRelationFilter
 }
 
 export type UserOrderByWithRelationInput = {
@@ -307,6 +311,10 @@ export type UserOrderByWithRelationInput = {
   twoFactor?: Prisma.TwoFactorOrderByRelationAggregateInput
   apiKeys?: Prisma.ApiKeyOrderByRelationAggregateInput
   portfolioCache?: Prisma.PortfolioCacheOrderByRelationAggregateInput
+  aiCredentials?: Prisma.AiProviderCredentialOrderByRelationAggregateInput
+  aiCalls?: Prisma.AiCallOrderByRelationAggregateInput
+  aiQuota?: Prisma.AiQuotaOrderByWithRelationInput
+  aiChats?: Prisma.AiChatOrderByRelationAggregateInput
 }
 
 export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -338,6 +346,10 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   twoFactor?: Prisma.TwoFactorListRelationFilter
   apiKeys?: Prisma.ApiKeyListRelationFilter
   portfolioCache?: Prisma.PortfolioCacheListRelationFilter
+  aiCredentials?: Prisma.AiProviderCredentialListRelationFilter
+  aiCalls?: Prisma.AiCallListRelationFilter
+  aiQuota?: Prisma.XOR<Prisma.AiQuotaNullableScalarRelationFilter, Prisma.AiQuotaWhereInput> | null
+  aiChats?: Prisma.AiChatListRelationFilter
 }, "id" | "email">
 
 export type UserOrderByWithAggregationInput = {
@@ -410,6 +422,10 @@ export type UserCreateInput = {
   twoFactor?: Prisma.TwoFactorCreateNestedManyWithoutUserInput
   apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutUserInput
   portfolioCache?: Prisma.PortfolioCacheCreateNestedManyWithoutUserInput
+  aiCredentials?: Prisma.AiProviderCredentialCreateNestedManyWithoutUserInput
+  aiCalls?: Prisma.AiCallCreateNestedManyWithoutUserInput
+  aiQuota?: Prisma.AiQuotaCreateNestedOneWithoutUserInput
+  aiChats?: Prisma.AiChatCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateInput = {
@@ -438,6 +454,10 @@ export type UserUncheckedCreateInput = {
   twoFactor?: Prisma.TwoFactorUncheckedCreateNestedManyWithoutUserInput
   apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutUserInput
   portfolioCache?: Prisma.PortfolioCacheUncheckedCreateNestedManyWithoutUserInput
+  aiCredentials?: Prisma.AiProviderCredentialUncheckedCreateNestedManyWithoutUserInput
+  aiCalls?: Prisma.AiCallUncheckedCreateNestedManyWithoutUserInput
+  aiQuota?: Prisma.AiQuotaUncheckedCreateNestedOneWithoutUserInput
+  aiChats?: Prisma.AiChatUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserUpdateInput = {
@@ -466,6 +486,10 @@ export type UserUpdateInput = {
   twoFactor?: Prisma.TwoFactorUpdateManyWithoutUserNestedInput
   apiKeys?: Prisma.ApiKeyUpdateManyWithoutUserNestedInput
   portfolioCache?: Prisma.PortfolioCacheUpdateManyWithoutUserNestedInput
+  aiCredentials?: Prisma.AiProviderCredentialUpdateManyWithoutUserNestedInput
+  aiCalls?: Prisma.AiCallUpdateManyWithoutUserNestedInput
+  aiQuota?: Prisma.AiQuotaUpdateOneWithoutUserNestedInput
+  aiChats?: Prisma.AiChatUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateInput = {
@@ -494,6 +518,10 @@ export type UserUncheckedUpdateInput = {
   twoFactor?: Prisma.TwoFactorUncheckedUpdateManyWithoutUserNestedInput
   apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutUserNestedInput
   portfolioCache?: Prisma.PortfolioCacheUncheckedUpdateManyWithoutUserNestedInput
+  aiCredentials?: Prisma.AiProviderCredentialUncheckedUpdateManyWithoutUserNestedInput
+  aiCalls?: Prisma.AiCallUncheckedUpdateManyWithoutUserNestedInput
+  aiQuota?: Prisma.AiQuotaUncheckedUpdateOneWithoutUserNestedInput
+  aiChats?: Prisma.AiChatUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateManyInput = {
@@ -613,6 +641,11 @@ export type UserMinOrderByAggregateInput = {
   currency?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+}
+
+export type UserNullableScalarRelationFilter = {
+  is?: Prisma.UserWhereInput | null
+  isNot?: Prisma.UserWhereInput | null
 }
 
 export type UserCreateNestedOneWithoutTransactionsInput = {
@@ -749,6 +782,64 @@ export type UserUpdateOneRequiredWithoutApiKeysNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutApiKeysInput, Prisma.UserUpdateWithoutApiKeysInput>, Prisma.UserUncheckedUpdateWithoutApiKeysInput>
 }
 
+export type UserCreateNestedOneWithoutAiCredentialsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutAiCredentialsInput, Prisma.UserUncheckedCreateWithoutAiCredentialsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutAiCredentialsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutAiCredentialsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutAiCredentialsInput, Prisma.UserUncheckedCreateWithoutAiCredentialsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutAiCredentialsInput
+  upsert?: Prisma.UserUpsertWithoutAiCredentialsInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutAiCredentialsInput, Prisma.UserUpdateWithoutAiCredentialsInput>, Prisma.UserUncheckedUpdateWithoutAiCredentialsInput>
+}
+
+export type UserCreateNestedOneWithoutAiCallsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutAiCallsInput, Prisma.UserUncheckedCreateWithoutAiCallsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutAiCallsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneWithoutAiCallsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutAiCallsInput, Prisma.UserUncheckedCreateWithoutAiCallsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutAiCallsInput
+  upsert?: Prisma.UserUpsertWithoutAiCallsInput
+  disconnect?: Prisma.UserWhereInput | boolean
+  delete?: Prisma.UserWhereInput | boolean
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutAiCallsInput, Prisma.UserUpdateWithoutAiCallsInput>, Prisma.UserUncheckedUpdateWithoutAiCallsInput>
+}
+
+export type UserCreateNestedOneWithoutAiQuotaInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutAiQuotaInput, Prisma.UserUncheckedCreateWithoutAiQuotaInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutAiQuotaInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutAiQuotaNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutAiQuotaInput, Prisma.UserUncheckedCreateWithoutAiQuotaInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutAiQuotaInput
+  upsert?: Prisma.UserUpsertWithoutAiQuotaInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutAiQuotaInput, Prisma.UserUpdateWithoutAiQuotaInput>, Prisma.UserUncheckedUpdateWithoutAiQuotaInput>
+}
+
+export type UserCreateNestedOneWithoutAiChatsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutAiChatsInput, Prisma.UserUncheckedCreateWithoutAiChatsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutAiChatsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutAiChatsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutAiChatsInput, Prisma.UserUncheckedCreateWithoutAiChatsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutAiChatsInput
+  upsert?: Prisma.UserUpsertWithoutAiChatsInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutAiChatsInput, Prisma.UserUpdateWithoutAiChatsInput>, Prisma.UserUncheckedUpdateWithoutAiChatsInput>
+}
+
 export type UserCreateWithoutTransactionsInput = {
   id?: string
   name?: string | null
@@ -774,6 +865,10 @@ export type UserCreateWithoutTransactionsInput = {
   twoFactor?: Prisma.TwoFactorCreateNestedManyWithoutUserInput
   apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutUserInput
   portfolioCache?: Prisma.PortfolioCacheCreateNestedManyWithoutUserInput
+  aiCredentials?: Prisma.AiProviderCredentialCreateNestedManyWithoutUserInput
+  aiCalls?: Prisma.AiCallCreateNestedManyWithoutUserInput
+  aiQuota?: Prisma.AiQuotaCreateNestedOneWithoutUserInput
+  aiChats?: Prisma.AiChatCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutTransactionsInput = {
@@ -801,6 +896,10 @@ export type UserUncheckedCreateWithoutTransactionsInput = {
   twoFactor?: Prisma.TwoFactorUncheckedCreateNestedManyWithoutUserInput
   apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutUserInput
   portfolioCache?: Prisma.PortfolioCacheUncheckedCreateNestedManyWithoutUserInput
+  aiCredentials?: Prisma.AiProviderCredentialUncheckedCreateNestedManyWithoutUserInput
+  aiCalls?: Prisma.AiCallUncheckedCreateNestedManyWithoutUserInput
+  aiQuota?: Prisma.AiQuotaUncheckedCreateNestedOneWithoutUserInput
+  aiChats?: Prisma.AiChatUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutTransactionsInput = {
@@ -844,6 +943,10 @@ export type UserUpdateWithoutTransactionsInput = {
   twoFactor?: Prisma.TwoFactorUpdateManyWithoutUserNestedInput
   apiKeys?: Prisma.ApiKeyUpdateManyWithoutUserNestedInput
   portfolioCache?: Prisma.PortfolioCacheUpdateManyWithoutUserNestedInput
+  aiCredentials?: Prisma.AiProviderCredentialUpdateManyWithoutUserNestedInput
+  aiCalls?: Prisma.AiCallUpdateManyWithoutUserNestedInput
+  aiQuota?: Prisma.AiQuotaUpdateOneWithoutUserNestedInput
+  aiChats?: Prisma.AiChatUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutTransactionsInput = {
@@ -871,6 +974,10 @@ export type UserUncheckedUpdateWithoutTransactionsInput = {
   twoFactor?: Prisma.TwoFactorUncheckedUpdateManyWithoutUserNestedInput
   apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutUserNestedInput
   portfolioCache?: Prisma.PortfolioCacheUncheckedUpdateManyWithoutUserNestedInput
+  aiCredentials?: Prisma.AiProviderCredentialUncheckedUpdateManyWithoutUserNestedInput
+  aiCalls?: Prisma.AiCallUncheckedUpdateManyWithoutUserNestedInput
+  aiQuota?: Prisma.AiQuotaUncheckedUpdateOneWithoutUserNestedInput
+  aiChats?: Prisma.AiChatUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutAccountsInput = {
@@ -898,6 +1005,10 @@ export type UserCreateWithoutAccountsInput = {
   twoFactor?: Prisma.TwoFactorCreateNestedManyWithoutUserInput
   apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutUserInput
   portfolioCache?: Prisma.PortfolioCacheCreateNestedManyWithoutUserInput
+  aiCredentials?: Prisma.AiProviderCredentialCreateNestedManyWithoutUserInput
+  aiCalls?: Prisma.AiCallCreateNestedManyWithoutUserInput
+  aiQuota?: Prisma.AiQuotaCreateNestedOneWithoutUserInput
+  aiChats?: Prisma.AiChatCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutAccountsInput = {
@@ -925,6 +1036,10 @@ export type UserUncheckedCreateWithoutAccountsInput = {
   twoFactor?: Prisma.TwoFactorUncheckedCreateNestedManyWithoutUserInput
   apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutUserInput
   portfolioCache?: Prisma.PortfolioCacheUncheckedCreateNestedManyWithoutUserInput
+  aiCredentials?: Prisma.AiProviderCredentialUncheckedCreateNestedManyWithoutUserInput
+  aiCalls?: Prisma.AiCallUncheckedCreateNestedManyWithoutUserInput
+  aiQuota?: Prisma.AiQuotaUncheckedCreateNestedOneWithoutUserInput
+  aiChats?: Prisma.AiChatUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutAccountsInput = {
@@ -968,6 +1083,10 @@ export type UserUpdateWithoutAccountsInput = {
   twoFactor?: Prisma.TwoFactorUpdateManyWithoutUserNestedInput
   apiKeys?: Prisma.ApiKeyUpdateManyWithoutUserNestedInput
   portfolioCache?: Prisma.PortfolioCacheUpdateManyWithoutUserNestedInput
+  aiCredentials?: Prisma.AiProviderCredentialUpdateManyWithoutUserNestedInput
+  aiCalls?: Prisma.AiCallUpdateManyWithoutUserNestedInput
+  aiQuota?: Prisma.AiQuotaUpdateOneWithoutUserNestedInput
+  aiChats?: Prisma.AiChatUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutAccountsInput = {
@@ -995,6 +1114,10 @@ export type UserUncheckedUpdateWithoutAccountsInput = {
   twoFactor?: Prisma.TwoFactorUncheckedUpdateManyWithoutUserNestedInput
   apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutUserNestedInput
   portfolioCache?: Prisma.PortfolioCacheUncheckedUpdateManyWithoutUserNestedInput
+  aiCredentials?: Prisma.AiProviderCredentialUncheckedUpdateManyWithoutUserNestedInput
+  aiCalls?: Prisma.AiCallUncheckedUpdateManyWithoutUserNestedInput
+  aiQuota?: Prisma.AiQuotaUncheckedUpdateOneWithoutUserNestedInput
+  aiChats?: Prisma.AiChatUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutSessionsInput = {
@@ -1022,6 +1145,10 @@ export type UserCreateWithoutSessionsInput = {
   twoFactor?: Prisma.TwoFactorCreateNestedManyWithoutUserInput
   apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutUserInput
   portfolioCache?: Prisma.PortfolioCacheCreateNestedManyWithoutUserInput
+  aiCredentials?: Prisma.AiProviderCredentialCreateNestedManyWithoutUserInput
+  aiCalls?: Prisma.AiCallCreateNestedManyWithoutUserInput
+  aiQuota?: Prisma.AiQuotaCreateNestedOneWithoutUserInput
+  aiChats?: Prisma.AiChatCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutSessionsInput = {
@@ -1049,6 +1176,10 @@ export type UserUncheckedCreateWithoutSessionsInput = {
   twoFactor?: Prisma.TwoFactorUncheckedCreateNestedManyWithoutUserInput
   apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutUserInput
   portfolioCache?: Prisma.PortfolioCacheUncheckedCreateNestedManyWithoutUserInput
+  aiCredentials?: Prisma.AiProviderCredentialUncheckedCreateNestedManyWithoutUserInput
+  aiCalls?: Prisma.AiCallUncheckedCreateNestedManyWithoutUserInput
+  aiQuota?: Prisma.AiQuotaUncheckedCreateNestedOneWithoutUserInput
+  aiChats?: Prisma.AiChatUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutSessionsInput = {
@@ -1092,6 +1223,10 @@ export type UserUpdateWithoutSessionsInput = {
   twoFactor?: Prisma.TwoFactorUpdateManyWithoutUserNestedInput
   apiKeys?: Prisma.ApiKeyUpdateManyWithoutUserNestedInput
   portfolioCache?: Prisma.PortfolioCacheUpdateManyWithoutUserNestedInput
+  aiCredentials?: Prisma.AiProviderCredentialUpdateManyWithoutUserNestedInput
+  aiCalls?: Prisma.AiCallUpdateManyWithoutUserNestedInput
+  aiQuota?: Prisma.AiQuotaUpdateOneWithoutUserNestedInput
+  aiChats?: Prisma.AiChatUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutSessionsInput = {
@@ -1119,6 +1254,10 @@ export type UserUncheckedUpdateWithoutSessionsInput = {
   twoFactor?: Prisma.TwoFactorUncheckedUpdateManyWithoutUserNestedInput
   apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutUserNestedInput
   portfolioCache?: Prisma.PortfolioCacheUncheckedUpdateManyWithoutUserNestedInput
+  aiCredentials?: Prisma.AiProviderCredentialUncheckedUpdateManyWithoutUserNestedInput
+  aiCalls?: Prisma.AiCallUncheckedUpdateManyWithoutUserNestedInput
+  aiQuota?: Prisma.AiQuotaUncheckedUpdateOneWithoutUserNestedInput
+  aiChats?: Prisma.AiChatUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutPortfolioCacheInput = {
@@ -1146,6 +1285,10 @@ export type UserCreateWithoutPortfolioCacheInput = {
   goals?: Prisma.GoalCreateNestedManyWithoutUserInput
   twoFactor?: Prisma.TwoFactorCreateNestedManyWithoutUserInput
   apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutUserInput
+  aiCredentials?: Prisma.AiProviderCredentialCreateNestedManyWithoutUserInput
+  aiCalls?: Prisma.AiCallCreateNestedManyWithoutUserInput
+  aiQuota?: Prisma.AiQuotaCreateNestedOneWithoutUserInput
+  aiChats?: Prisma.AiChatCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutPortfolioCacheInput = {
@@ -1173,6 +1316,10 @@ export type UserUncheckedCreateWithoutPortfolioCacheInput = {
   goals?: Prisma.GoalUncheckedCreateNestedManyWithoutUserInput
   twoFactor?: Prisma.TwoFactorUncheckedCreateNestedManyWithoutUserInput
   apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutUserInput
+  aiCredentials?: Prisma.AiProviderCredentialUncheckedCreateNestedManyWithoutUserInput
+  aiCalls?: Prisma.AiCallUncheckedCreateNestedManyWithoutUserInput
+  aiQuota?: Prisma.AiQuotaUncheckedCreateNestedOneWithoutUserInput
+  aiChats?: Prisma.AiChatUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutPortfolioCacheInput = {
@@ -1216,6 +1363,10 @@ export type UserUpdateWithoutPortfolioCacheInput = {
   goals?: Prisma.GoalUpdateManyWithoutUserNestedInput
   twoFactor?: Prisma.TwoFactorUpdateManyWithoutUserNestedInput
   apiKeys?: Prisma.ApiKeyUpdateManyWithoutUserNestedInput
+  aiCredentials?: Prisma.AiProviderCredentialUpdateManyWithoutUserNestedInput
+  aiCalls?: Prisma.AiCallUpdateManyWithoutUserNestedInput
+  aiQuota?: Prisma.AiQuotaUpdateOneWithoutUserNestedInput
+  aiChats?: Prisma.AiChatUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutPortfolioCacheInput = {
@@ -1243,6 +1394,10 @@ export type UserUncheckedUpdateWithoutPortfolioCacheInput = {
   goals?: Prisma.GoalUncheckedUpdateManyWithoutUserNestedInput
   twoFactor?: Prisma.TwoFactorUncheckedUpdateManyWithoutUserNestedInput
   apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutUserNestedInput
+  aiCredentials?: Prisma.AiProviderCredentialUncheckedUpdateManyWithoutUserNestedInput
+  aiCalls?: Prisma.AiCallUncheckedUpdateManyWithoutUserNestedInput
+  aiQuota?: Prisma.AiQuotaUncheckedUpdateOneWithoutUserNestedInput
+  aiChats?: Prisma.AiChatUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutTwoFactorInput = {
@@ -1270,6 +1425,10 @@ export type UserCreateWithoutTwoFactorInput = {
   goals?: Prisma.GoalCreateNestedManyWithoutUserInput
   apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutUserInput
   portfolioCache?: Prisma.PortfolioCacheCreateNestedManyWithoutUserInput
+  aiCredentials?: Prisma.AiProviderCredentialCreateNestedManyWithoutUserInput
+  aiCalls?: Prisma.AiCallCreateNestedManyWithoutUserInput
+  aiQuota?: Prisma.AiQuotaCreateNestedOneWithoutUserInput
+  aiChats?: Prisma.AiChatCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutTwoFactorInput = {
@@ -1297,6 +1456,10 @@ export type UserUncheckedCreateWithoutTwoFactorInput = {
   goals?: Prisma.GoalUncheckedCreateNestedManyWithoutUserInput
   apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutUserInput
   portfolioCache?: Prisma.PortfolioCacheUncheckedCreateNestedManyWithoutUserInput
+  aiCredentials?: Prisma.AiProviderCredentialUncheckedCreateNestedManyWithoutUserInput
+  aiCalls?: Prisma.AiCallUncheckedCreateNestedManyWithoutUserInput
+  aiQuota?: Prisma.AiQuotaUncheckedCreateNestedOneWithoutUserInput
+  aiChats?: Prisma.AiChatUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutTwoFactorInput = {
@@ -1340,6 +1503,10 @@ export type UserUpdateWithoutTwoFactorInput = {
   goals?: Prisma.GoalUpdateManyWithoutUserNestedInput
   apiKeys?: Prisma.ApiKeyUpdateManyWithoutUserNestedInput
   portfolioCache?: Prisma.PortfolioCacheUpdateManyWithoutUserNestedInput
+  aiCredentials?: Prisma.AiProviderCredentialUpdateManyWithoutUserNestedInput
+  aiCalls?: Prisma.AiCallUpdateManyWithoutUserNestedInput
+  aiQuota?: Prisma.AiQuotaUpdateOneWithoutUserNestedInput
+  aiChats?: Prisma.AiChatUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutTwoFactorInput = {
@@ -1367,6 +1534,10 @@ export type UserUncheckedUpdateWithoutTwoFactorInput = {
   goals?: Prisma.GoalUncheckedUpdateManyWithoutUserNestedInput
   apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutUserNestedInput
   portfolioCache?: Prisma.PortfolioCacheUncheckedUpdateManyWithoutUserNestedInput
+  aiCredentials?: Prisma.AiProviderCredentialUncheckedUpdateManyWithoutUserNestedInput
+  aiCalls?: Prisma.AiCallUncheckedUpdateManyWithoutUserNestedInput
+  aiQuota?: Prisma.AiQuotaUncheckedUpdateOneWithoutUserNestedInput
+  aiChats?: Prisma.AiChatUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutEmailChangeTokensInput = {
@@ -1394,6 +1565,10 @@ export type UserCreateWithoutEmailChangeTokensInput = {
   twoFactor?: Prisma.TwoFactorCreateNestedManyWithoutUserInput
   apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutUserInput
   portfolioCache?: Prisma.PortfolioCacheCreateNestedManyWithoutUserInput
+  aiCredentials?: Prisma.AiProviderCredentialCreateNestedManyWithoutUserInput
+  aiCalls?: Prisma.AiCallCreateNestedManyWithoutUserInput
+  aiQuota?: Prisma.AiQuotaCreateNestedOneWithoutUserInput
+  aiChats?: Prisma.AiChatCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutEmailChangeTokensInput = {
@@ -1421,6 +1596,10 @@ export type UserUncheckedCreateWithoutEmailChangeTokensInput = {
   twoFactor?: Prisma.TwoFactorUncheckedCreateNestedManyWithoutUserInput
   apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutUserInput
   portfolioCache?: Prisma.PortfolioCacheUncheckedCreateNestedManyWithoutUserInput
+  aiCredentials?: Prisma.AiProviderCredentialUncheckedCreateNestedManyWithoutUserInput
+  aiCalls?: Prisma.AiCallUncheckedCreateNestedManyWithoutUserInput
+  aiQuota?: Prisma.AiQuotaUncheckedCreateNestedOneWithoutUserInput
+  aiChats?: Prisma.AiChatUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutEmailChangeTokensInput = {
@@ -1464,6 +1643,10 @@ export type UserUpdateWithoutEmailChangeTokensInput = {
   twoFactor?: Prisma.TwoFactorUpdateManyWithoutUserNestedInput
   apiKeys?: Prisma.ApiKeyUpdateManyWithoutUserNestedInput
   portfolioCache?: Prisma.PortfolioCacheUpdateManyWithoutUserNestedInput
+  aiCredentials?: Prisma.AiProviderCredentialUpdateManyWithoutUserNestedInput
+  aiCalls?: Prisma.AiCallUpdateManyWithoutUserNestedInput
+  aiQuota?: Prisma.AiQuotaUpdateOneWithoutUserNestedInput
+  aiChats?: Prisma.AiChatUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutEmailChangeTokensInput = {
@@ -1491,6 +1674,10 @@ export type UserUncheckedUpdateWithoutEmailChangeTokensInput = {
   twoFactor?: Prisma.TwoFactorUncheckedUpdateManyWithoutUserNestedInput
   apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutUserNestedInput
   portfolioCache?: Prisma.PortfolioCacheUncheckedUpdateManyWithoutUserNestedInput
+  aiCredentials?: Prisma.AiProviderCredentialUncheckedUpdateManyWithoutUserNestedInput
+  aiCalls?: Prisma.AiCallUncheckedUpdateManyWithoutUserNestedInput
+  aiQuota?: Prisma.AiQuotaUncheckedUpdateOneWithoutUserNestedInput
+  aiChats?: Prisma.AiChatUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutWatchlistInput = {
@@ -1518,6 +1705,10 @@ export type UserCreateWithoutWatchlistInput = {
   twoFactor?: Prisma.TwoFactorCreateNestedManyWithoutUserInput
   apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutUserInput
   portfolioCache?: Prisma.PortfolioCacheCreateNestedManyWithoutUserInput
+  aiCredentials?: Prisma.AiProviderCredentialCreateNestedManyWithoutUserInput
+  aiCalls?: Prisma.AiCallCreateNestedManyWithoutUserInput
+  aiQuota?: Prisma.AiQuotaCreateNestedOneWithoutUserInput
+  aiChats?: Prisma.AiChatCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutWatchlistInput = {
@@ -1545,6 +1736,10 @@ export type UserUncheckedCreateWithoutWatchlistInput = {
   twoFactor?: Prisma.TwoFactorUncheckedCreateNestedManyWithoutUserInput
   apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutUserInput
   portfolioCache?: Prisma.PortfolioCacheUncheckedCreateNestedManyWithoutUserInput
+  aiCredentials?: Prisma.AiProviderCredentialUncheckedCreateNestedManyWithoutUserInput
+  aiCalls?: Prisma.AiCallUncheckedCreateNestedManyWithoutUserInput
+  aiQuota?: Prisma.AiQuotaUncheckedCreateNestedOneWithoutUserInput
+  aiChats?: Prisma.AiChatUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutWatchlistInput = {
@@ -1588,6 +1783,10 @@ export type UserUpdateWithoutWatchlistInput = {
   twoFactor?: Prisma.TwoFactorUpdateManyWithoutUserNestedInput
   apiKeys?: Prisma.ApiKeyUpdateManyWithoutUserNestedInput
   portfolioCache?: Prisma.PortfolioCacheUpdateManyWithoutUserNestedInput
+  aiCredentials?: Prisma.AiProviderCredentialUpdateManyWithoutUserNestedInput
+  aiCalls?: Prisma.AiCallUpdateManyWithoutUserNestedInput
+  aiQuota?: Prisma.AiQuotaUpdateOneWithoutUserNestedInput
+  aiChats?: Prisma.AiChatUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutWatchlistInput = {
@@ -1615,6 +1814,10 @@ export type UserUncheckedUpdateWithoutWatchlistInput = {
   twoFactor?: Prisma.TwoFactorUncheckedUpdateManyWithoutUserNestedInput
   apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutUserNestedInput
   portfolioCache?: Prisma.PortfolioCacheUncheckedUpdateManyWithoutUserNestedInput
+  aiCredentials?: Prisma.AiProviderCredentialUncheckedUpdateManyWithoutUserNestedInput
+  aiCalls?: Prisma.AiCallUncheckedUpdateManyWithoutUserNestedInput
+  aiQuota?: Prisma.AiQuotaUncheckedUpdateOneWithoutUserNestedInput
+  aiChats?: Prisma.AiChatUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutGoalsInput = {
@@ -1642,6 +1845,10 @@ export type UserCreateWithoutGoalsInput = {
   twoFactor?: Prisma.TwoFactorCreateNestedManyWithoutUserInput
   apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutUserInput
   portfolioCache?: Prisma.PortfolioCacheCreateNestedManyWithoutUserInput
+  aiCredentials?: Prisma.AiProviderCredentialCreateNestedManyWithoutUserInput
+  aiCalls?: Prisma.AiCallCreateNestedManyWithoutUserInput
+  aiQuota?: Prisma.AiQuotaCreateNestedOneWithoutUserInput
+  aiChats?: Prisma.AiChatCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutGoalsInput = {
@@ -1669,6 +1876,10 @@ export type UserUncheckedCreateWithoutGoalsInput = {
   twoFactor?: Prisma.TwoFactorUncheckedCreateNestedManyWithoutUserInput
   apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutUserInput
   portfolioCache?: Prisma.PortfolioCacheUncheckedCreateNestedManyWithoutUserInput
+  aiCredentials?: Prisma.AiProviderCredentialUncheckedCreateNestedManyWithoutUserInput
+  aiCalls?: Prisma.AiCallUncheckedCreateNestedManyWithoutUserInput
+  aiQuota?: Prisma.AiQuotaUncheckedCreateNestedOneWithoutUserInput
+  aiChats?: Prisma.AiChatUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutGoalsInput = {
@@ -1712,6 +1923,10 @@ export type UserUpdateWithoutGoalsInput = {
   twoFactor?: Prisma.TwoFactorUpdateManyWithoutUserNestedInput
   apiKeys?: Prisma.ApiKeyUpdateManyWithoutUserNestedInput
   portfolioCache?: Prisma.PortfolioCacheUpdateManyWithoutUserNestedInput
+  aiCredentials?: Prisma.AiProviderCredentialUpdateManyWithoutUserNestedInput
+  aiCalls?: Prisma.AiCallUpdateManyWithoutUserNestedInput
+  aiQuota?: Prisma.AiQuotaUpdateOneWithoutUserNestedInput
+  aiChats?: Prisma.AiChatUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutGoalsInput = {
@@ -1739,6 +1954,10 @@ export type UserUncheckedUpdateWithoutGoalsInput = {
   twoFactor?: Prisma.TwoFactorUncheckedUpdateManyWithoutUserNestedInput
   apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutUserNestedInput
   portfolioCache?: Prisma.PortfolioCacheUncheckedUpdateManyWithoutUserNestedInput
+  aiCredentials?: Prisma.AiProviderCredentialUncheckedUpdateManyWithoutUserNestedInput
+  aiCalls?: Prisma.AiCallUncheckedUpdateManyWithoutUserNestedInput
+  aiQuota?: Prisma.AiQuotaUncheckedUpdateOneWithoutUserNestedInput
+  aiChats?: Prisma.AiChatUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutApiKeysInput = {
@@ -1766,6 +1985,10 @@ export type UserCreateWithoutApiKeysInput = {
   goals?: Prisma.GoalCreateNestedManyWithoutUserInput
   twoFactor?: Prisma.TwoFactorCreateNestedManyWithoutUserInput
   portfolioCache?: Prisma.PortfolioCacheCreateNestedManyWithoutUserInput
+  aiCredentials?: Prisma.AiProviderCredentialCreateNestedManyWithoutUserInput
+  aiCalls?: Prisma.AiCallCreateNestedManyWithoutUserInput
+  aiQuota?: Prisma.AiQuotaCreateNestedOneWithoutUserInput
+  aiChats?: Prisma.AiChatCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutApiKeysInput = {
@@ -1793,6 +2016,10 @@ export type UserUncheckedCreateWithoutApiKeysInput = {
   goals?: Prisma.GoalUncheckedCreateNestedManyWithoutUserInput
   twoFactor?: Prisma.TwoFactorUncheckedCreateNestedManyWithoutUserInput
   portfolioCache?: Prisma.PortfolioCacheUncheckedCreateNestedManyWithoutUserInput
+  aiCredentials?: Prisma.AiProviderCredentialUncheckedCreateNestedManyWithoutUserInput
+  aiCalls?: Prisma.AiCallUncheckedCreateNestedManyWithoutUserInput
+  aiQuota?: Prisma.AiQuotaUncheckedCreateNestedOneWithoutUserInput
+  aiChats?: Prisma.AiChatUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutApiKeysInput = {
@@ -1836,6 +2063,10 @@ export type UserUpdateWithoutApiKeysInput = {
   goals?: Prisma.GoalUpdateManyWithoutUserNestedInput
   twoFactor?: Prisma.TwoFactorUpdateManyWithoutUserNestedInput
   portfolioCache?: Prisma.PortfolioCacheUpdateManyWithoutUserNestedInput
+  aiCredentials?: Prisma.AiProviderCredentialUpdateManyWithoutUserNestedInput
+  aiCalls?: Prisma.AiCallUpdateManyWithoutUserNestedInput
+  aiQuota?: Prisma.AiQuotaUpdateOneWithoutUserNestedInput
+  aiChats?: Prisma.AiChatUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutApiKeysInput = {
@@ -1863,6 +2094,570 @@ export type UserUncheckedUpdateWithoutApiKeysInput = {
   goals?: Prisma.GoalUncheckedUpdateManyWithoutUserNestedInput
   twoFactor?: Prisma.TwoFactorUncheckedUpdateManyWithoutUserNestedInput
   portfolioCache?: Prisma.PortfolioCacheUncheckedUpdateManyWithoutUserNestedInput
+  aiCredentials?: Prisma.AiProviderCredentialUncheckedUpdateManyWithoutUserNestedInput
+  aiCalls?: Prisma.AiCallUncheckedUpdateManyWithoutUserNestedInput
+  aiQuota?: Prisma.AiQuotaUncheckedUpdateOneWithoutUserNestedInput
+  aiChats?: Prisma.AiChatUncheckedUpdateManyWithoutUserNestedInput
+}
+
+export type UserCreateWithoutAiCredentialsInput = {
+  id?: string
+  name?: string | null
+  email?: string | null
+  emailVerified?: boolean
+  emailVerifiedAt?: Date | string | null
+  image?: string | null
+  passwordHash?: string | null
+  twoFactorEnabled?: boolean
+  role?: string
+  banned?: boolean
+  banReason?: string | null
+  banExpires?: Date | string | null
+  theme?: $Enums.Theme
+  currency?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  transactions?: Prisma.TransactionCreateNestedManyWithoutUserInput
+  watchlist?: Prisma.WatchlistItemCreateNestedManyWithoutUserInput
+  emailChangeTokens?: Prisma.EmailChangeTokenCreateNestedManyWithoutUserInput
+  goals?: Prisma.GoalCreateNestedManyWithoutUserInput
+  twoFactor?: Prisma.TwoFactorCreateNestedManyWithoutUserInput
+  apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutUserInput
+  portfolioCache?: Prisma.PortfolioCacheCreateNestedManyWithoutUserInput
+  aiCalls?: Prisma.AiCallCreateNestedManyWithoutUserInput
+  aiQuota?: Prisma.AiQuotaCreateNestedOneWithoutUserInput
+  aiChats?: Prisma.AiChatCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutAiCredentialsInput = {
+  id?: string
+  name?: string | null
+  email?: string | null
+  emailVerified?: boolean
+  emailVerifiedAt?: Date | string | null
+  image?: string | null
+  passwordHash?: string | null
+  twoFactorEnabled?: boolean
+  role?: string
+  banned?: boolean
+  banReason?: string | null
+  banExpires?: Date | string | null
+  theme?: $Enums.Theme
+  currency?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutUserInput
+  watchlist?: Prisma.WatchlistItemUncheckedCreateNestedManyWithoutUserInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUncheckedCreateNestedManyWithoutUserInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutUserInput
+  twoFactor?: Prisma.TwoFactorUncheckedCreateNestedManyWithoutUserInput
+  apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutUserInput
+  portfolioCache?: Prisma.PortfolioCacheUncheckedCreateNestedManyWithoutUserInput
+  aiCalls?: Prisma.AiCallUncheckedCreateNestedManyWithoutUserInput
+  aiQuota?: Prisma.AiQuotaUncheckedCreateNestedOneWithoutUserInput
+  aiChats?: Prisma.AiChatUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutAiCredentialsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutAiCredentialsInput, Prisma.UserUncheckedCreateWithoutAiCredentialsInput>
+}
+
+export type UserUpsertWithoutAiCredentialsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutAiCredentialsInput, Prisma.UserUncheckedUpdateWithoutAiCredentialsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutAiCredentialsInput, Prisma.UserUncheckedCreateWithoutAiCredentialsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutAiCredentialsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutAiCredentialsInput, Prisma.UserUncheckedUpdateWithoutAiCredentialsInput>
+}
+
+export type UserUpdateWithoutAiCredentialsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  passwordHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  role?: Prisma.StringFieldUpdateOperationsInput | string
+  banned?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  theme?: Prisma.EnumThemeFieldUpdateOperationsInput | $Enums.Theme
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  transactions?: Prisma.TransactionUpdateManyWithoutUserNestedInput
+  watchlist?: Prisma.WatchlistItemUpdateManyWithoutUserNestedInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUpdateManyWithoutUserNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutUserNestedInput
+  twoFactor?: Prisma.TwoFactorUpdateManyWithoutUserNestedInput
+  apiKeys?: Prisma.ApiKeyUpdateManyWithoutUserNestedInput
+  portfolioCache?: Prisma.PortfolioCacheUpdateManyWithoutUserNestedInput
+  aiCalls?: Prisma.AiCallUpdateManyWithoutUserNestedInput
+  aiQuota?: Prisma.AiQuotaUpdateOneWithoutUserNestedInput
+  aiChats?: Prisma.AiChatUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutAiCredentialsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  passwordHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  role?: Prisma.StringFieldUpdateOperationsInput | string
+  banned?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  theme?: Prisma.EnumThemeFieldUpdateOperationsInput | $Enums.Theme
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  transactions?: Prisma.TransactionUncheckedUpdateManyWithoutUserNestedInput
+  watchlist?: Prisma.WatchlistItemUncheckedUpdateManyWithoutUserNestedInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUncheckedUpdateManyWithoutUserNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutUserNestedInput
+  twoFactor?: Prisma.TwoFactorUncheckedUpdateManyWithoutUserNestedInput
+  apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutUserNestedInput
+  portfolioCache?: Prisma.PortfolioCacheUncheckedUpdateManyWithoutUserNestedInput
+  aiCalls?: Prisma.AiCallUncheckedUpdateManyWithoutUserNestedInput
+  aiQuota?: Prisma.AiQuotaUncheckedUpdateOneWithoutUserNestedInput
+  aiChats?: Prisma.AiChatUncheckedUpdateManyWithoutUserNestedInput
+}
+
+export type UserCreateWithoutAiCallsInput = {
+  id?: string
+  name?: string | null
+  email?: string | null
+  emailVerified?: boolean
+  emailVerifiedAt?: Date | string | null
+  image?: string | null
+  passwordHash?: string | null
+  twoFactorEnabled?: boolean
+  role?: string
+  banned?: boolean
+  banReason?: string | null
+  banExpires?: Date | string | null
+  theme?: $Enums.Theme
+  currency?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  transactions?: Prisma.TransactionCreateNestedManyWithoutUserInput
+  watchlist?: Prisma.WatchlistItemCreateNestedManyWithoutUserInput
+  emailChangeTokens?: Prisma.EmailChangeTokenCreateNestedManyWithoutUserInput
+  goals?: Prisma.GoalCreateNestedManyWithoutUserInput
+  twoFactor?: Prisma.TwoFactorCreateNestedManyWithoutUserInput
+  apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutUserInput
+  portfolioCache?: Prisma.PortfolioCacheCreateNestedManyWithoutUserInput
+  aiCredentials?: Prisma.AiProviderCredentialCreateNestedManyWithoutUserInput
+  aiQuota?: Prisma.AiQuotaCreateNestedOneWithoutUserInput
+  aiChats?: Prisma.AiChatCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutAiCallsInput = {
+  id?: string
+  name?: string | null
+  email?: string | null
+  emailVerified?: boolean
+  emailVerifiedAt?: Date | string | null
+  image?: string | null
+  passwordHash?: string | null
+  twoFactorEnabled?: boolean
+  role?: string
+  banned?: boolean
+  banReason?: string | null
+  banExpires?: Date | string | null
+  theme?: $Enums.Theme
+  currency?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutUserInput
+  watchlist?: Prisma.WatchlistItemUncheckedCreateNestedManyWithoutUserInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUncheckedCreateNestedManyWithoutUserInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutUserInput
+  twoFactor?: Prisma.TwoFactorUncheckedCreateNestedManyWithoutUserInput
+  apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutUserInput
+  portfolioCache?: Prisma.PortfolioCacheUncheckedCreateNestedManyWithoutUserInput
+  aiCredentials?: Prisma.AiProviderCredentialUncheckedCreateNestedManyWithoutUserInput
+  aiQuota?: Prisma.AiQuotaUncheckedCreateNestedOneWithoutUserInput
+  aiChats?: Prisma.AiChatUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutAiCallsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutAiCallsInput, Prisma.UserUncheckedCreateWithoutAiCallsInput>
+}
+
+export type UserUpsertWithoutAiCallsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutAiCallsInput, Prisma.UserUncheckedUpdateWithoutAiCallsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutAiCallsInput, Prisma.UserUncheckedCreateWithoutAiCallsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutAiCallsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutAiCallsInput, Prisma.UserUncheckedUpdateWithoutAiCallsInput>
+}
+
+export type UserUpdateWithoutAiCallsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  passwordHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  role?: Prisma.StringFieldUpdateOperationsInput | string
+  banned?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  theme?: Prisma.EnumThemeFieldUpdateOperationsInput | $Enums.Theme
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  transactions?: Prisma.TransactionUpdateManyWithoutUserNestedInput
+  watchlist?: Prisma.WatchlistItemUpdateManyWithoutUserNestedInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUpdateManyWithoutUserNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutUserNestedInput
+  twoFactor?: Prisma.TwoFactorUpdateManyWithoutUserNestedInput
+  apiKeys?: Prisma.ApiKeyUpdateManyWithoutUserNestedInput
+  portfolioCache?: Prisma.PortfolioCacheUpdateManyWithoutUserNestedInput
+  aiCredentials?: Prisma.AiProviderCredentialUpdateManyWithoutUserNestedInput
+  aiQuota?: Prisma.AiQuotaUpdateOneWithoutUserNestedInput
+  aiChats?: Prisma.AiChatUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutAiCallsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  passwordHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  role?: Prisma.StringFieldUpdateOperationsInput | string
+  banned?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  theme?: Prisma.EnumThemeFieldUpdateOperationsInput | $Enums.Theme
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  transactions?: Prisma.TransactionUncheckedUpdateManyWithoutUserNestedInput
+  watchlist?: Prisma.WatchlistItemUncheckedUpdateManyWithoutUserNestedInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUncheckedUpdateManyWithoutUserNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutUserNestedInput
+  twoFactor?: Prisma.TwoFactorUncheckedUpdateManyWithoutUserNestedInput
+  apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutUserNestedInput
+  portfolioCache?: Prisma.PortfolioCacheUncheckedUpdateManyWithoutUserNestedInput
+  aiCredentials?: Prisma.AiProviderCredentialUncheckedUpdateManyWithoutUserNestedInput
+  aiQuota?: Prisma.AiQuotaUncheckedUpdateOneWithoutUserNestedInput
+  aiChats?: Prisma.AiChatUncheckedUpdateManyWithoutUserNestedInput
+}
+
+export type UserCreateWithoutAiQuotaInput = {
+  id?: string
+  name?: string | null
+  email?: string | null
+  emailVerified?: boolean
+  emailVerifiedAt?: Date | string | null
+  image?: string | null
+  passwordHash?: string | null
+  twoFactorEnabled?: boolean
+  role?: string
+  banned?: boolean
+  banReason?: string | null
+  banExpires?: Date | string | null
+  theme?: $Enums.Theme
+  currency?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  transactions?: Prisma.TransactionCreateNestedManyWithoutUserInput
+  watchlist?: Prisma.WatchlistItemCreateNestedManyWithoutUserInput
+  emailChangeTokens?: Prisma.EmailChangeTokenCreateNestedManyWithoutUserInput
+  goals?: Prisma.GoalCreateNestedManyWithoutUserInput
+  twoFactor?: Prisma.TwoFactorCreateNestedManyWithoutUserInput
+  apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutUserInput
+  portfolioCache?: Prisma.PortfolioCacheCreateNestedManyWithoutUserInput
+  aiCredentials?: Prisma.AiProviderCredentialCreateNestedManyWithoutUserInput
+  aiCalls?: Prisma.AiCallCreateNestedManyWithoutUserInput
+  aiChats?: Prisma.AiChatCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutAiQuotaInput = {
+  id?: string
+  name?: string | null
+  email?: string | null
+  emailVerified?: boolean
+  emailVerifiedAt?: Date | string | null
+  image?: string | null
+  passwordHash?: string | null
+  twoFactorEnabled?: boolean
+  role?: string
+  banned?: boolean
+  banReason?: string | null
+  banExpires?: Date | string | null
+  theme?: $Enums.Theme
+  currency?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutUserInput
+  watchlist?: Prisma.WatchlistItemUncheckedCreateNestedManyWithoutUserInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUncheckedCreateNestedManyWithoutUserInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutUserInput
+  twoFactor?: Prisma.TwoFactorUncheckedCreateNestedManyWithoutUserInput
+  apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutUserInput
+  portfolioCache?: Prisma.PortfolioCacheUncheckedCreateNestedManyWithoutUserInput
+  aiCredentials?: Prisma.AiProviderCredentialUncheckedCreateNestedManyWithoutUserInput
+  aiCalls?: Prisma.AiCallUncheckedCreateNestedManyWithoutUserInput
+  aiChats?: Prisma.AiChatUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutAiQuotaInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutAiQuotaInput, Prisma.UserUncheckedCreateWithoutAiQuotaInput>
+}
+
+export type UserUpsertWithoutAiQuotaInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutAiQuotaInput, Prisma.UserUncheckedUpdateWithoutAiQuotaInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutAiQuotaInput, Prisma.UserUncheckedCreateWithoutAiQuotaInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutAiQuotaInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutAiQuotaInput, Prisma.UserUncheckedUpdateWithoutAiQuotaInput>
+}
+
+export type UserUpdateWithoutAiQuotaInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  passwordHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  role?: Prisma.StringFieldUpdateOperationsInput | string
+  banned?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  theme?: Prisma.EnumThemeFieldUpdateOperationsInput | $Enums.Theme
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  transactions?: Prisma.TransactionUpdateManyWithoutUserNestedInput
+  watchlist?: Prisma.WatchlistItemUpdateManyWithoutUserNestedInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUpdateManyWithoutUserNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutUserNestedInput
+  twoFactor?: Prisma.TwoFactorUpdateManyWithoutUserNestedInput
+  apiKeys?: Prisma.ApiKeyUpdateManyWithoutUserNestedInput
+  portfolioCache?: Prisma.PortfolioCacheUpdateManyWithoutUserNestedInput
+  aiCredentials?: Prisma.AiProviderCredentialUpdateManyWithoutUserNestedInput
+  aiCalls?: Prisma.AiCallUpdateManyWithoutUserNestedInput
+  aiChats?: Prisma.AiChatUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutAiQuotaInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  passwordHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  role?: Prisma.StringFieldUpdateOperationsInput | string
+  banned?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  theme?: Prisma.EnumThemeFieldUpdateOperationsInput | $Enums.Theme
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  transactions?: Prisma.TransactionUncheckedUpdateManyWithoutUserNestedInput
+  watchlist?: Prisma.WatchlistItemUncheckedUpdateManyWithoutUserNestedInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUncheckedUpdateManyWithoutUserNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutUserNestedInput
+  twoFactor?: Prisma.TwoFactorUncheckedUpdateManyWithoutUserNestedInput
+  apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutUserNestedInput
+  portfolioCache?: Prisma.PortfolioCacheUncheckedUpdateManyWithoutUserNestedInput
+  aiCredentials?: Prisma.AiProviderCredentialUncheckedUpdateManyWithoutUserNestedInput
+  aiCalls?: Prisma.AiCallUncheckedUpdateManyWithoutUserNestedInput
+  aiChats?: Prisma.AiChatUncheckedUpdateManyWithoutUserNestedInput
+}
+
+export type UserCreateWithoutAiChatsInput = {
+  id?: string
+  name?: string | null
+  email?: string | null
+  emailVerified?: boolean
+  emailVerifiedAt?: Date | string | null
+  image?: string | null
+  passwordHash?: string | null
+  twoFactorEnabled?: boolean
+  role?: string
+  banned?: boolean
+  banReason?: string | null
+  banExpires?: Date | string | null
+  theme?: $Enums.Theme
+  currency?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  transactions?: Prisma.TransactionCreateNestedManyWithoutUserInput
+  watchlist?: Prisma.WatchlistItemCreateNestedManyWithoutUserInput
+  emailChangeTokens?: Prisma.EmailChangeTokenCreateNestedManyWithoutUserInput
+  goals?: Prisma.GoalCreateNestedManyWithoutUserInput
+  twoFactor?: Prisma.TwoFactorCreateNestedManyWithoutUserInput
+  apiKeys?: Prisma.ApiKeyCreateNestedManyWithoutUserInput
+  portfolioCache?: Prisma.PortfolioCacheCreateNestedManyWithoutUserInput
+  aiCredentials?: Prisma.AiProviderCredentialCreateNestedManyWithoutUserInput
+  aiCalls?: Prisma.AiCallCreateNestedManyWithoutUserInput
+  aiQuota?: Prisma.AiQuotaCreateNestedOneWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutAiChatsInput = {
+  id?: string
+  name?: string | null
+  email?: string | null
+  emailVerified?: boolean
+  emailVerifiedAt?: Date | string | null
+  image?: string | null
+  passwordHash?: string | null
+  twoFactorEnabled?: boolean
+  role?: string
+  banned?: boolean
+  banReason?: string | null
+  banExpires?: Date | string | null
+  theme?: $Enums.Theme
+  currency?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutUserInput
+  watchlist?: Prisma.WatchlistItemUncheckedCreateNestedManyWithoutUserInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUncheckedCreateNestedManyWithoutUserInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutUserInput
+  twoFactor?: Prisma.TwoFactorUncheckedCreateNestedManyWithoutUserInput
+  apiKeys?: Prisma.ApiKeyUncheckedCreateNestedManyWithoutUserInput
+  portfolioCache?: Prisma.PortfolioCacheUncheckedCreateNestedManyWithoutUserInput
+  aiCredentials?: Prisma.AiProviderCredentialUncheckedCreateNestedManyWithoutUserInput
+  aiCalls?: Prisma.AiCallUncheckedCreateNestedManyWithoutUserInput
+  aiQuota?: Prisma.AiQuotaUncheckedCreateNestedOneWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutAiChatsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutAiChatsInput, Prisma.UserUncheckedCreateWithoutAiChatsInput>
+}
+
+export type UserUpsertWithoutAiChatsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutAiChatsInput, Prisma.UserUncheckedUpdateWithoutAiChatsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutAiChatsInput, Prisma.UserUncheckedCreateWithoutAiChatsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutAiChatsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutAiChatsInput, Prisma.UserUncheckedUpdateWithoutAiChatsInput>
+}
+
+export type UserUpdateWithoutAiChatsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  passwordHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  role?: Prisma.StringFieldUpdateOperationsInput | string
+  banned?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  theme?: Prisma.EnumThemeFieldUpdateOperationsInput | $Enums.Theme
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  transactions?: Prisma.TransactionUpdateManyWithoutUserNestedInput
+  watchlist?: Prisma.WatchlistItemUpdateManyWithoutUserNestedInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUpdateManyWithoutUserNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutUserNestedInput
+  twoFactor?: Prisma.TwoFactorUpdateManyWithoutUserNestedInput
+  apiKeys?: Prisma.ApiKeyUpdateManyWithoutUserNestedInput
+  portfolioCache?: Prisma.PortfolioCacheUpdateManyWithoutUserNestedInput
+  aiCredentials?: Prisma.AiProviderCredentialUpdateManyWithoutUserNestedInput
+  aiCalls?: Prisma.AiCallUpdateManyWithoutUserNestedInput
+  aiQuota?: Prisma.AiQuotaUpdateOneWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutAiChatsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  passwordHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twoFactorEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  role?: Prisma.StringFieldUpdateOperationsInput | string
+  banned?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  theme?: Prisma.EnumThemeFieldUpdateOperationsInput | $Enums.Theme
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  transactions?: Prisma.TransactionUncheckedUpdateManyWithoutUserNestedInput
+  watchlist?: Prisma.WatchlistItemUncheckedUpdateManyWithoutUserNestedInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUncheckedUpdateManyWithoutUserNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutUserNestedInput
+  twoFactor?: Prisma.TwoFactorUncheckedUpdateManyWithoutUserNestedInput
+  apiKeys?: Prisma.ApiKeyUncheckedUpdateManyWithoutUserNestedInput
+  portfolioCache?: Prisma.PortfolioCacheUncheckedUpdateManyWithoutUserNestedInput
+  aiCredentials?: Prisma.AiProviderCredentialUncheckedUpdateManyWithoutUserNestedInput
+  aiCalls?: Prisma.AiCallUncheckedUpdateManyWithoutUserNestedInput
+  aiQuota?: Prisma.AiQuotaUncheckedUpdateOneWithoutUserNestedInput
 }
 
 
@@ -1880,6 +2675,9 @@ export type UserCountOutputType = {
   twoFactor: number
   apiKeys: number
   portfolioCache: number
+  aiCredentials: number
+  aiCalls: number
+  aiChats: number
 }
 
 export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1892,6 +2690,9 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   twoFactor?: boolean | UserCountOutputTypeCountTwoFactorArgs
   apiKeys?: boolean | UserCountOutputTypeCountApiKeysArgs
   portfolioCache?: boolean | UserCountOutputTypeCountPortfolioCacheArgs
+  aiCredentials?: boolean | UserCountOutputTypeCountAiCredentialsArgs
+  aiCalls?: boolean | UserCountOutputTypeCountAiCallsArgs
+  aiChats?: boolean | UserCountOutputTypeCountAiChatsArgs
 }
 
 /**
@@ -1967,6 +2768,27 @@ export type UserCountOutputTypeCountPortfolioCacheArgs<ExtArgs extends runtime.T
   where?: Prisma.PortfolioCacheWhereInput
 }
 
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountAiCredentialsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.AiProviderCredentialWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountAiCallsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.AiCallWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountAiChatsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.AiChatWhereInput
+}
+
 
 export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1994,6 +2816,10 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   twoFactor?: boolean | Prisma.User$twoFactorArgs<ExtArgs>
   apiKeys?: boolean | Prisma.User$apiKeysArgs<ExtArgs>
   portfolioCache?: boolean | Prisma.User$portfolioCacheArgs<ExtArgs>
+  aiCredentials?: boolean | Prisma.User$aiCredentialsArgs<ExtArgs>
+  aiCalls?: boolean | Prisma.User$aiCallsArgs<ExtArgs>
+  aiQuota?: boolean | Prisma.User$aiQuotaArgs<ExtArgs>
+  aiChats?: boolean | Prisma.User$aiChatsArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["user"]>
 
@@ -2065,6 +2891,10 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   twoFactor?: boolean | Prisma.User$twoFactorArgs<ExtArgs>
   apiKeys?: boolean | Prisma.User$apiKeysArgs<ExtArgs>
   portfolioCache?: boolean | Prisma.User$portfolioCacheArgs<ExtArgs>
+  aiCredentials?: boolean | Prisma.User$aiCredentialsArgs<ExtArgs>
+  aiCalls?: boolean | Prisma.User$aiCallsArgs<ExtArgs>
+  aiQuota?: boolean | Prisma.User$aiQuotaArgs<ExtArgs>
+  aiChats?: boolean | Prisma.User$aiChatsArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type UserIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -2082,6 +2912,10 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     twoFactor: Prisma.$TwoFactorPayload<ExtArgs>[]
     apiKeys: Prisma.$ApiKeyPayload<ExtArgs>[]
     portfolioCache: Prisma.$PortfolioCachePayload<ExtArgs>[]
+    aiCredentials: Prisma.$AiProviderCredentialPayload<ExtArgs>[]
+    aiCalls: Prisma.$AiCallPayload<ExtArgs>[]
+    aiQuota: Prisma.$AiQuotaPayload<ExtArgs> | null
+    aiChats: Prisma.$AiChatPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -2503,6 +3337,10 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   twoFactor<T extends Prisma.User$twoFactorArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$twoFactorArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TwoFactorPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   apiKeys<T extends Prisma.User$apiKeysArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$apiKeysArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ApiKeyPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   portfolioCache<T extends Prisma.User$portfolioCacheArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$portfolioCacheArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PortfolioCachePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  aiCredentials<T extends Prisma.User$aiCredentialsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$aiCredentialsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AiProviderCredentialPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  aiCalls<T extends Prisma.User$aiCallsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$aiCallsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AiCallPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  aiQuota<T extends Prisma.User$aiQuotaArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$aiQuotaArgs<ExtArgs>>): Prisma.Prisma__AiQuotaClient<runtime.Types.Result.GetResult<Prisma.$AiQuotaPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  aiChats<T extends Prisma.User$aiChatsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$aiChatsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AiChatPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -3154,6 +3992,97 @@ export type User$portfolioCacheArgs<ExtArgs extends runtime.Types.Extensions.Int
   take?: number
   skip?: number
   distinct?: Prisma.PortfolioCacheScalarFieldEnum | Prisma.PortfolioCacheScalarFieldEnum[]
+}
+
+/**
+ * User.aiCredentials
+ */
+export type User$aiCredentialsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the AiProviderCredential
+   */
+  select?: Prisma.AiProviderCredentialSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the AiProviderCredential
+   */
+  omit?: Prisma.AiProviderCredentialOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.AiProviderCredentialInclude<ExtArgs> | null
+  where?: Prisma.AiProviderCredentialWhereInput
+  orderBy?: Prisma.AiProviderCredentialOrderByWithRelationInput | Prisma.AiProviderCredentialOrderByWithRelationInput[]
+  cursor?: Prisma.AiProviderCredentialWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.AiProviderCredentialScalarFieldEnum | Prisma.AiProviderCredentialScalarFieldEnum[]
+}
+
+/**
+ * User.aiCalls
+ */
+export type User$aiCallsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the AiCall
+   */
+  select?: Prisma.AiCallSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the AiCall
+   */
+  omit?: Prisma.AiCallOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.AiCallInclude<ExtArgs> | null
+  where?: Prisma.AiCallWhereInput
+  orderBy?: Prisma.AiCallOrderByWithRelationInput | Prisma.AiCallOrderByWithRelationInput[]
+  cursor?: Prisma.AiCallWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.AiCallScalarFieldEnum | Prisma.AiCallScalarFieldEnum[]
+}
+
+/**
+ * User.aiQuota
+ */
+export type User$aiQuotaArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the AiQuota
+   */
+  select?: Prisma.AiQuotaSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the AiQuota
+   */
+  omit?: Prisma.AiQuotaOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.AiQuotaInclude<ExtArgs> | null
+  where?: Prisma.AiQuotaWhereInput
+}
+
+/**
+ * User.aiChats
+ */
+export type User$aiChatsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the AiChat
+   */
+  select?: Prisma.AiChatSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the AiChat
+   */
+  omit?: Prisma.AiChatOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.AiChatInclude<ExtArgs> | null
+  where?: Prisma.AiChatWhereInput
+  orderBy?: Prisma.AiChatOrderByWithRelationInput | Prisma.AiChatOrderByWithRelationInput[]
+  cursor?: Prisma.AiChatWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.AiChatScalarFieldEnum | Prisma.AiChatScalarFieldEnum[]
 }
 
 /**

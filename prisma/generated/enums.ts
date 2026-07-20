@@ -23,3 +23,58 @@ export const Theme = {
 } as const
 
 export type Theme = (typeof Theme)[keyof typeof Theme]
+
+
+export const AiProvider = {
+  AZURE: 'AZURE',
+  OPENAI: 'OPENAI',
+  ANTHROPIC: 'ANTHROPIC',
+  GOOGLE: 'GOOGLE',
+  OPENAI_COMPATIBLE: 'OPENAI_COMPATIBLE'
+} as const
+
+export type AiProvider = (typeof AiProvider)[keyof typeof AiProvider]
+
+
+export const AiSurface = {
+  CHAT: 'CHAT',
+  MCP: 'MCP',
+  CRON: 'CRON',
+  EVAL: 'EVAL'
+} as const
+
+export type AiSurface = (typeof AiSurface)[keyof typeof AiSurface]
+
+
+export const AiCallKind = {
+  LANGUAGE_MODEL: 'LANGUAGE_MODEL',
+  EMBEDDING: 'EMBEDDING'
+} as const
+
+export type AiCallKind = (typeof AiCallKind)[keyof typeof AiCallKind]
+
+
+export const AiBilledTo = {
+  PLATFORM: 'PLATFORM',
+  USER: 'USER'
+} as const
+
+export type AiBilledTo = (typeof AiBilledTo)[keyof typeof AiBilledTo]
+
+
+export const AiPricingStatus = {
+  PRICED: 'PRICED',
+  UNKNOWN_MODEL: 'UNKNOWN_MODEL'
+} as const
+
+export type AiPricingStatus = (typeof AiPricingStatus)[keyof typeof AiPricingStatus]
+
+
+export const AiCallOutcome = {
+  OK: 'OK',
+  ERROR: 'ERROR',
+  ABORTED: 'ABORTED',
+  CONTENT_FILTERED: 'CONTENT_FILTERED'
+} as const
+
+export type AiCallOutcome = (typeof AiCallOutcome)[keyof typeof AiCallOutcome]

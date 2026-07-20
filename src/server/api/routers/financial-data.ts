@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { env } from '@/env';
 import { currencySchema, SUPPORTED_CURRENCIES } from '@/lib/currency';
 import { isValidSymbol, normalizeSymbol, symbolSchema } from '@/lib/validation';
-import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
+import { adminProcedure, createTRPCRouter } from '@/server/api/trpc';
 import { buildFxMatrixFromUsdLegs, convertAmount } from '@/server/fx';
 import { getLatestFxBars } from '@/server/fx-history';
 import { fluxStringLiteral, influxQueryApi, measurement } from '@/server/influx';
@@ -19,7 +19,8 @@ import { invalidateAllPortfolioCache } from '@/server/portfolio-compute';
  * - Manual data triggers (force re-fetch)
  * - FX rate monitoring
  *
- * All procedures require admin role.
+ * All procedures require admin role (via the shared `adminProcedure`, which re-reads
+ * role/banned from Postgres on every call — see `src/server/api/trpc.ts`).
  */
 
 const AUDIT_ACTIONS = {
@@ -29,21 +30,6 @@ const AUDIT_ACTIONS = {
 	VIEW_FX_RATES: 'VIEW_FX_RATES',
 	VIEW_SYMBOLS: 'VIEW_SYMBOLS'
 } as const;
-
-/**
- * Middleware to check if user is an admin (admin or superadmin)
- */
-const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
-	const userRole = ctx.session.user.role;
-
-	if (userRole !== 'superadmin' && userRole !== 'admin') {
-		throw new TRPCError({
-			code: 'FORBIDDEN',
-			message: 'Admin access required'
-		});
-	}
-	return next({ ctx });
-});
 
 export const financialDataRouter = createTRPCRouter({
 	/**

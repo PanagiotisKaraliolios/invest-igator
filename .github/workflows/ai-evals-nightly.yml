@@ -1,0 +1,53 @@
+name: AI Evals (Tier 1)
+
+# Tier 1 (golden tool-selection set + injection suite) and Tier 1a (the MiFID II advice-boundary
+# suite) are LIVE evals: real network calls to Azure, real (small) spend. They are deliberately
+# NOT part of `ci.yml`'s `unit` job or its `all-checks` gate — `bun test --isolate src` must stay
+# hermetic, $0, zero network, so it can gate every merge. These run against a real model instead,
+# on a schedule, and alert on failure. Tier 1a failing is a RELEASE BLOCKER (see the job below),
+# not merely an alert — a human must look at it before the next deploy.
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  tier1:
+    name: Tier 1 — golden set, injection, advice boundary
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # Every test file under src/server/ai/evals/tier1 is gated on AI_EVAL_LIVE and does
+      # `describe.skipIf(!LIVE)` — this is what turns them from "skipped, $0" (every other CI
+      # run) into "actually calls Azure" (this job only).
+      AI_EVAL_LIVE: '1'
+      SKIP_ENV_VALIDATION: '1'
+      # Tier-1 files never QUERY Postgres (they only read tool METADATA off ALL_TOOLS — name,
+      # description, inputSchema — never call `execute`), but importing `tools/registry.ts`
+      # transitively constructs a PrismaPg adapter off DATABASE_URL, which must at least parse
+      # as a URL. No live Postgres container is started for this job.
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/investigator
+      AZURE_OPENAI_RESOURCE_NAME: ${{ secrets.AZURE_OPENAI_RESOURCE_NAME }}
+      AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+      AZURE_OPENAI_CHAT_DEPLOYMENT: ${{ secrets.AZURE_OPENAI_CHAT_DEPLOYMENT }}
+      AZURE_OPENAI_CHAT_MODEL: ${{ secrets.AZURE_OPENAI_CHAT_MODEL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: bun run postinstall
+
+      - name: Tier 1 — golden tool-selection set + injection suite (alerts on failure)
+        run: bun run eval:tier1
+
+      - name: Tier 1a — advice boundary (RELEASE BLOCKER — a human must review a failure here before the next deploy)
+        run: bun run eval:advice

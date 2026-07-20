@@ -63,7 +63,14 @@ export const ModelName = {
   WatchlistItem: 'WatchlistItem',
   Goal: 'Goal',
   AuditLog: 'AuditLog',
-  ApiKey: 'ApiKey'
+  ApiKey: 'ApiKey',
+  AiProviderCredential: 'AiProviderCredential',
+  AiCall: 'AiCall',
+  AiToolCall: 'AiToolCall',
+  AiQuota: 'AiQuota',
+  AiQuotaReservation: 'AiQuotaReservation',
+  AiChat: 'AiChat',
+  AiMessage: 'AiMessage'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -264,6 +271,7 @@ export const ApiKeyScalarFieldEnum = {
   start: 'start',
   prefix: 'prefix',
   key: 'key',
+  keyHmac: 'keyHmac',
   userId: 'userId',
   refillInterval: 'refillInterval',
   refillAmount: 'refillAmount',
@@ -285,6 +293,134 @@ export const ApiKeyScalarFieldEnum = {
 export type ApiKeyScalarFieldEnum = (typeof ApiKeyScalarFieldEnum)[keyof typeof ApiKeyScalarFieldEnum]
 
 
+export const AiProviderCredentialScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  provider: 'provider',
+  kid: 'kid',
+  iv: 'iv',
+  ciphertext: 'ciphertext',
+  authTag: 'authTag',
+  resourceName: 'resourceName',
+  baseURL: 'baseURL',
+  apiVersion: 'apiVersion',
+  deployment: 'deployment',
+  defaultModelId: 'defaultModelId',
+  label: 'label',
+  enabled: 'enabled',
+  lastVerifiedAt: 'lastVerifiedAt',
+  lastUsedAt: 'lastUsedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type AiProviderCredentialScalarFieldEnum = (typeof AiProviderCredentialScalarFieldEnum)[keyof typeof AiProviderCredentialScalarFieldEnum]
+
+
+export const AiCallScalarFieldEnum = {
+  id: 'id',
+  createdAt: 'createdAt',
+  userId: 'userId',
+  surface: 'surface',
+  functionId: 'functionId',
+  requestId: 'requestId',
+  chatId: 'chatId',
+  kind: 'kind',
+  provider: 'provider',
+  modelId: 'modelId',
+  resolvedModel: 'resolvedModel',
+  callId: 'callId',
+  responseId: 'responseId',
+  inputTokens: 'inputTokens',
+  outputTokens: 'outputTokens',
+  totalTokens: 'totalTokens',
+  noCacheTokens: 'noCacheTokens',
+  cacheReadTokens: 'cacheReadTokens',
+  cacheWriteTokens: 'cacheWriteTokens',
+  textTokens: 'textTokens',
+  reasoningTokens: 'reasoningTokens',
+  billedTo: 'billedTo',
+  pricingStatus: 'pricingStatus',
+  costNanoUsd: 'costNanoUsd',
+  priceSnapshotId: 'priceSnapshotId',
+  latencyMs: 'latencyMs',
+  finishReason: 'finishReason',
+  outcome: 'outcome',
+  errorCode: 'errorCode',
+  errorMessage: 'errorMessage',
+  systemPromptId: 'systemPromptId',
+  systemPromptVersion: 'systemPromptVersion',
+  systemPromptHash: 'systemPromptHash'
+} as const
+
+export type AiCallScalarFieldEnum = (typeof AiCallScalarFieldEnum)[keyof typeof AiCallScalarFieldEnum]
+
+
+export const AiToolCallScalarFieldEnum = {
+  id: 'id',
+  createdAt: 'createdAt',
+  requestId: 'requestId',
+  userId: 'userId',
+  surface: 'surface',
+  toolName: 'toolName',
+  toolCallId: 'toolCallId',
+  ok: 'ok',
+  durationMs: 'durationMs',
+  inputHash: 'inputHash',
+  errorMessage: 'errorMessage'
+} as const
+
+export type AiToolCallScalarFieldEnum = (typeof AiToolCallScalarFieldEnum)[keyof typeof AiToolCallScalarFieldEnum]
+
+
+export const AiQuotaScalarFieldEnum = {
+  userId: 'userId',
+  tier: 'tier',
+  periodStart: 'periodStart',
+  limitNanoUsd: 'limitNanoUsd',
+  spentNanoUsd: 'spentNanoUsd',
+  reservedNanoUsd: 'reservedNanoUsd',
+  updatedAt: 'updatedAt'
+} as const
+
+export type AiQuotaScalarFieldEnum = (typeof AiQuotaScalarFieldEnum)[keyof typeof AiQuotaScalarFieldEnum]
+
+
+export const AiQuotaReservationScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  requestId: 'requestId',
+  ceilingNanoUsd: 'ceilingNanoUsd',
+  createdAt: 'createdAt',
+  settledAt: 'settledAt'
+} as const
+
+export type AiQuotaReservationScalarFieldEnum = (typeof AiQuotaReservationScalarFieldEnum)[keyof typeof AiQuotaReservationScalarFieldEnum]
+
+
+export const AiChatScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  title: 'title',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type AiChatScalarFieldEnum = (typeof AiChatScalarFieldEnum)[keyof typeof AiChatScalarFieldEnum]
+
+
+export const AiMessageScalarFieldEnum = {
+  id: 'id',
+  chatId: 'chatId',
+  role: 'role',
+  parts: 'parts',
+  metadata: 'metadata',
+  createdAt: 'createdAt'
+} as const
+
+export type AiMessageScalarFieldEnum = (typeof AiMessageScalarFieldEnum)[keyof typeof AiMessageScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -298,6 +434,14 @@ export const JsonNullValueInput = {
 } as const
 
 export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
+
+
+export const NullableJsonNullValueInput = {
+  DbNull: DbNull,
+  JsonNull: JsonNull
+} as const
+
+export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
 
 
 export const QueryMode = {

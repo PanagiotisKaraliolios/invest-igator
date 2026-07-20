@@ -50,6 +50,7 @@ export type ApiKeyMinAggregateOutputType = {
   start: string | null
   prefix: string | null
   key: string | null
+  keyHmac: string | null
   userId: string | null
   refillInterval: number | null
   refillAmount: number | null
@@ -74,6 +75,7 @@ export type ApiKeyMaxAggregateOutputType = {
   start: string | null
   prefix: string | null
   key: string | null
+  keyHmac: string | null
   userId: string | null
   refillInterval: number | null
   refillAmount: number | null
@@ -98,6 +100,7 @@ export type ApiKeyCountAggregateOutputType = {
   start: number
   prefix: number
   key: number
+  keyHmac: number
   userId: number
   refillInterval: number
   refillAmount: number
@@ -142,6 +145,7 @@ export type ApiKeyMinAggregateInputType = {
   start?: true
   prefix?: true
   key?: true
+  keyHmac?: true
   userId?: true
   refillInterval?: true
   refillAmount?: true
@@ -166,6 +170,7 @@ export type ApiKeyMaxAggregateInputType = {
   start?: true
   prefix?: true
   key?: true
+  keyHmac?: true
   userId?: true
   refillInterval?: true
   refillAmount?: true
@@ -190,6 +195,7 @@ export type ApiKeyCountAggregateInputType = {
   start?: true
   prefix?: true
   key?: true
+  keyHmac?: true
   userId?: true
   refillInterval?: true
   refillAmount?: true
@@ -301,6 +307,7 @@ export type ApiKeyGroupByOutputType = {
   start: string | null
   prefix: string | null
   key: string
+  keyHmac: string | null
   userId: string
   refillInterval: number | null
   refillAmount: number | null
@@ -348,6 +355,7 @@ export type ApiKeyWhereInput = {
   start?: Prisma.StringNullableFilter<"ApiKey"> | string | null
   prefix?: Prisma.StringNullableFilter<"ApiKey"> | string | null
   key?: Prisma.StringFilter<"ApiKey"> | string
+  keyHmac?: Prisma.StringNullableFilter<"ApiKey"> | string | null
   userId?: Prisma.StringFilter<"ApiKey"> | string
   refillInterval?: Prisma.IntNullableFilter<"ApiKey"> | number | null
   refillAmount?: Prisma.IntNullableFilter<"ApiKey"> | number | null
@@ -373,6 +381,7 @@ export type ApiKeyOrderByWithRelationInput = {
   start?: Prisma.SortOrderInput | Prisma.SortOrder
   prefix?: Prisma.SortOrderInput | Prisma.SortOrder
   key?: Prisma.SortOrder
+  keyHmac?: Prisma.SortOrderInput | Prisma.SortOrder
   userId?: Prisma.SortOrder
   refillInterval?: Prisma.SortOrderInput | Prisma.SortOrder
   refillAmount?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -395,6 +404,7 @@ export type ApiKeyOrderByWithRelationInput = {
 export type ApiKeyWhereUniqueInput = Prisma.AtLeast<{
   id?: string
   key?: string
+  keyHmac?: string
   AND?: Prisma.ApiKeyWhereInput | Prisma.ApiKeyWhereInput[]
   OR?: Prisma.ApiKeyWhereInput[]
   NOT?: Prisma.ApiKeyWhereInput | Prisma.ApiKeyWhereInput[]
@@ -418,7 +428,7 @@ export type ApiKeyWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"ApiKey"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ApiKey"> | Date | string
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
-}, "id" | "key">
+}, "id" | "key" | "keyHmac">
 
 export type ApiKeyOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
@@ -426,6 +436,7 @@ export type ApiKeyOrderByWithAggregationInput = {
   start?: Prisma.SortOrderInput | Prisma.SortOrder
   prefix?: Prisma.SortOrderInput | Prisma.SortOrder
   key?: Prisma.SortOrder
+  keyHmac?: Prisma.SortOrderInput | Prisma.SortOrder
   userId?: Prisma.SortOrder
   refillInterval?: Prisma.SortOrderInput | Prisma.SortOrder
   refillAmount?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -458,6 +469,7 @@ export type ApiKeyScalarWhereWithAggregatesInput = {
   start?: Prisma.StringNullableWithAggregatesFilter<"ApiKey"> | string | null
   prefix?: Prisma.StringNullableWithAggregatesFilter<"ApiKey"> | string | null
   key?: Prisma.StringWithAggregatesFilter<"ApiKey"> | string
+  keyHmac?: Prisma.StringNullableWithAggregatesFilter<"ApiKey"> | string | null
   userId?: Prisma.StringWithAggregatesFilter<"ApiKey"> | string
   refillInterval?: Prisma.IntNullableWithAggregatesFilter<"ApiKey"> | number | null
   refillAmount?: Prisma.IntNullableWithAggregatesFilter<"ApiKey"> | number | null
@@ -482,6 +494,7 @@ export type ApiKeyCreateInput = {
   start?: string | null
   prefix?: string | null
   key: string
+  keyHmac?: string | null
   refillInterval?: number | null
   refillAmount?: number | null
   lastRefillAt?: Date | string | null
@@ -506,6 +519,7 @@ export type ApiKeyUncheckedCreateInput = {
   start?: string | null
   prefix?: string | null
   key: string
+  keyHmac?: string | null
   userId: string
   refillInterval?: number | null
   refillAmount?: number | null
@@ -530,6 +544,7 @@ export type ApiKeyUpdateInput = {
   start?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   prefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   key?: Prisma.StringFieldUpdateOperationsInput | string
+  keyHmac?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refillInterval?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   refillAmount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastRefillAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -554,6 +569,7 @@ export type ApiKeyUncheckedUpdateInput = {
   start?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   prefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   key?: Prisma.StringFieldUpdateOperationsInput | string
+  keyHmac?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   refillInterval?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   refillAmount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -578,6 +594,7 @@ export type ApiKeyCreateManyInput = {
   start?: string | null
   prefix?: string | null
   key: string
+  keyHmac?: string | null
   userId: string
   refillInterval?: number | null
   refillAmount?: number | null
@@ -602,6 +619,7 @@ export type ApiKeyUpdateManyMutationInput = {
   start?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   prefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   key?: Prisma.StringFieldUpdateOperationsInput | string
+  keyHmac?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refillInterval?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   refillAmount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastRefillAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -625,6 +643,7 @@ export type ApiKeyUncheckedUpdateManyInput = {
   start?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   prefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   key?: Prisma.StringFieldUpdateOperationsInput | string
+  keyHmac?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   refillInterval?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   refillAmount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -659,6 +678,7 @@ export type ApiKeyCountOrderByAggregateInput = {
   start?: Prisma.SortOrder
   prefix?: Prisma.SortOrder
   key?: Prisma.SortOrder
+  keyHmac?: Prisma.SortOrder
   userId?: Prisma.SortOrder
   refillInterval?: Prisma.SortOrder
   refillAmount?: Prisma.SortOrder
@@ -692,6 +712,7 @@ export type ApiKeyMaxOrderByAggregateInput = {
   start?: Prisma.SortOrder
   prefix?: Prisma.SortOrder
   key?: Prisma.SortOrder
+  keyHmac?: Prisma.SortOrder
   userId?: Prisma.SortOrder
   refillInterval?: Prisma.SortOrder
   refillAmount?: Prisma.SortOrder
@@ -716,6 +737,7 @@ export type ApiKeyMinOrderByAggregateInput = {
   start?: Prisma.SortOrder
   prefix?: Prisma.SortOrder
   key?: Prisma.SortOrder
+  keyHmac?: Prisma.SortOrder
   userId?: Prisma.SortOrder
   refillInterval?: Prisma.SortOrder
   refillAmount?: Prisma.SortOrder
@@ -807,6 +829,7 @@ export type ApiKeyCreateWithoutUserInput = {
   start?: string | null
   prefix?: string | null
   key: string
+  keyHmac?: string | null
   refillInterval?: number | null
   refillAmount?: number | null
   lastRefillAt?: Date | string | null
@@ -830,6 +853,7 @@ export type ApiKeyUncheckedCreateWithoutUserInput = {
   start?: string | null
   prefix?: string | null
   key: string
+  keyHmac?: string | null
   refillInterval?: number | null
   refillAmount?: number | null
   lastRefillAt?: Date | string | null
@@ -882,6 +906,7 @@ export type ApiKeyScalarWhereInput = {
   start?: Prisma.StringNullableFilter<"ApiKey"> | string | null
   prefix?: Prisma.StringNullableFilter<"ApiKey"> | string | null
   key?: Prisma.StringFilter<"ApiKey"> | string
+  keyHmac?: Prisma.StringNullableFilter<"ApiKey"> | string | null
   userId?: Prisma.StringFilter<"ApiKey"> | string
   refillInterval?: Prisma.IntNullableFilter<"ApiKey"> | number | null
   refillAmount?: Prisma.IntNullableFilter<"ApiKey"> | number | null
@@ -906,6 +931,7 @@ export type ApiKeyCreateManyUserInput = {
   start?: string | null
   prefix?: string | null
   key: string
+  keyHmac?: string | null
   refillInterval?: number | null
   refillAmount?: number | null
   lastRefillAt?: Date | string | null
@@ -929,6 +955,7 @@ export type ApiKeyUpdateWithoutUserInput = {
   start?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   prefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   key?: Prisma.StringFieldUpdateOperationsInput | string
+  keyHmac?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refillInterval?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   refillAmount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastRefillAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -952,6 +979,7 @@ export type ApiKeyUncheckedUpdateWithoutUserInput = {
   start?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   prefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   key?: Prisma.StringFieldUpdateOperationsInput | string
+  keyHmac?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refillInterval?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   refillAmount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastRefillAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -975,6 +1003,7 @@ export type ApiKeyUncheckedUpdateManyWithoutUserInput = {
   start?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   prefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   key?: Prisma.StringFieldUpdateOperationsInput | string
+  keyHmac?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   refillInterval?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   refillAmount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastRefillAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1000,6 +1029,7 @@ export type ApiKeySelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   start?: boolean
   prefix?: boolean
   key?: boolean
+  keyHmac?: boolean
   userId?: boolean
   refillInterval?: boolean
   refillAmount?: boolean
@@ -1025,6 +1055,7 @@ export type ApiKeySelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extens
   start?: boolean
   prefix?: boolean
   key?: boolean
+  keyHmac?: boolean
   userId?: boolean
   refillInterval?: boolean
   refillAmount?: boolean
@@ -1050,6 +1081,7 @@ export type ApiKeySelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extens
   start?: boolean
   prefix?: boolean
   key?: boolean
+  keyHmac?: boolean
   userId?: boolean
   refillInterval?: boolean
   refillAmount?: boolean
@@ -1075,6 +1107,7 @@ export type ApiKeySelectScalar = {
   start?: boolean
   prefix?: boolean
   key?: boolean
+  keyHmac?: boolean
   userId?: boolean
   refillInterval?: boolean
   refillAmount?: boolean
@@ -1093,7 +1126,7 @@ export type ApiKeySelectScalar = {
   updatedAt?: boolean
 }
 
-export type ApiKeyOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "start" | "prefix" | "key" | "userId" | "refillInterval" | "refillAmount" | "lastRefillAt" | "enabled" | "remaining" | "rateLimitEnabled" | "rateLimitTimeWindow" | "rateLimitMax" | "requestCount" | "lastRequest" | "expiresAt" | "permissions" | "metadata" | "createdAt" | "updatedAt", ExtArgs["result"]["apiKey"]>
+export type ApiKeyOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "start" | "prefix" | "key" | "keyHmac" | "userId" | "refillInterval" | "refillAmount" | "lastRefillAt" | "enabled" | "remaining" | "rateLimitEnabled" | "rateLimitTimeWindow" | "rateLimitMax" | "requestCount" | "lastRequest" | "expiresAt" | "permissions" | "metadata" | "createdAt" | "updatedAt", ExtArgs["result"]["apiKey"]>
 export type ApiKeyInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }
@@ -1115,6 +1148,7 @@ export type $ApiKeyPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
     start: string | null
     prefix: string | null
     key: string
+    keyHmac: string | null
     userId: string
     refillInterval: number | null
     refillAmount: number | null
@@ -1560,6 +1594,7 @@ export interface ApiKeyFieldRefs {
   readonly start: Prisma.FieldRef<"ApiKey", 'String'>
   readonly prefix: Prisma.FieldRef<"ApiKey", 'String'>
   readonly key: Prisma.FieldRef<"ApiKey", 'String'>
+  readonly keyHmac: Prisma.FieldRef<"ApiKey", 'String'>
   readonly userId: Prisma.FieldRef<"ApiKey", 'String'>
   readonly refillInterval: Prisma.FieldRef<"ApiKey", 'Int'>
   readonly refillAmount: Prisma.FieldRef<"ApiKey", 'Int'>

@@ -7,17 +7,30 @@ title = "Gitleaks config for invest-igator"
 # Use the default Gitleaks rules
 useDefault = true
 
-# Allowlist for example API keys in documentation
+# Allowlist for example API keys in documentation, and synthetic (non-real) credentials
+# used only to PROVE the telemetry/BYOK secret-scrubber redacts them.
 [allowlist]
-description = "Example API keys in documentation files"
+description = "Example API keys in docs; synthetic fixtures that test secret redaction"
 paths = [
   '''postman/\.postman-examples\.md''',
   '''docs/api-key-usage\.md''',
-  '''README\.md'''
+  '''README\.md''',
+  # Internal design docs (brainstorm/spec/plan/research). Full of illustrative crypto
+  # code sketches with DUMMY base64 keys — e.g. 'MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY='
+  # decodes to '0123456789abcdef…', and 'REPLACE_WITH_openssl_rand_base64_32' is a placeholder.
+  '''docs/superpowers/.*''',
+  # AI-layer test fixtures: fake keys fed through the scrubber to assert it redacts them.
+  '''src/server/ai/credential-config\.test\.ts''',
+  '''src/server/ai/telemetry\.test\.ts''',
+  '''src/server/api/routers/ai-credentials\.test\.ts'''
 ]
 regexes = [
   '''your_api_key_here''',
   '''sk_live_abc123''',
   '''api_key_id''',
-  '''key_id_here'''
+  '''key_id_here''',
+  # 'sk-live-' (hyphenated) is not a real provider key format — no OpenAI/Anthropic/Stripe
+  # key uses it. It appears only in scrubber fixtures and one truncated doc-comment example.
+  '''sk-live-''',
+  '''hunter2hunter2'''
 ]

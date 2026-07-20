@@ -106,3 +106,38 @@ export type AuditLog = Prisma.AuditLogModel
  * 
  */
 export type ApiKey = Prisma.ApiKeyModel
+/**
+ * Model AiProviderCredential
+ * BYOK. Only the secret is encrypted; endpoint/deployment/version are config.
+ */
+export type AiProviderCredential = Prisma.AiProviderCredentialModel
+/**
+ * Model AiCall
+ * Append-only ledger. One row per PROVIDER CALL, not per turn.
+ */
+export type AiCall = Prisma.AiCallModel
+/**
+ * Model AiToolCall
+ * Correlated by requestId, NOT by AiCall.id — tools execute BETWEEN model calls.
+ */
+export type AiToolCall = Prisma.AiToolCallModel
+/**
+ * Model AiQuota
+ * Multi-instance safe. NEVER hold quota state in process memory — we run N replicas.
+ */
+export type AiQuota = Prisma.AiQuotaModel
+/**
+ * Model AiQuotaReservation
+ * 
+ */
+export type AiQuotaReservation = Prisma.AiQuotaReservationModel
+/**
+ * Model AiChat
+ * 
+ */
+export type AiChat = Prisma.AiChatModel
+/**
+ * Model AiMessage
+ * 
+ */
+export type AiMessage = Prisma.AiMessageModel

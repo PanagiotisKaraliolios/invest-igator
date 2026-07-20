@@ -99,6 +99,10 @@ model User {
   twoFactor              TwoFactor[]
   apiKeys                ApiKey[]
   portfolioCache         PortfolioCache[]
+  aiCredentials          AiProviderCredential[]
+  aiCalls                AiCall[]
+  aiQuota                AiQuota?
+  aiChats                AiChat[]
 }
 
 // Shared server-side cache for the expensive portfolio computations (performance
@@ -230,6 +234,7 @@ model ApiKey {
   start                String?   // First few characters for identification (includes prefix)
   prefix               String?   // Optional prefix for the key (e.g., "proj_")
   key                  String    @unique // Hashed API key
+  keyHmac              String?   @unique // HMAC-SHA256(key, AI_API_KEY_PEPPER) — deterministic, O(1) lookup
   userId               String    // Owner of the API key
   user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   
@@ -266,4 +271,191 @@ model ApiKey {
   @@index([enabled])
   @@index([start])
   @@map("apiKey")
+}
+
+// ---------------------------------------------------------------------------
+// AI layer (Phase 0)
+// ---------------------------------------------------------------------------
+
+enum AiProvider {
+  AZURE
+  OPENAI
+  ANTHROPIC
+  GOOGLE
+  OPENAI_COMPATIBLE
+}
+
+enum AiSurface {
+  CHAT
+  MCP
+  CRON
+  EVAL
+}
+
+enum AiCallKind {
+  LANGUAGE_MODEL
+  EMBEDDING
+}
+
+enum AiBilledTo {
+  PLATFORM
+  USER
+}
+
+enum AiPricingStatus {
+  PRICED
+  UNKNOWN_MODEL
+}
+
+enum AiCallOutcome {
+  OK
+  ERROR
+  ABORTED
+  CONTENT_FILTERED
+}
+
+/// BYOK. Only the secret is encrypted; endpoint/deployment/version are config.
+model AiProviderCredential {
+  id       String     @id @default(cuid())
+  userId   String
+  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider AiProvider
+
+  kid        String // which master key sealed this row (rotation)
+  iv         Bytes // 12 bytes, unique per encryption
+  ciphertext Bytes
+  authTag    Bytes // 16 bytes. Lose this and the row is undecryptable.
+
+  resourceName   String? // Azure: XOR baseURL
+  baseURL        String?
+  apiVersion     String? // null => SDK default 'v1'. Never store a date.
+  deployment     String? // AZURE ONLY: the string passed as the SDK "model id"
+  defaultModelId String // the REAL model ('gpt-5.4-mini'). This is what we price on.
+
+  label          String?
+  enabled        Boolean   @default(true)
+  lastVerifiedAt DateTime?
+  lastUsedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([userId, provider])
+  @@index([userId])
+}
+
+/// Append-only ledger. One row per PROVIDER CALL, not per turn.
+model AiCall {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  userId     String? // SetNull on delete: keeps aggregate spend, drops the PII linkage
+  user       User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  surface    AiSurface
+  functionId String // 'chat.turn' | 'mcp.tool' | 'cron.digest' | 'eval.<name>'
+  requestId  String // correlates every call + tool in one turn (from AsyncLocalStorage)
+  chatId     String?
+
+  kind          AiCallKind @default(LANGUAGE_MODEL)
+  provider      String // as reported by the SDK
+  modelId       String // as reported by the SDK. For AZURE this is the DEPLOYMENT NAME.
+  resolvedModel String // the real model. NEVER price on modelId for Azure.
+  callId        String?
+  responseId    String?
+
+  inputTokens      Int?
+  outputTokens     Int? // nullable: embeddings have no output count
+  totalTokens      Int?
+  noCacheTokens    Int?
+  cacheReadTokens  Int? // ~10x cheaper — must be priced separately
+  cacheWriteTokens Int?
+  textTokens       Int?
+  reasoningTokens  Int?
+
+  billedTo        AiBilledTo
+  pricingStatus   AiPricingStatus @default(PRICED)
+  costNanoUsd     BigInt? // 1e-9 USD. null iff UNKNOWN_MODEL. NEVER default to 0.
+  priceSnapshotId String // hash of models.snapshot.json -> reproducible re-pricing
+
+  latencyMs    Int?
+  finishReason String?
+  outcome      AiCallOutcome
+  errorCode    String?
+  errorMessage String? // SANITISED. Never JSON.stringify(err) — providers echo the auth header.
+
+  systemPromptId      String?
+  systemPromptVersion Int?
+  systemPromptHash    String?
+
+  @@index([userId, createdAt])
+  @@index([requestId])
+  @@index([createdAt])
+  @@index([billedTo, createdAt])
+}
+
+/// Correlated by requestId, NOT by AiCall.id — tools execute BETWEEN model calls.
+model AiToolCall {
+  id           String    @id @default(cuid())
+  createdAt    DateTime  @default(now())
+  requestId    String
+  userId       String?
+  surface      AiSurface
+  toolName     String
+  toolCallId   String
+  ok           Boolean
+  durationMs   Int?
+  inputHash    String? // sha256 of canonicalised input — queryable without storing positions
+  errorMessage String?
+
+  @@index([requestId])
+  @@index([userId, createdAt])
+  @@index([toolName, createdAt])
+}
+
+/// Multi-instance safe. NEVER hold quota state in process memory — we run N replicas.
+model AiQuota {
+  userId          String   @id
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tier            String   @default("free")
+  periodStart     DateTime
+  limitNanoUsd    BigInt
+  spentNanoUsd    BigInt   @default(0) // settled
+  reservedNanoUsd BigInt   @default(0) // in-flight ceilings
+  updatedAt       DateTime @updatedAt
+}
+
+model AiQuotaReservation {
+  id             String    @id @default(cuid())
+  userId         String
+  requestId      String
+  ceilingNanoUsd BigInt
+  createdAt      DateTime  @default(now())
+  settledAt      DateTime?
+
+  @@index([userId, settledAt])
+  @@index([requestId])
+  @@index([createdAt]) // sweeper for reservations orphaned by a crash
+}
+
+model AiChat {
+  id        String      @id @default(cuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  messages  AiMessage[]
+
+  @@index([userId, updatedAt])
+}
+
+model AiMessage {
+  id        String   @id // the AI SDK message id
+  chatId    String
+  chat      AiChat   @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  role      String
+  parts     Json // the whole UIMessage.parts array
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([chatId, createdAt])
 }

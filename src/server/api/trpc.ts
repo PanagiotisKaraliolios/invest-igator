@@ -339,3 +339,32 @@ export const withPermissions = (scope: string, action: string) => {
 		return next({ ctx });
 	});
 };
+
+/**
+ * Authoritative role + ban lookup, straight from Postgres.
+ *
+ * `ctx.session` may be served from Better Auth's signed session cookie (cookieCache), so
+ * `session.user.role` and `session.user.banned` can be up to `cookieCache.maxAge` stale. A
+ * privilege decision must never honour a stale role — a just-demoted or just-banned
+ * admin would otherwise keep admin powers for the whole cache window.
+ *
+ * THIS IS THE ONLY ADMIN GATE. Do not write another one in a router.
+ */
+export const assertCurrentRole = async (userId: string, allowed: readonly string[]): Promise<void> => {
+	const current = await db.user.findUnique({ select: { banned: true, role: true }, where: { id: userId } });
+	if (!current || current.banned || !allowed.includes(current.role)) {
+		throw new TRPCError({
+			code: 'FORBIDDEN',
+			message: allowed.includes('admin') ? 'Admin access required' : 'Superadmin access required'
+		});
+	}
+};
+
+/**
+ * Admin (admin or superadmin) procedure. Re-reads the role from the DB on every call.
+ * Admin routes are rare, so the extra indexed read costs nothing at scale.
+ */
+export const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
+	await assertCurrentRole(ctx.session.user.id, ['admin', 'superadmin']);
+	return next({ ctx });
+});

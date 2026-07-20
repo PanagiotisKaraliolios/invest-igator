@@ -7,6 +7,7 @@ import { createTransactionInput, updateTransactionInput } from '@/server/api/rou
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
 import { sleep } from '@/server/jobs/yahoo-lib';
 import { invalidatePortfolioCache } from '@/server/portfolio-compute';
+import { buildTransactionWhere, toTransactionRow } from '@/server/services/transactions';
 import { symbolExistsOnYahoo } from '@/server/yahoo-search';
 
 const supportedCurrencies = SUPPORTED_CURRENCIES;
@@ -737,23 +738,12 @@ export const transactionsRouter = createTRPCRouter({
 			})
 		)
 		.query(async ({ ctx, input }) => {
-			const userId = ctx.session.user.id;
-			const where: any = { userId };
-			if (input.symbol && input.symbol.trim() !== '') {
-				where.symbol = { contains: input.symbol.trim(), mode: 'insensitive' };
-			}
-			if (input.side) {
-				where.side = input.side;
-			}
-			if (input.dateFrom || input.dateTo) {
-				where.date = {} as any;
-				if (input.dateFrom) (where.date as any).gte = new Date(input.dateFrom);
-				if (input.dateTo) {
-					const dt = new Date(input.dateTo);
-					dt.setHours(23, 59, 59, 999);
-					(where.date as any).lte = dt;
-				}
-			}
+			const where = buildTransactionWhere(ctx.session.user.id, {
+				dateFrom: input.dateFrom,
+				dateTo: input.dateTo,
+				side: input.side,
+				symbol: input.symbol
+			});
 
 			const total = await ctx.db.transaction.count({ where });
 			const rows = await ctx.db.transaction.findMany({
@@ -763,18 +753,7 @@ export const transactionsRouter = createTRPCRouter({
 				where
 			});
 			return {
-				items: rows.map((t) => ({
-					date: t.date.toISOString(),
-					fee: t.fee ?? null,
-					feeCurrency: (t as any).feeCurrency ?? null,
-					id: t.id,
-					note: t.note ?? null,
-					price: t.price,
-					priceCurrency: (t as any).priceCurrency,
-					quantity: t.quantity,
-					side: t.side,
-					symbol: t.symbol
-				})),
+				items: rows.map(toTransactionRow),
 				page: input.page,
 				pageSize: input.pageSize,
 				total

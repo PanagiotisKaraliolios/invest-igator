@@ -26,6 +26,10 @@ services:
       ofelia.job-exec.ingest-fx.schedule: 0 6,18 * * *
       ofelia.job-exec.ingest-fx.command: bun run src/server/jobs/ingest-fx.ts
       ofelia.job-exec.ingest-fx.no-overlap: "true"
+      # Release AI quota reservations orphaned by a crashed replica, every 5 minutes
+      ofelia.job-exec.sweep-ai-reservations.schedule: '*/5 * * * *'
+      ofelia.job-exec.sweep-ai-reservations.command: bun run src/server/jobs/sweep-ai-reservations.ts
+      ofelia.job-exec.sweep-ai-reservations.no-overlap: "true"
     ports:
       - 3311:3000
     depends_on:
@@ -46,7 +50,12 @@ services:
     restart: unless-stopped
   # Internal Postgres (keep if you don't already have an external DB)
   db:
-    image: postgres:16-alpine
+    # pgvector, not the alpine/musl postgres image. pgvector ships no alpine build, so
+    # adopting it later would move a populated PGDATA from musl to glibc — a collation-provider
+    # change that silently corrupts btree indexes on text columns. Same PG major (16), so the
+    # data directory is binary-compatible; only the collation needs a REINDEX.
+    # Existing volume? Read docs/runbooks/postgres-pgvector-swap.md BEFORE restarting.
+    image: pgvector/pgvector:0.8.5-pg16
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
@@ -55,6 +64,11 @@ services:
       # Named volume (portable). To use a host bind mount instead, replace with:
       #   - /docker-containers/invest-igator/pgdata:/var/lib/postgresql/data
       - pgdata:/var/lib/postgresql/data
+    # Published so `bun run test:db` / `bun run db:migrate` work against the compose stack
+    # without a dev hand-finding the container IP (`docker inspect`). `.env`'s DATABASE_URL
+    # points at localhost:5432, which is only reachable if this is published.
+    ports:
+      - '5432:5432'
     healthcheck:
       test:
         - CMD-SHELL
