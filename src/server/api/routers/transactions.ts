@@ -1,7 +1,9 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { type Currency, currencySchema, SUPPORTED_CURRENCIES } from '@/lib/currency';
-import { isValidSymbol as isValidSymbolFormat, normalizeSymbol, symbolSchema } from '@/lib/validation';
+import { parseIsoDateUtc } from '@/lib/date';
+import { isValidSymbol as isValidSymbolFormat, normalizeSymbol } from '@/lib/validation';
+import { createTransactionInput, updateTransactionInput } from '@/server/api/routers/transactions.schemas';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
 import { sleep } from '@/server/jobs/yahoo-lib';
 import { invalidatePortfolioCache } from '@/server/portfolio-compute';
@@ -101,69 +103,55 @@ export const transactionsRouter = createTRPCRouter({
 	 *   feeCurrency: 'USD'
 	 * });
 	 */
-	create: protectedProcedure
-		.input(
-			z.object({
-				date: z.string().transform((s) => new Date(s)),
-				fee: z.number().optional(),
-				feeCurrency: currencySchema.optional(),
-				note: z.string().optional(),
-				price: z.number(),
-				priceCurrency: currencySchema.default('USD'),
-				quantity: z.number(),
-				side: z.enum(['BUY', 'SELL']),
-				symbol: symbolSchema
-			})
-		)
-		.mutation(async ({ ctx, input }) => {
-			const userId = ctx.session.user.id;
-			const symbol = normalizeSymbol(input.symbol);
-			// Fast-path: accept if symbol already on user's watchlist; else validate via Yahoo Finance
-			const exists = await ctx.db.watchlistItem.findUnique({
-				select: { symbol: true },
-				where: { userId_symbol: { symbol, userId } }
-			});
-			if (!exists) {
-				const existence = await symbolExistsOnYahoo(symbol);
-				if (existence === 'unreachable') {
-					throw new TRPCError({
-						code: 'BAD_REQUEST',
-						message: `Couldn't reach Yahoo to verify ${symbol}. Please try again.`
-					});
-				}
-				if (existence === 'no') {
-					throw new TRPCError({
-						code: 'BAD_REQUEST',
-						message: 'Unknown symbol. Please select from suggestions.'
-					});
-				}
-			}
-			const created = await ctx.db.transaction.create({
-				data: {
-					date: input.date,
-					fee: input.fee,
-					feeCurrency: (input.feeCurrency as Currency | undefined) ?? null,
-					note: input.note,
-					price: input.price,
-					priceCurrency: input.priceCurrency as Currency,
-					quantity: input.quantity,
-					side: input.side,
-					symbol,
-					userId
-				}
-			});
-
-			// Ensure the asset exists in the user's watchlist
-			try {
-				await ctx.db.watchlistItem.upsert({
-					create: { symbol: created.symbol, userId },
-					update: {},
-					where: { userId_symbol: { symbol: created.symbol, userId } }
+	create: protectedProcedure.input(createTransactionInput).mutation(async ({ ctx, input }) => {
+		const userId = ctx.session.user.id;
+		const symbol = normalizeSymbol(input.symbol);
+		// Fast-path: accept if symbol already on user's watchlist; else validate via Yahoo Finance
+		const exists = await ctx.db.watchlistItem.findUnique({
+			select: { symbol: true },
+			where: { userId_symbol: { symbol, userId } }
+		});
+		if (!exists) {
+			const existence = await symbolExistsOnYahoo(symbol);
+			if (existence === 'unreachable') {
+				throw new TRPCError({
+					code: 'BAD_REQUEST',
+					message: `Couldn't reach Yahoo to verify ${symbol}. Please try again.`
 				});
-			} catch {}
-			await invalidatePortfolioCache(userId);
-			return { id: created.id } as const;
-		}),
+			}
+			if (existence === 'no') {
+				throw new TRPCError({
+					code: 'BAD_REQUEST',
+					message: 'Unknown symbol. Please select from suggestions.'
+				});
+			}
+		}
+		const created = await ctx.db.transaction.create({
+			data: {
+				date: input.date,
+				fee: input.fee,
+				feeCurrency: (input.feeCurrency as Currency | undefined) ?? null,
+				note: input.note,
+				price: input.price,
+				priceCurrency: input.priceCurrency as Currency,
+				quantity: input.quantity,
+				side: input.side,
+				symbol,
+				userId
+			}
+		});
+
+		// Ensure the asset exists in the user's watchlist
+		try {
+			await ctx.db.watchlistItem.upsert({
+				create: { symbol: created.symbol, userId },
+				update: {},
+				where: { userId_symbol: { symbol: created.symbol, userId } }
+			});
+		} catch {}
+		await invalidatePortfolioCache(userId);
+		return { id: created.id } as const;
+	}),
 
 	/**
 	 * Exports transactions to CSV format with optional filters.
@@ -413,8 +401,8 @@ export const transactionsRouter = createTRPCRouter({
 					const noteRaw = byColumn('note').trim();
 					const dateRaw = byColumn('date').trim();
 					if (!dateRaw) throw new Error('Date is required.');
-					const date = new Date(`${dateRaw}T00:00:00Z`);
-					if (Number.isNaN(date.getTime())) {
+					const date = parseIsoDateUtc(dateRaw);
+					if (!date) {
 						throw new Error(`Invalid date "${dateRaw}".`);
 					}
 
@@ -640,8 +628,8 @@ export const transactionsRouter = createTRPCRouter({
 						message: `Unsupported price currency "${item.priceCurrency}".`
 					});
 				}
-				const date = new Date(`${item.date}T00:00:00Z`);
-				if (Number.isNaN(date.getTime())) {
+				const date = parseIsoDateUtc(item.date);
+				if (!date) {
 					throw new TRPCError({
 						code: 'BAD_REQUEST',
 						message: `Invalid date "${item.date}".`
@@ -811,88 +799,70 @@ export const transactionsRouter = createTRPCRouter({
 	 *   note: 'Updated quantity'
 	 * });
 	 */
-	update: protectedProcedure
-		.input(
-			z.object({
-				date: z
-					.string()
-					.transform((s) => new Date(s))
-					.optional(),
-				fee: z.number().nullable().optional(),
-				feeCurrency: currencySchema.nullable().optional(),
-				id: z.string().min(1),
-				note: z.string().nullable().optional(),
-				price: z.number().optional(),
-				priceCurrency: currencySchema.optional(),
-				quantity: z.number().optional(),
-				side: z.enum(['BUY', 'SELL']).optional(),
-				symbol: symbolSchema.optional()
-			})
-		)
-		.mutation(async ({ ctx, input }) => {
-			const userId = ctx.session.user.id;
-			const current = await ctx.db.transaction.findUnique({ where: { id: input.id } });
-			if (!current || current.userId !== userId) {
-				throw new TRPCError({ code: 'NOT_FOUND', message: 'Transaction not found' });
-			}
+	update: protectedProcedure.input(updateTransactionInput).mutation(async ({ ctx, input }) => {
+		const userId = ctx.session.user.id;
+		const current = await ctx.db.transaction.findUnique({ where: { id: input.id } });
+		if (!current || current.userId !== userId) {
+			throw new TRPCError({ code: 'NOT_FOUND', message: 'Transaction not found' });
+		}
 
-			let nextSymbol: string | undefined;
-			if (input.symbol) {
-				nextSymbol = normalizeSymbol(input.symbol);
-				if (!isValidSymbolFormat(nextSymbol)) {
+		let nextSymbol: string | undefined;
+		if (input.symbol) {
+			nextSymbol = normalizeSymbol(input.symbol);
+			if (!isValidSymbolFormat(nextSymbol)) {
+				throw new TRPCError({
+					code: 'BAD_REQUEST',
+					message: 'Symbol contains invalid characters.'
+				});
+			}
+			const exists = await ctx.db.watchlistItem.findUnique({
+				select: { symbol: true },
+				where: { userId_symbol: { symbol: nextSymbol, userId } }
+			});
+			if (!exists) {
+				const existence = await symbolExistsOnYahoo(nextSymbol);
+				if (existence === 'unreachable') {
 					throw new TRPCError({
 						code: 'BAD_REQUEST',
-						message: 'Symbol contains invalid characters.'
+						message: `Couldn't reach Yahoo to verify ${nextSymbol}. Please try again.`
 					});
 				}
-				const exists = await ctx.db.watchlistItem.findUnique({
-					select: { symbol: true },
+				if (existence === 'no') {
+					throw new TRPCError({
+						code: 'BAD_REQUEST',
+						message: 'Unknown symbol. Please select from suggestions.'
+					});
+				}
+			}
+		}
+		await ctx.db.transaction.update({
+			data: {
+				date: input.date ?? undefined,
+				fee: input.fee ?? undefined,
+				feeCurrency: (input.feeCurrency as Currency | null | undefined) ?? undefined,
+				note: input.note ?? undefined,
+				price: input.price ?? undefined,
+				priceCurrency: (input.priceCurrency as Currency | undefined) ?? undefined,
+				quantity: input.quantity ?? undefined,
+				side: input.side ?? undefined,
+				symbol: nextSymbol ?? undefined
+			},
+			where: { id: input.id }
+		});
+
+		// Ensure the new asset exists in the user's watchlist if symbol changed
+		if (nextSymbol) {
+			try {
+				await ctx.db.watchlistItem.upsert({
+					create: { symbol: nextSymbol, userId },
+					update: {},
 					where: { userId_symbol: { symbol: nextSymbol, userId } }
 				});
-				if (!exists) {
-					const existence = await symbolExistsOnYahoo(nextSymbol);
-					if (existence === 'unreachable') {
-						throw new TRPCError({
-							code: 'BAD_REQUEST',
-							message: `Couldn't reach Yahoo to verify ${nextSymbol}. Please try again.`
-						});
-					}
-					if (existence === 'no') {
-						throw new TRPCError({
-							code: 'BAD_REQUEST',
-							message: 'Unknown symbol. Please select from suggestions.'
-						});
-					}
-				}
-			}
-			await ctx.db.transaction.update({
-				data: {
-					date: input.date ?? undefined,
-					fee: input.fee ?? undefined,
-					feeCurrency: (input.feeCurrency as Currency | null | undefined) ?? undefined,
-					note: input.note ?? undefined,
-					price: input.price ?? undefined,
-					priceCurrency: (input.priceCurrency as Currency | undefined) ?? undefined,
-					quantity: input.quantity ?? undefined,
-					side: input.side ?? undefined,
-					symbol: nextSymbol ?? undefined
-				},
-				where: { id: input.id }
-			});
-
-			// Ensure the new asset exists in the user's watchlist if symbol changed
-			if (nextSymbol) {
-				try {
-					await ctx.db.watchlistItem.upsert({
-						create: { symbol: nextSymbol, userId },
-						update: {},
-						where: { userId_symbol: { symbol: nextSymbol, userId } }
-					});
-				} catch {}
-			}
-			await invalidatePortfolioCache(userId);
-			return { success: true } as const;
-		})
+			} catch {}
+		}
+		await invalidatePortfolioCache(userId);
+		return { success: true } as const;
+	})
 });
 
 function parseCsv(text: string): string[][] {

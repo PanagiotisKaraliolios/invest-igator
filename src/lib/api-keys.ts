@@ -26,8 +26,18 @@ export function generateApiKey(
 	// Hash the key for storage
 	const hashedKey = hashApiKey(key);
 
-	// Store first 6 characters (or prefix + 6) for identification
-	const start = key.slice(0, 6 + (prefix?.length ?? 0));
+	// Identifying lookup shortcut. This MUST match how the auth paths slice the
+	// incoming key (`apiKey.slice(0, 6)` in createTRPCContext and apiKeys.verify).
+	// Previously this added the prefix length, making the stored `start` longer than
+	// the 6-char lookup slice — so any key created with a prefix could never be found
+	// by `where: { start }` and authenticated as nobody. Keep it a fixed 6 chars.
+	//
+	// Tradeoff: a fixed 6-char `start` lowers selectivity when many keys share a >=6-char
+	// prefix — they land in one `start` bucket, so auth does bcrypt.compareSync across all
+	// of them. Acceptable here (personal-scale, and it's what existing rows can be matched
+	// against); raising selectivity would need a longer fixed slice on both read paths plus
+	// a data migration.
+	const start = key.slice(0, 6);
 
 	return { hashedKey, key, start };
 }
