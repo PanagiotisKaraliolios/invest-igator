@@ -38,6 +38,11 @@
 			"input": 1.5,
 			"output": 9
 		},
+		"gpt-5-mini": {
+			"cacheRead": 0.03,
+			"input": 0.25,
+			"output": 2
+		},
 		"gpt-5.4": {
 			"cacheRead": 0.25,
 			"contextThreshold": 272000,

@@ -24,6 +24,10 @@ const OUT = resolve(import.meta.dirname, '..', 'src/server/ai/pricing/models.sna
  * otherwise price() returns null and the call is recorded UNKNOWN_MODEL.
  */
 const WANTED: ReadonlyArray<readonly [string, string]> = [
+	// gpt-5-mini: Azure and OpenAI publish different cache_read rates (0.03 vs 0.025), so we pin the
+	// Azure price only — that is the provider we deploy it on. (The gpt-5.4 family happens to match
+	// across both providers, so those keep both entries.)
+	['azure', 'gpt-5-mini'],
 	['azure', 'gpt-5.4'],
 	['azure', 'gpt-5.4-mini'],
 	['azure', 'gpt-5.4-nano'],
