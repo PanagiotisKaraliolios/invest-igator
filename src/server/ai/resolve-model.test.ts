@@ -268,6 +268,68 @@ describe('resolveModel', () => {
 	});
 });
 
+describe('resolveModel — selector', () => {
+	const userId = 'user-1';
+
+	const anthropicRow: Row = {
+		...ROW,
+		defaultModelId: 'claude-haiku-4-5',
+		deployment: null,
+		provider: 'ANTHROPIC',
+		resourceName: null
+	};
+	const googleRow: Row = {
+		...ROW,
+		defaultModelId: 'gemini-2.5-flash',
+		deployment: null,
+		provider: 'GOOGLE',
+		resourceName: null
+	};
+
+	test('selector platform returns the platform model even when a BYOK credential exists', async () => {
+		credential = { ...anthropicRow };
+		const resolved = await resolveModel(userId, { kind: 'platform' });
+		expect(resolved.byok).toBe(false);
+		expect(resolved.providerId).toBe('azure');
+	});
+
+	test('selector byok picks that specific provider', async () => {
+		// The mock only holds one row at a time (see comment below), so this doesn't prove
+		// GOOGLE was picked OVER an ANTHROPIC row — the next test covers that via the query args.
+		credential = { ...googleRow };
+		const resolved = await resolveModel(userId, { kind: 'byok', provider: 'GOOGLE' });
+		expect(resolved.byok).toBe(true);
+		expect(resolved.providerId).toBe('google');
+	});
+
+	// The mock findFirst always returns whatever `credential` currently holds regardless of
+	// `where`, so the previous test alone can't prove the query is actually scoped by provider —
+	// a resolveModel that dropped `provider` from the where-clause would pass it too. Assert on
+	// the captured args directly, mirroring the existing "scoped to caller and enabled rows" test.
+	test('the byok selector query is scoped to the caller, provider, and enabled rows', async () => {
+		credential = { ...googleRow };
+		await resolveModel(userId, { kind: 'byok', provider: 'GOOGLE' });
+		const args = findFirstArgs.at(-1) as { where?: Record<string, unknown> } | undefined;
+		expect(args?.where?.userId).toBe(userId);
+		expect(args?.where?.enabled).toBe(true);
+		expect(args?.where?.provider).toBe('GOOGLE');
+	});
+
+	test('selector byok for a provider the user lacks throws (never falls through to platform)', async () => {
+		await expect(resolveModel(userId, { kind: 'byok', provider: 'ANTHROPIC' })).rejects.toThrow(
+			InvalidCredentialError
+		);
+	});
+
+	test('no selector preserves back-compat: most-recent BYOK else platform', async () => {
+		const platform = await resolveModel(userId);
+		expect(platform.byok).toBe(false);
+		credential = { ...anthropicRow };
+		const byok = await resolveModel(userId);
+		expect(byok.byok).toBe(true);
+	});
+});
+
 // C1: this is THE property the whole guardrail exists for — BYOK bypasses platform QUOTA and
 // NOTHING else. Earlier coverage (guardrails.test.ts) proved `applyGuardrails` works in
 // isolation and that `GUARDRAIL_STACK[0] === guardrails`; neither drives `resolveModel`, so

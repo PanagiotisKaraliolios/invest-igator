@@ -195,34 +195,30 @@ export function buildByokModel(cfg: ByokConfig, apiKey: string): Unguarded {
 }
 
 /**
- * BYOK if the user has an enabled credential, otherwise the platform model.
- *
- * BYOK bypasses platform QUOTA — and nothing else. Same guardrails, same tool authorization.
- * The quota check lives in a separate code path (Task 8) precisely so that a BYOK
- * short-circuit cannot accidentally skip both.
- *
- * A BROKEN BYOK credential THROWS. It must never fall through to platformModel(): that would
- * silently move a BYOK user's spend onto the platform's card — and hide the misconfiguration.
+ * Decrypt + build a `ResolvedModel` from a credential row. Shared by the selector-driven
+ * lookup and the back-compat (no-selector) lookup below — the row->model path is identical
+ * either way, only the query that produces the row differs.
  */
-export async function resolveModel(userId: string): Promise<ResolvedModel> {
-	const cred = await db.aiProviderCredential.findFirst({
-		// Scoped to THIS user. Deterministic pick if Task 4's uniqueness ever regresses.
-		orderBy: { updatedAt: 'desc' },
-		where: { enabled: true, userId }
-	});
-	if (cred === null) return platformModel();
-
-	const cfg = toByokConfig(cred);
+function byokFromRow(
+	row: Parameters<typeof toByokConfig>[0] & {
+		authTag: Uint8Array;
+		ciphertext: Uint8Array;
+		iv: Uint8Array;
+		kid: string;
+	},
+	userId: string
+): ResolvedModel {
+	const cfg = toByokConfig(row);
 
 	// The AAD binds the ciphertext to (CALLER userId, provider): a row copied to another
 	// tenant FAILS to decrypt rather than silently working. Pass the caller's id — never
-	// cred.userId, which would make a stolen row decrypt for whoever holds it.
+	// row.userId, which would make a stolen row decrypt for whoever holds it.
 	const secret = open(
 		{
-			authTag: cred.authTag,
-			ciphertext: cred.ciphertext,
-			iv: cred.iv,
-			kid: cred.kid
+			authTag: row.authTag,
+			ciphertext: row.ciphertext,
+			iv: row.iv,
+			kid: row.kid
 		},
 		userId,
 		cfg.provider
@@ -239,4 +235,47 @@ export async function resolveModel(userId: string): Promise<ResolvedModel> {
 		// The REAL model. NEVER price on modelId — for Azure that is the deployment name.
 		resolvedModel: cfg.defaultModelId
 	};
+}
+
+/** Names either the platform model or one specific BYOK provider — the chat model picker's shape. */
+export type ModelSelector = { kind: 'platform' } | { kind: 'byok'; provider: ByokProvider };
+
+/**
+ * Resolves the model to use for a request. With no selector: BYOK if the user has an enabled
+ * credential, otherwise the platform model (back-compat with the pre-picker behavior, and what
+ * the eval harness relies on). With a selector: the picker's explicit choice.
+ *
+ * BYOK bypasses platform QUOTA — and nothing else. Same guardrails, same tool authorization.
+ * The quota check lives in a separate code path (Task 8) precisely so that a BYOK
+ * short-circuit cannot accidentally skip both.
+ *
+ * A BROKEN BYOK credential (one that exists but fails to build) always THROWS, whether picked
+ * implicitly (most-recent) or explicitly via `selector` — it must never fall through to
+ * platformModel(): that would silently move a BYOK user's spend onto the platform's card and
+ * hide the misconfiguration. A MISSING credential differs by path: with no selector it falls
+ * through to the platform model (today's default-user experience); with an explicit `byok`
+ * selector it also throws — the user asked for that specific provider, so silently falling back
+ * to platform would defeat the point of an explicit picker.
+ */
+export async function resolveModel(userId: string, selector?: ModelSelector): Promise<ResolvedModel> {
+	if (selector?.kind === 'platform') return platformModel();
+
+	if (selector?.kind === 'byok') {
+		const row = await db.aiProviderCredential.findFirst({
+			where: { enabled: true, provider: selector.provider, userId }
+		});
+		if (row === null) {
+			throw new InvalidCredentialError(`No enabled ${selector.provider} credential for this user`);
+		}
+		return byokFromRow(row, userId);
+	}
+
+	// No selector: back-compat — most-recent enabled BYOK, else platform.
+	const row = await db.aiProviderCredential.findFirst({
+		// Scoped to THIS user. Deterministic pick if Task 4's uniqueness ever regresses.
+		orderBy: { updatedAt: 'desc' },
+		where: { enabled: true, userId }
+	});
+	if (row === null) return platformModel();
+	return byokFromRow(row, userId);
 }

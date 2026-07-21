@@ -2,6 +2,7 @@ import { accountRouter } from '@/server/api/routers/account';
 import { watchlistRouter } from '@/server/api/routers/watchlist';
 import { createCallerFactory, createTRPCRouter } from '@/server/api/trpc';
 import { adminRouter } from './routers/admin';
+import { aiChatRouter } from './routers/ai-chat';
 import { aiCredentialsRouter } from './routers/ai-credentials';
 import { aiObservabilityRouter } from './routers/ai-observability';
 import { apiKeysRouter } from './routers/api-keys';
@@ -131,6 +132,7 @@ import { transactionsRouter } from './routers/transactions';
 export const appRouter = createTRPCRouter({
 	account: accountRouter,
 	admin: adminRouter,
+	aiChat: aiChatRouter,
 	aiCredentials: aiCredentialsRouter,
 	aiObservability: aiObservabilityRouter,
 	apiKeys: apiKeysRouter,

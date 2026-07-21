@@ -1,0 +1,197 @@
+import { beforeEach, describe, expect, test } from 'bun:test';
+import type { UIMessage } from 'ai';
+import { createChat, deriveTitle, ensureChat, loadTurnHistory, saveTurn } from '../src/server/ai/chat/persistence';
+import { resetAiTables, seedUser } from '../src/server/ai/evals/db-support';
+import { db } from '../src/server/db';
+
+/**
+ * `persistence.ts` is the ownership-scoped data layer the chat gateway (Task 5) and route
+ * (Task 6) use to create chats, load prior turns to feed the model, and save a finished turn.
+ * The brief's own test snippet is written as if it could create users/chats directly and assert
+ * against them hermetically, but the `src/**` unit suite (`bun test --isolate src`) MOCKS
+ * `@/server/db` — it cannot do `upsert`, ordered `findMany`, or prove relational ownership, so a
+ * hermetic test here would be a lie. This file lives outside `src/` (alongside
+ * `ai-quota.test.ts` and `ai-tool-authz.test.ts`) so `bun test --isolate src` stays hermetic,
+ * gated instead by `db_tests` via `bun run test:db`, and asserts against a REAL Postgres.
+ *
+ * The two ownership tests below are the security core: a user must never be able to read or
+ * overwrite another user's chat. Both use two distinct seeded users so the gate is proven for
+ * real, not simulated.
+ */
+
+const msg = (id: string, role: 'assistant' | 'user', text: string): UIMessage => ({
+	id,
+	parts: [{ text, type: 'text' }],
+	role
+});
+
+describe('deriveTitle (pure — no DB)', () => {
+	test('trims to 60 chars and falls back to "New chat"', () => {
+		expect(deriveTitle('  How is my portfolio?  ')).toBe('How is my portfolio?');
+		expect(deriveTitle('')).toBe('New chat');
+		expect(deriveTitle('x'.repeat(80))).toHaveLength(60);
+	});
+
+	test('uses only the first line of multi-line text', () => {
+		expect(deriveTitle('First line\nSecond line')).toBe('First line');
+	});
+
+	test('a whitespace-only string falls back to "New chat"', () => {
+		expect(deriveTitle('   \n  ')).toBe('New chat');
+	});
+});
+
+describe('Tier 0 (DB) — chat persistence: ownership-scoped create/load/save', () => {
+	beforeEach(async () => {
+		await resetAiTables();
+	});
+
+	test('createChat scopes the chat to userId and stores the given title', async () => {
+		const userId = await seedUser('owner');
+		const { id: chatId } = await createChat(userId, 'My title');
+		const chat = await db.aiChat.findUniqueOrThrow({ where: { id: chatId } });
+		expect(chat.userId).toBe(userId);
+		expect(chat.title).toBe('My title');
+	});
+
+	test('saveTurn then loadTurnHistory round-trips parts, in order, for the owner', async () => {
+		const userId = await seedUser('owner');
+		const { id: chatId } = await createChat(userId, 'T');
+		await saveTurn({
+			chatId,
+			messages: [msg('m1', 'user', 'hi'), msg('m2', 'assistant', 'hello')],
+			userId
+		});
+		const loaded = await loadTurnHistory(chatId, userId);
+		expect(loaded.map((m) => m.id)).toEqual(['m1', 'm2']);
+		expect(loaded[1]?.parts).toEqual([{ text: 'hello', type: 'text' }]);
+	});
+
+	test('saveTurn upserts by message id: a repeat call with the same id updates parts, not a duplicate row', async () => {
+		const userId = await seedUser('owner');
+		const { id: chatId } = await createChat(userId, 'T');
+		await saveTurn({ chatId, messages: [msg('m1', 'user', 'first draft')], userId });
+		await saveTurn({ chatId, messages: [msg('m1', 'user', 'edited')], userId });
+		const loaded = await loadTurnHistory(chatId, userId);
+		expect(loaded).toHaveLength(1);
+		expect(loaded[0]?.parts).toEqual([{ text: 'edited', type: 'text' }]);
+	});
+
+	test('saveTurn bumps AiChat.updatedAt', async () => {
+		const userId = await seedUser('owner');
+		const { id: chatId } = await createChat(userId, 'T');
+		const before = await db.aiChat.findUniqueOrThrow({ select: { updatedAt: true }, where: { id: chatId } });
+		await new Promise((resolve) => setTimeout(resolve, 5));
+		await saveTurn({ chatId, messages: [msg('m1', 'user', 'hi')], userId });
+		const after = await db.aiChat.findUniqueOrThrow({ select: { updatedAt: true }, where: { id: chatId } });
+		expect(after.updatedAt.getTime()).toBeGreaterThan(before.updatedAt.getTime());
+	});
+
+	test('loadTurnHistory returns [] for a chat the user does not own — the read side of the ownership gate', async () => {
+		const owner = await seedUser('owner');
+		const other = await seedUser('other');
+		const { id: chatId } = await createChat(owner, 'T');
+		await saveTurn({ chatId, messages: [msg('m1', 'user', 'secret')], userId: owner });
+
+		expect(await loadTurnHistory(chatId, other)).toEqual([]);
+		// The owner's own view is unaffected by the foreign read attempt.
+		expect((await loadTurnHistory(chatId, owner)).map((m) => m.id)).toEqual(['m1']);
+	});
+
+	test('loadTurnHistory returns [] for a chatId that does not exist at all', async () => {
+		const userId = await seedUser('owner');
+		expect(await loadTurnHistory('does-not-exist', userId)).toEqual([]);
+	});
+
+	test('saveTurn silently no-ops on a chat the user does not own — the write side of the ownership gate', async () => {
+		const owner = await seedUser('owner');
+		const other = await seedUser('other');
+		const { id: chatId } = await createChat(owner, 'T');
+
+		await saveTurn({ chatId, messages: [msg('x', 'user', 'inject')], userId: other });
+
+		// Nothing landed at all — not under the attacker's view, not under the real owner's.
+		expect(await loadTurnHistory(chatId, other)).toEqual([]);
+		expect(await loadTurnHistory(chatId, owner)).toEqual([]);
+		expect(await db.aiMessage.count({ where: { chatId } })).toBe(0);
+	});
+
+	test("saveTurn on a foreign chat does not corrupt the chat's own updatedAt", async () => {
+		const owner = await seedUser('owner');
+		const other = await seedUser('other');
+		const { id: chatId } = await createChat(owner, 'T');
+		const before = await db.aiChat.findUniqueOrThrow({ select: { updatedAt: true }, where: { id: chatId } });
+
+		await saveTurn({ chatId, messages: [msg('x', 'user', 'inject')], userId: other });
+
+		const after = await db.aiChat.findUniqueOrThrow({ select: { updatedAt: true }, where: { id: chatId } });
+		expect(after.updatedAt.getTime()).toBe(before.updatedAt.getTime());
+	});
+
+	test('ensureChat creates a chat with the client-supplied id, scoped to the caller, when missing', async () => {
+		const userId = await seedUser('owner');
+		await ensureChat('client-uuid-1', userId, 'Hello there');
+		const chat = await db.aiChat.findUniqueOrThrow({ where: { id: 'client-uuid-1' } });
+		expect(chat.userId).toBe(userId);
+		expect(chat.title).toBe('Hello there');
+	});
+
+	test('ensureChat is a no-op when the id already exists — never changes the title or owner', async () => {
+		const userId = await seedUser('owner');
+		await ensureChat('client-uuid-2', userId, 'Original title');
+		await ensureChat('client-uuid-2', userId, 'A different title');
+		const chat = await db.aiChat.findUniqueOrThrow({ where: { id: 'client-uuid-2' } });
+		expect(chat.title).toBe('Original title');
+		expect(chat.userId).toBe(userId);
+	});
+
+	test('ensureChat on an id owned by ANOTHER user does not hand the caller a chat (cross-tenant upsert gate)', async () => {
+		const owner = await seedUser('owner');
+		const attacker = await seedUser('attacker');
+		await ensureChat('collide-id', owner, 'Owner chat');
+		const before = await db.aiChat.findUniqueOrThrow({ select: { updatedAt: true }, where: { id: 'collide-id' } });
+
+		// The attacker reuses the owner's id. `AiChat.id` is globally unique, so the upsert matches
+		// the existing foreign row and the `update: {}` touches nothing — the row stays the owner's.
+		await ensureChat('collide-id', attacker, 'Attacker chat');
+
+		const chat = await db.aiChat.findUniqueOrThrow({ where: { id: 'collide-id' } });
+		expect(chat.userId).toBe(owner);
+		expect(chat.title).toBe('Owner chat');
+		// The attacker gained no chat of their own.
+		expect(await db.aiChat.count({ where: { userId: attacker } })).toBe(0);
+		// Regression guard: the whole no-op rests on Prisma leaving `@updatedAt` untouched for an
+		// empty `update: {}` (behaviour that changed ~Prisma 4.4). If a future upgrade reintroduced
+		// a touch, the collision would silently reorder the victim's recency-sorted history.
+		const after = await db.aiChat.findUniqueOrThrow({ select: { updatedAt: true }, where: { id: 'collide-id' } });
+		expect(after.updatedAt.getTime()).toBe(before.updatedAt.getTime());
+	});
+
+	test("saveTurn refuses to overwrite a message id that already belongs to ANOTHER user's chat (cross-tenant write gate)", async () => {
+		// AiMessage.id is globally unique, so B owning their chat is NOT enough: a caller who owns
+		// their OWN chat could still clobber a victim's message row in place by reusing its id. The
+		// data layer must refuse to touch any message id already bound to a different chat, even
+		// though the outer ownership gate (caller owns args.chatId) passes.
+		const userA = await seedUser('attacker');
+		const userB = await seedUser('victim');
+		const { id: chatAId } = await createChat(userA, 'A');
+		const { id: chatBId } = await createChat(userB, 'B');
+
+		// B legitimately writes 'collide-1' into their own chat.
+		await saveTurn({ chatId: chatBId, messages: [msg('collide-1', 'user', 'B private')], userId: userB });
+
+		// A owns chat A and submits a message reusing B's id, trying to overwrite B's row in place.
+		await saveTurn({ chatId: chatAId, messages: [msg('collide-1', 'user', 'A attack')], userId: userA });
+
+		// B's row is UNCHANGED: same parts, still attached to chat B.
+		const bHistory = await loadTurnHistory(chatBId, userB);
+		expect(bHistory.map((m) => m.id)).toEqual(['collide-1']);
+		expect(bHistory[0]?.parts).toEqual([{ text: 'B private', type: 'text' }]);
+		const collided = await db.aiMessage.findUniqueOrThrow({ select: { chatId: true }, where: { id: 'collide-1' } });
+		expect(collided.chatId).toBe(chatBId);
+
+		// A's attack landed nothing: the colliding id was refused, not moved into chat A.
+		expect(await loadTurnHistory(chatAId, userA)).toEqual([]);
+		expect(await db.aiMessage.count({ where: { chatId: chatAId } })).toBe(0);
+	});
+});

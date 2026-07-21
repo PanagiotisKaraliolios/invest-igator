@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { AppSidebar } from '@/app/(dashboard)/_components/app-sidebar';
 import DashboardBreadcrumbs from '@/app/(dashboard)/_components/breadcrumbs';
+import { ChatLauncher } from '@/app/(dashboard)/_components/chat/chat-launcher';
 import CurrencySwitch from '@/app/(dashboard)/_components/currency-switch';
 import ThemeSwitch from '@/app/(dashboard)/_components/theme-switch';
 import { ImpersonationBanner } from '@/components/admin/impersonation-banner';
@@ -19,6 +20,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
 	// Check if user is admin or superadmin
 	const isAdmin = session.user.role === 'admin' || session.user.role === 'superadmin';
 
+	// The platform (Azure) model is available only when all three Azure OpenAI settings are set;
+	// otherwise the assistant offers just the user's own BYOK providers.
+	const platformConfigured = Boolean(
+		env.AZURE_OPENAI_API_KEY && env.AZURE_OPENAI_RESOURCE_NAME && env.AZURE_OPENAI_CHAT_DEPLOYMENT
+	);
+
 	return (
 		<SidebarProvider>
 			<AppSidebar applicationName={env.APP_NAME} isAdmin={isAdmin} />
@@ -30,6 +37,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 						<DashboardBreadcrumbs />
 					</div>
 					<div className='mr-4 ml-auto flex items-center gap-3'>
+						<ChatLauncher platformConfigured={platformConfigured} />
 						<CurrencySwitch isAuthenticated={Boolean(session?.user)} />
 						<ThemeSwitch />
 					</div>
