@@ -111,7 +111,7 @@
 		"preview": "next build && next start",
 		"prices:fetch": "bun run scripts/fetch-model-prices.ts",
 		"start": "next start",
-		"test:db": "bun test prisma/ai-schema.test.ts prisma/ai-telemetry-dbsink.test.ts prisma/ai-quota.test.ts prisma/ai-telemetry-ledger.test.ts prisma/ai-tool-authz.test.ts prisma/ai-chat-persistence.test.ts prisma/ai-chat-router.test.ts",
+		"test:db": "bun test prisma/ai-schema.test.ts prisma/ai-telemetry-dbsink.test.ts prisma/ai-quota.test.ts prisma/ai-telemetry-ledger.test.ts prisma/ai-tool-authz.test.ts prisma/ai-chat-persistence.test.ts prisma/ai-chat-router.test.ts prisma/ai-mcp-e2e.test.ts",
 		"test:e2e": "bunx playwright test",
 		"test:e2e:headed": "bunx playwright test --headed",
 		"test:e2e:install": "bunx playwright install --with-deps",
