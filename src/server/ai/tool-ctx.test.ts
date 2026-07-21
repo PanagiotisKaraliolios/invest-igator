@@ -4,6 +4,7 @@ import { describe, expect, mock, test } from 'bun:test';
 // the pattern in resolve-model.test.ts (mock only the fields this module touches).
 const findUniqueArgs: unknown[] = [];
 const currencyByUser: Record<string, string | null> = {
+	'user-eur': 'EUR',
 	'user-no-currency': null
 };
 
@@ -46,6 +47,11 @@ describe('createToolCtx', () => {
 	test('defaults currency to USD when the user has none set', async () => {
 		const ctx = await createToolCtx({ user: { id: 'user-no-currency' } }, 'chat');
 		expect(ctx.currency).toBe('USD');
+	});
+
+	test("passes through the user's saved non-default currency", async () => {
+		const ctx = await createToolCtx({ user: { id: 'user-eur' } }, 'chat');
+		expect(ctx.currency).toBe('EUR');
 	});
 });
 
