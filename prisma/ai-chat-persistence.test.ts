@@ -127,4 +127,32 @@ describe('Tier 0 (DB) — chat persistence: ownership-scoped create/load/save', 
 		const after = await db.aiChat.findUniqueOrThrow({ select: { updatedAt: true }, where: { id: chatId } });
 		expect(after.updatedAt.getTime()).toBe(before.updatedAt.getTime());
 	});
+
+	test("saveTurn refuses to overwrite a message id that already belongs to ANOTHER user's chat (cross-tenant write gate)", async () => {
+		// AiMessage.id is globally unique, so B owning their chat is NOT enough: a caller who owns
+		// their OWN chat could still clobber a victim's message row in place by reusing its id. The
+		// data layer must refuse to touch any message id already bound to a different chat, even
+		// though the outer ownership gate (caller owns args.chatId) passes.
+		const userA = await seedUser('attacker');
+		const userB = await seedUser('victim');
+		const { id: chatAId } = await createChat(userA, 'A');
+		const { id: chatBId } = await createChat(userB, 'B');
+
+		// B legitimately writes 'collide-1' into their own chat.
+		await saveTurn({ chatId: chatBId, messages: [msg('collide-1', 'user', 'B private')], userId: userB });
+
+		// A owns chat A and submits a message reusing B's id, trying to overwrite B's row in place.
+		await saveTurn({ chatId: chatAId, messages: [msg('collide-1', 'user', 'A attack')], userId: userA });
+
+		// B's row is UNCHANGED: same parts, still attached to chat B.
+		const bHistory = await loadTurnHistory(chatBId, userB);
+		expect(bHistory.map((m) => m.id)).toEqual(['collide-1']);
+		expect(bHistory[0]?.parts).toEqual([{ text: 'B private', type: 'text' }]);
+		const collided = await db.aiMessage.findUniqueOrThrow({ select: { chatId: true }, where: { id: 'collide-1' } });
+		expect(collided.chatId).toBe(chatBId);
+
+		// A's attack landed nothing: the colliding id was refused, not moved into chat A.
+		expect(await loadTurnHistory(chatAId, userA)).toEqual([]);
+		expect(await db.aiMessage.count({ where: { chatId: chatAId } })).toBe(0);
+	});
 });

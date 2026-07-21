@@ -39,23 +39,36 @@ export async function loadTurnHistory(chatId: string, userId: string): Promise<U
  * never leak whether a given chatId exists to a user who doesn't own it. Upserts each message by
  * id (so a resend of the same message updates its parts rather than duplicating a row) and bumps
  * `AiChat.updatedAt` so recency-ordered chat lists reflect the new turn.
+ *
+ * Defense in depth beyond the outer chat-ownership gate: `AiMessage.id` is globally unique (the
+ * AI SDK message id — there is no compound `@@unique([id, chatId])`), so a naive
+ * `upsert({ where: { id } })` would let a caller who legitimately owns THEIR chat overwrite
+ * another user's message row in place merely by submitting a message whose id collides with the
+ * victim's. Each write therefore first checks the existing row's `chatId`: an id already bound to
+ * a DIFFERENT chat is a collision/attack and is refused (skipped), never touched. The whole turn
+ * runs in one interactive transaction, so it saves all-or-nothing.
  */
 export async function saveTurn(args: { chatId: string; userId: string; messages: UIMessage[] }): Promise<void> {
 	const chat = await db.aiChat.findFirst({ select: { id: true }, where: { id: args.chatId, userId: args.userId } });
 	if (chat === null) return;
 
-	for (const m of args.messages) {
-		await db.aiMessage.upsert({
-			create: {
-				chatId: args.chatId,
-				id: m.id,
-				metadata: (m.metadata ?? undefined) as object | undefined,
-				parts: m.parts as object,
-				role: m.role
-			},
-			update: { metadata: (m.metadata ?? undefined) as object | undefined, parts: m.parts as object },
-			where: { id: m.id }
-		});
-	}
-	await db.aiChat.update({ data: { updatedAt: new Date() }, where: { id: args.chatId } });
+	await db.$transaction(async (tx) => {
+		for (const m of args.messages) {
+			const existing = await tx.aiMessage.findUnique({ select: { chatId: true }, where: { id: m.id } });
+			// An id that already exists under a DIFFERENT chat is a collision/attack — refuse to touch it.
+			if (existing !== null && existing.chatId !== args.chatId) continue;
+			await tx.aiMessage.upsert({
+				create: {
+					chatId: args.chatId,
+					id: m.id,
+					metadata: (m.metadata ?? undefined) as object | undefined,
+					parts: m.parts as object,
+					role: m.role
+				},
+				update: { metadata: (m.metadata ?? undefined) as object | undefined, parts: m.parts as object },
+				where: { id: m.id }
+			});
+		}
+		await tx.aiChat.update({ data: { updatedAt: new Date() }, where: { id: args.chatId } });
+	});
 }
