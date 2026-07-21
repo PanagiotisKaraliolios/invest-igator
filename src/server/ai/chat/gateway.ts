@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import { convertToModelMessages, isStepCount, streamText, type UIMessage } from 'ai';
+import { convertToModelMessages, isStepCount, type LanguageModelUsage, streamText, type UIMessage } from 'ai';
 import { runWithAiContext } from '@/server/ai/context';
-import { price } from '@/server/ai/pricing/price';
+import { price, type TokenUsage } from '@/server/ai/pricing/price';
 import { PORTFOLIO_ANALYST } from '@/server/ai/prompts/portfolio-analyst';
 import {
 	estimateRequestCeilingNanoUsd,
@@ -52,22 +52,49 @@ const DEFAULT_DEPS: Deps = {
 const ESTIMATED_INPUT_TOKENS = 2000;
 
 /**
+ * Sums the per-step token usage of every step that FINISHED before an abort into one
+ * `TokenUsage`, so an aborted turn is settled against the partial spend it actually incurred —
+ * NOT the full reserved ceiling. `onAbort` (`StreamTextOnAbortCallback`, verified against the
+ * v7 `.d.ts`) exposes `steps: StepResult[]`, each carrying a `LanguageModelUsage`; zero finished
+ * steps => all-zero usage => a $0 partial that still releases the reservation. (`onError`, by
+ * contrast, is `StreamTextOnErrorCallback` = `{ error }` only — no usage to price — so the error
+ * path settles `null`, which `settle()` coalesces to the full ceiling, the fail-safe.)
+ */
+function sumStepUsage(steps: ReadonlyArray<{ usage: LanguageModelUsage }>): TokenUsage {
+	const total: TokenUsage = { cacheReadTokens: 0, cacheWriteTokens: 0, inputTokens: 0, outputTokens: 0 };
+	for (const step of steps) {
+		const u = toTokenUsage(step.usage);
+		total.inputTokens = (total.inputTokens ?? 0) + (u.inputTokens ?? 0);
+		total.outputTokens = (total.outputTokens ?? 0) + (u.outputTokens ?? 0);
+		total.cacheReadTokens = (total.cacheReadTokens ?? 0) + (u.cacheReadTokens ?? 0);
+		total.cacheWriteTokens = (total.cacheWriteTokens ?? 0) + (u.cacheWriteTokens ?? 0);
+	}
+	return total;
+}
+
+/**
  * The gateway: the one place the Phase 0 pieces compose into a live streaming chat turn.
  *
  * Order: resolve model -> build tool context/toolset -> load history -> reserve quota
  * (platform only) -> run inside the ALS correlation context -> `streamText` -> return the UI
  * message stream, persisting the finished turn and settling the reservation as it completes.
  *
- * Settle/persist happen in `streamText`'s and `toUIMessageStreamResponse`'s `onEnd` callbacks
- * (the current, non-deprecated names — `onFinish` is an alias for both, kept only for
- * backwards compatibility per the v7 `.d.ts`). Settling is EXACTLY ONCE and ONLY when a
- * reservation exists (platform turns only — BYOK never reserves and never settles). No
- * error-path settle: a crash or client abort before `onEnd` fires leaves the reservation
- * unclaimed, and `sweepOrphanedReservations` reclaims its ceiling after `ORPHAN_AGE_MS` — the
- * same crash backstop every other reservation in the system already relies on. An additional
- * `finally`-based best-effort settle here would risk running concurrently with `onEnd`'s
- * success settle on some abort/finish race and double-billing, which is worse than the bounded,
- * already-covered delay in reclaiming an unused ceiling.
+ * SETTLEMENT (platform turns only — BYOK never reserves, so never settles). Every one of
+ * `streamText`'s three MUTUALLY-EXCLUSIVE terminal callbacks settles the reservation, so a turn
+ * that ends any way releases its held ceiling promptly instead of waiting on the 10-minute
+ * orphan sweeper (an aborted turn holding its full request ceiling is the common case — the user
+ * hitting "stop" — and on a non-resetting $1 default limit a few of those can transiently 429 a
+ * legitimate user):
+ *   - `onEnd`   (success): price the aggregate `usage` and settle the exact actual.
+ *   - `onAbort` (user "stop" / signal): price the SUM of the finished `steps`' usage — the
+ *                partial actually spent — never the full ceiling.
+ *   - `onError` (stream/provider failure): `{ error }` carries no usage, so settle `null`;
+ *                `settle()` coalesces null to the full ceiling (fail-safe — bill the worst case).
+ * These three are terminal and mutually exclusive, so settle fires at most once per turn; a
+ * `settled` latch makes that exactly-once regardless of any SDK edge, because `settle()` is
+ * deliberately NOT idempotent on its spend leg and double-settling double-bills. The persist
+ * happens separately, in `toUIMessageStreamResponse`'s own `onEnd`. (`onEnd`/`onAbort`/`onError`
+ * are the current, non-deprecated names — `onFinish` is a deprecated alias.)
  */
 export async function streamChatTurn(
 	args: {
@@ -108,16 +135,30 @@ export async function streamChatTurn(
 			userId
 		},
 		async () => {
+			// Exactly-once settle across the three mutually-exclusive terminal callbacks below.
+			// BYOK turns hold no reservation, so this is a no-op for them.
+			let settled = false;
+			const settleOnce = async (actual: bigint | null): Promise<void> => {
+				if (reservation === null || settled) return;
+				settled = true;
+				await deps.settle(reservation, actual);
+			};
+
 			const result = streamText({
 				abortSignal: args.abortSignal,
 				instructions: PORTFOLIO_ANALYST.text,
 				messages: await convertToModelMessages(uiMessages),
 				model: resolved.model,
+				onAbort: async ({ steps }) => {
+					// Partial spend actually incurred before the abort — never the full ceiling.
+					await settleOnce(price(resolved.resolvedModel, sumStepUsage(steps))?.nanoUsd ?? null);
+				},
 				onEnd: async ({ usage }) => {
-					if (reservation !== null) {
-						const priced = price(resolved.resolvedModel, toTokenUsage(usage));
-						await deps.settle(reservation, priced?.nanoUsd ?? null);
-					}
+					await settleOnce(price(resolved.resolvedModel, toTokenUsage(usage))?.nanoUsd ?? null);
+				},
+				onError: async () => {
+					// The error event exposes no usage; null => full-ceiling fail-safe in settle().
+					await settleOnce(null);
 				},
 				stopWhen: isStepCount(MAX_STEPS),
 				// recordInputs/recordOutputs MUST both be false and inline — v7 defaults both to
