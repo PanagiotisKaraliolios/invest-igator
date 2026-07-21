@@ -123,7 +123,10 @@ export function ChatLauncher({ platformConfigured }: { platformConfigured: boole
 				<Sparkles />
 			</Button>
 			<Sheet onOpenChange={setOpen} open={open}>
-				<SheetContent className='flex w-[clamp(420px,40vw,760px)] max-w-[95vw] flex-col p-0' side='right'>
+				<SheetContent
+					className='flex w-[clamp(400px,36vw,560px)] max-w-[96vw] flex-col gap-0 p-0 sm:max-w-[96vw]'
+					side='right'
+				>
 					<ChatDrawer
 						activeId={chatId ?? null}
 						error={error}

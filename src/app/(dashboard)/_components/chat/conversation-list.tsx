@@ -1,7 +1,7 @@
 'use client';
 
 import { formatDistanceToNow } from 'date-fns';
-import { MessageSquarePlus, Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { useRef, useState } from 'react';
 import {
 	AlertDialog,
@@ -20,9 +20,9 @@ import { cn } from '@/lib/utils';
 export type ChatSummary = { id: string; title: string; updatedAt: Date };
 
 /**
- * The chat drawer's history rail. Purely presentational: `chats` comes from
- * `api.aiChat.list` and `onRename`/`onDelete` are wired to `api.aiChat.rename`/`delete`
- * mutations by the drawer (Task 10) — this component owns no tRPC calls.
+ * Conversation history, rendered as the content of the header's history menu (a popover): a "New
+ * chat" action, then the recent conversations with inline rename and delete. Purely presentational
+ * — `chats` comes from `api.aiChat.list` and the mutations are wired by the drawer (Task 10).
  *
  * Sorts defensively (newest `updatedAt` first) rather than trusting caller order, so the
  * "newest first" contract holds even if a future caller forgets to sort server-side.
@@ -61,84 +61,85 @@ export function ConversationList(props: {
 	}
 
 	return (
-		<div className='flex h-full flex-col'>
-			<div className='p-2'>
-				<Button className='w-full justify-start gap-2' onClick={onNew} size='sm' variant='outline'>
-					<MessageSquarePlus className='size-4' />
-					New chat
-				</Button>
-			</div>
+		<div className='flex max-h-[min(60vh,26rem)] flex-col p-1.5'>
+			<Button className='w-full justify-start gap-2 font-medium' onClick={onNew} size='sm' variant='ghost'>
+				<Plus className='size-4 text-primary' />
+				New chat
+			</Button>
 
 			{sorted.length === 0 ? (
-				<p className='text-muted-foreground px-3 py-2 text-sm'>
-					No conversations yet — start one to see it here.
-				</p>
+				<p className='px-2 py-6 text-center text-muted-foreground text-xs'>No conversations yet.</p>
 			) : (
-				<div className='flex-1 space-y-0.5 overflow-y-auto px-2'>
-					{sorted.map((chat) => (
-						<div
-							className={cn(
-								'group flex items-center gap-1 rounded-md px-2 py-1.5',
-								chat.id === activeId ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50'
-							)}
-							key={chat.id}
-						>
-							{editingId === chat.id ? (
-								<Input
-									autoFocus
-									className='h-7 flex-1'
-									onBlur={() => {
-										if (skipNextBlurCommit.current) {
-											skipNextBlurCommit.current = false;
-											return;
-										}
-										commitEdit(chat);
-									}}
-									onChange={(e) => setDraft(e.target.value)}
-									onKeyDown={(e) => {
-										if (e.key === 'Enter') {
-											e.preventDefault();
-											e.currentTarget.blur();
-										} else if (e.key === 'Escape') {
-											e.preventDefault();
-											cancelEdit();
-										}
-									}}
-									value={draft}
-								/>
-							) : (
-								<button
-									className='min-w-0 flex-1 text-left'
-									onClick={() => onSelect(chat.id)}
-									type='button'
-								>
-									<span className='block truncate text-sm'>{chat.title}</span>
-									<span className='text-muted-foreground block truncate text-xs'>
-										{formatDistanceToNow(chat.updatedAt, { addSuffix: true })}
-									</span>
-								</button>
-							)}
-							<div className='flex shrink-0 items-center gap-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'>
-								<Button
-									aria-label={`Rename ${chat.title}`}
-									onClick={() => startEdit(chat)}
-									size='icon-xs'
-									variant='ghost'
-								>
-									<Pencil className='size-3' />
-								</Button>
-								<Button
-									aria-label={`Delete ${chat.title}`}
-									onClick={() => setToDelete(chat.id)}
-									size='icon-xs'
-									variant='ghost'
-								>
-									<Trash2 className='size-3' />
-								</Button>
+				<>
+					<p className='px-2 pt-2.5 pb-1 font-medium text-[10px] text-muted-foreground uppercase tracking-wider'>
+						Recent
+					</p>
+					<div className='-mr-1 flex flex-col gap-0.5 overflow-y-auto pr-1'>
+						{sorted.map((chat) => (
+							<div
+								className={cn(
+									'group flex items-center gap-1 rounded-lg px-2 py-1.5',
+									chat.id === activeId ? 'bg-accent text-accent-foreground' : 'hover:bg-muted'
+								)}
+								key={chat.id}
+							>
+								{editingId === chat.id ? (
+									<Input
+										autoFocus
+										className='h-7 flex-1'
+										onBlur={() => {
+											if (skipNextBlurCommit.current) {
+												skipNextBlurCommit.current = false;
+												return;
+											}
+											commitEdit(chat);
+										}}
+										onChange={(e) => setDraft(e.target.value)}
+										onKeyDown={(e) => {
+											if (e.key === 'Enter') {
+												e.preventDefault();
+												e.currentTarget.blur();
+											} else if (e.key === 'Escape') {
+												e.preventDefault();
+												cancelEdit();
+											}
+										}}
+										value={draft}
+									/>
+								) : (
+									<button
+										className='min-w-0 flex-1 text-left'
+										onClick={() => onSelect(chat.id)}
+										type='button'
+									>
+										<span className='block truncate text-sm'>{chat.title}</span>
+										<span className='block truncate text-muted-foreground text-xs'>
+											{formatDistanceToNow(chat.updatedAt, { addSuffix: true })}
+										</span>
+									</button>
+								)}
+								<div className='flex shrink-0 items-center gap-0.5 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100'>
+									<Button
+										aria-label={`Rename ${chat.title}`}
+										onClick={() => startEdit(chat)}
+										size='icon-xs'
+										variant='ghost'
+									>
+										<Pencil className='size-3' />
+									</Button>
+									<Button
+										aria-label={`Delete ${chat.title}`}
+										onClick={() => setToDelete(chat.id)}
+										size='icon-xs'
+										variant='ghost'
+									>
+										<Trash2 className='size-3' />
+									</Button>
+								</div>
 							</div>
-						</div>
-					))}
-				</div>
+						))}
+					</div>
+				</>
 			)}
 
 			<AlertDialog onOpenChange={(open) => !open && setToDelete(null)} open={toDelete !== null}>

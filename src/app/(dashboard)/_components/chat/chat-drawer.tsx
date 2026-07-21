@@ -7,7 +7,6 @@ import { renderArtifact } from './artifacts/registry';
 import { errorCopy } from './chat-errors';
 import { ChatHeader } from './chat-header';
 import { Composer } from './composer';
-import { ConversationList } from './conversation-list';
 import { Disclosure } from './disclosure';
 import { MessageThread } from './message-thread';
 import type { SelectorOption } from './use-chat-selector';
@@ -30,11 +29,11 @@ function errorCode(error: Error | undefined): string | null {
 }
 
 /**
- * Assembles the chat experience inside the launcher's `SheetContent`: a history rail
- * (`ConversationList`), the header (title + model picker + new-chat), the message thread (tool
- * parts rendered by the deterministic artifact registry), an error banner, the composer and the
- * persistent AI disclosure. Owns only its own tRPC calls (chat list + rename/delete mutations);
- * everything else — messages, status, selector, send/stop — is threaded down from the launcher.
+ * Assembles the chat experience inside the launcher's `SheetContent` as a single column: the header
+ * (assistant mark + title + model picker + history menu), the message thread (tool parts rendered
+ * by the deterministic artifact registry), an error banner, the composer and the persistent AI
+ * disclosure. Owns only its own tRPC calls (chat list + rename/delete mutations); everything else —
+ * messages, status, selector, send/stop — is threaded down from the launcher.
  */
 export function ChatDrawer(props: {
 	activeId: string | null;
@@ -56,50 +55,40 @@ export function ChatDrawer(props: {
 
 	const busy = props.status === 'streaming' || props.status === 'submitted';
 	const code = errorCode(props.error);
+	// `AiChat.title` is nullable in the schema; give an untitled chat a stable label.
+	const chats = (chatsQuery.data ?? []).map((c) => ({ ...c, title: c.title ?? 'New chat' }));
 
 	return (
-		<div className='flex h-full min-h-0'>
-			<aside className='w-56 shrink-0 border-r'>
-				<ConversationList
-					activeId={props.activeId}
-					// `AiChat.title` is nullable in the schema; give an untitled chat a stable label.
-					chats={(chatsQuery.data ?? []).map((c) => ({ ...c, title: c.title ?? 'New chat' }))}
-					onDelete={(id) => {
-						remove.mutate({ chatId: id });
-						// Deleting the open conversation would leave the thread orphaned — start a fresh one.
-						if (id === props.activeId) props.onNewChat();
-					}}
-					onNew={props.onNewChat}
-					onRename={(id, title) => rename.mutate({ chatId: id, title })}
-					onSelect={props.onSelectChat}
-				/>
-			</aside>
-			<div className='flex min-h-0 flex-1 flex-col'>
-				<ChatHeader
-					onNewChat={props.onNewChat}
-					onSelectorChange={props.onSelectorChange}
-					options={props.options}
-					selector={props.selector}
-				/>
-				<MessageThread
-					messages={props.messages}
-					renderToolPart={(toolName, part) =>
-						renderArtifact(toolName, part as { output?: unknown; state?: string })
-					}
-				/>
-				{code ? (
-					<p className='border-t px-4 py-2 text-destructive text-sm' role='alert'>
-						{errorCopy(code)}
-					</p>
-				) : null}
-				<Composer
-					busy={busy}
-					disabled={props.options.length === 0}
-					onSend={props.onSend}
-					onStop={props.onStop}
-				/>
-				<Disclosure />
-			</div>
+		<div className='flex h-full min-h-0 flex-col'>
+			<ChatHeader
+				activeId={props.activeId}
+				chats={chats}
+				onDeleteChat={(id) => {
+					remove.mutate({ chatId: id });
+					// Deleting the open conversation would leave the thread orphaned — start a fresh one.
+					if (id === props.activeId) props.onNewChat();
+				}}
+				onNewChat={props.onNewChat}
+				onRenameChat={(id, title) => rename.mutate({ chatId: id, title })}
+				onSelectChat={props.onSelectChat}
+				onSelectorChange={props.onSelectorChange}
+				options={props.options}
+				selector={props.selector}
+			/>
+			<MessageThread
+				messages={props.messages}
+				onExample={props.onSend}
+				renderToolPart={(toolName, part) =>
+					renderArtifact(toolName, part as { output?: unknown; state?: string })
+				}
+			/>
+			{code ? (
+				<p className='px-4 pt-2 text-center text-destructive text-sm' role='alert'>
+					{errorCopy(code)}
+				</p>
+			) : null}
+			<Composer busy={busy} disabled={props.options.length === 0} onSend={props.onSend} onStop={props.onStop} />
+			<Disclosure />
 		</div>
 	);
 }

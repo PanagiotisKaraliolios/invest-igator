@@ -4,7 +4,7 @@
  */
 export function Disclosure() {
 	return (
-		<p className='px-4 py-2 text-muted-foreground text-xs' role='note'>
+		<p className='px-4 pb-3 text-center text-muted-foreground text-xs' role='note'>
 			AI assistant — informational only, not financial advice.
 		</p>
 	);

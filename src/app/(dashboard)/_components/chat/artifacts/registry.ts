@@ -44,10 +44,13 @@ export const ARTIFACT_RENDERERS: Record<string, (output: unknown) => ReactNode> 
 export function renderArtifact(toolName: string, part: { state?: string; output?: unknown }): ReactNode {
 	const canonical = fromAiSdkToolName(toolName);
 	const renderer = ARTIFACT_RENDERERS[canonical];
+	const artifact = part.state === 'output-available' && renderer ? renderer(part.output) : null;
 	return createElement(
 		'div',
-		{ className: 'my-2 space-y-1' },
+		{ className: 'space-y-1.5' },
 		createElement(ToolCallChip, { state: part.state, toolName: canonical }),
-		part.state === 'output-available' && renderer ? renderer(part.output) : null
+		artifact
+			? createElement('div', { className: 'overflow-hidden rounded-xl border bg-card/60 p-3' }, artifact)
+			: null
 	);
 }
