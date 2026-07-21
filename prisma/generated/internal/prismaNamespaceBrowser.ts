@@ -415,7 +415,8 @@ export const AiMessageScalarFieldEnum = {
   role: 'role',
   parts: 'parts',
   metadata: 'metadata',
-  createdAt: 'createdAt'
+  createdAt: 'createdAt',
+  seq: 'seq'
 } as const
 
 export type AiMessageScalarFieldEnum = (typeof AiMessageScalarFieldEnum)[keyof typeof AiMessageScalarFieldEnum]

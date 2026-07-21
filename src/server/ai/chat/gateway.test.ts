@@ -229,4 +229,33 @@ describe('streamChatTurn', () => {
 		// `onError` would settle `null` (the full-ceiling fail-safe). 0n is none of those by accident.
 		expect(settle.mock.calls[0]?.[1]).toBe(0n);
 	});
+
+	test('a setup failure after reserve settles the reservation (null → ceiling), not leaking to the sweeper', async () => {
+		const reserve = mock(async (): Promise<Reservation> => ({ ceilingNanoUsd: 1000n, id: 'res-1', userId: 'u1' }));
+		const settle = mock(async () => {});
+		// A prior message with an unsupported role makes `convertToModelMessages` throw — after
+		// `reserve`, but before streamText's terminal callbacks exist. The gateway's catch settles it.
+		const badHistory = [
+			{ id: 'bad', parts: [{ text: 'x', type: 'text' }], role: 'banana' }
+		] as unknown as UIMessage[];
+		await expect(
+			streamChatTurn(
+				{
+					chatId: 'c1',
+					incoming: userMsg('hi'),
+					selector: { kind: 'platform' },
+					session: { user: { id: 'u1' } }
+				},
+				{
+					loadTurnHistory: async () => badHistory,
+					reserve,
+					resolveModel: async () => resolvedPlatform(),
+					saveTurn: async () => {},
+					settle
+				}
+			)
+		).rejects.toThrow();
+		expect(settle).toHaveBeenCalledTimes(1);
+		expect(settle.mock.calls[0]?.[1]).toBeNull();
+	});
 });

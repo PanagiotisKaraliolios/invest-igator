@@ -38,7 +38,10 @@ export async function loadTurnHistory(chatId: string, userId: string): Promise<U
 	if (chat === null) return [];
 
 	const rows = await db.aiMessage.findMany({
-		orderBy: { createdAt: 'asc' },
+		// `seq` (a DB sequence), not `createdAt`: same-turn messages share a transaction-fixed
+		// timestamp, so ordering by `createdAt` leaves the intra-turn order to unspecified heap
+		// order. `seq` is strictly increasing → deterministic question-then-answer order on reload.
+		orderBy: { seq: 'asc' },
 		where: { chatId }
 	});
 	return rows.map((r) => ({

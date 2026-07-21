@@ -123,6 +123,17 @@ export async function streamChatTurn(
 		reservation = await deps.reserve(userId, ceiling, requestId);
 	}
 
+	// Exactly-once settle, shared by the stream's terminal callbacks AND the setup-failure path.
+	// BYOK turns hold no reservation, so this is a no-op for them. It lives at function scope (not
+	// inside the closure) so the catch below can release a reservation taken just before a setup
+	// throw — otherwise that request's ceiling would be held until the 10-minute orphan sweeper.
+	let settled = false;
+	const settleOnce = async (actual: bigint | null): Promise<void> => {
+		if (reservation === null || settled) return;
+		settled = true;
+		await deps.settle(reservation, actual);
+	};
+
 	return runWithAiContext(
 		{
 			byok: resolved.byok,
@@ -135,45 +146,46 @@ export async function streamChatTurn(
 			userId
 		},
 		async () => {
-			// Exactly-once settle across the three mutually-exclusive terminal callbacks below.
-			// BYOK turns hold no reservation, so this is a no-op for them.
-			let settled = false;
-			const settleOnce = async (actual: bigint | null): Promise<void> => {
-				if (reservation === null || settled) return;
-				settled = true;
-				await deps.settle(reservation, actual);
-			};
+			try {
+				// `convertToModelMessages` can throw on a malformed history; do it inside the try so
+				// a failure here settles the reservation rather than leaking it past the callbacks.
+				const modelMessages = await convertToModelMessages(uiMessages);
+				const result = streamText({
+					abortSignal: args.abortSignal,
+					instructions: PORTFOLIO_ANALYST.text,
+					messages: modelMessages,
+					model: resolved.model,
+					onAbort: async ({ steps }) => {
+						// Partial spend actually incurred before the abort — never the full ceiling.
+						await settleOnce(price(resolved.resolvedModel, sumStepUsage(steps))?.nanoUsd ?? null);
+					},
+					onEnd: async ({ usage }) => {
+						await settleOnce(price(resolved.resolvedModel, toTokenUsage(usage))?.nanoUsd ?? null);
+					},
+					onError: async () => {
+						// The error event exposes no usage; null => full-ceiling fail-safe in settle().
+						await settleOnce(null);
+					},
+					stopWhen: isStepCount(MAX_STEPS),
+					// recordInputs/recordOutputs MUST both be false and inline — v7 defaults both to
+					// true, which would write this user's portfolio/transactions into the telemetry
+					// sink. Enforced build-wide by telemetry-privacy.ts's TIER-0 BUILD GATE.
+					telemetry: { functionId: 'chat.turn', recordInputs: false, recordOutputs: false },
+					tools
+				});
 
-			const result = streamText({
-				abortSignal: args.abortSignal,
-				instructions: PORTFOLIO_ANALYST.text,
-				messages: await convertToModelMessages(uiMessages),
-				model: resolved.model,
-				onAbort: async ({ steps }) => {
-					// Partial spend actually incurred before the abort — never the full ceiling.
-					await settleOnce(price(resolved.resolvedModel, sumStepUsage(steps))?.nanoUsd ?? null);
-				},
-				onEnd: async ({ usage }) => {
-					await settleOnce(price(resolved.resolvedModel, toTokenUsage(usage))?.nanoUsd ?? null);
-				},
-				onError: async () => {
-					// The error event exposes no usage; null => full-ceiling fail-safe in settle().
-					await settleOnce(null);
-				},
-				stopWhen: isStepCount(MAX_STEPS),
-				// recordInputs/recordOutputs MUST both be false and inline — v7 defaults both to
-				// true, which would write this user's portfolio/transactions into the telemetry
-				// sink. Enforced build-wide by telemetry-privacy.ts's TIER-0 BUILD GATE.
-				telemetry: { functionId: 'chat.turn', recordInputs: false, recordOutputs: false },
-				tools
-			});
-
-			return result.toUIMessageStreamResponse({
-				onEnd: async ({ messages }) => {
-					await deps.saveTurn({ chatId: args.chatId, messages, userId });
-				},
-				originalMessages: uiMessages
-			});
+				return result.toUIMessageStreamResponse({
+					onEnd: async ({ messages }) => {
+						await deps.saveTurn({ chatId: args.chatId, messages, userId });
+					},
+					originalMessages: uiMessages
+				});
+			} catch (err) {
+				// Setup threw after the reservation was taken but before the stream's terminal
+				// callbacks could settle it — release it now (null => full-ceiling fail-safe).
+				await settleOnce(null);
+				throw err;
+			}
 		}
 	);
 }
