@@ -93,6 +93,9 @@ export async function POST(req: Request): Promise<Response> {
 		// `QuotaExceededError` propagates OUT of the call above rather than being handled inside it.
 		if (err instanceof QuotaExceededError) return json(429, { error: 'QUOTA_EXCEEDED' });
 		if (err instanceof InvalidCredentialError) return json(402, { error: 'CREDENTIAL_REJECTED' });
+		// Converting to a JSON 500 here suppresses Next's default uncaught-error logging, so log
+		// explicitly — otherwise an unmapped failure becomes invisible in production.
+		console.error('POST /api/ai/chat failed:', err);
 		return json(500, { error: 'CHAT_FAILED' });
 	}
 }
