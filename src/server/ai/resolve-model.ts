@@ -249,9 +249,13 @@ export type ModelSelector = { kind: 'platform' } | { kind: 'byok'; provider: Byo
  * The quota check lives in a separate code path (Task 8) precisely so that a BYOK
  * short-circuit cannot accidentally skip both.
  *
- * A BROKEN or MISSING BYOK credential THROWS — whether picked implicitly (most-recent) or
- * explicitly via `selector`. It must never fall through to platformModel(): that would silently
- * move a BYOK user's spend onto the platform's card — and hide the misconfiguration.
+ * A BROKEN BYOK credential (one that exists but fails to build) always THROWS, whether picked
+ * implicitly (most-recent) or explicitly via `selector` — it must never fall through to
+ * platformModel(): that would silently move a BYOK user's spend onto the platform's card and
+ * hide the misconfiguration. A MISSING credential differs by path: with no selector it falls
+ * through to the platform model (today's default-user experience); with an explicit `byok`
+ * selector it also throws — the user asked for that specific provider, so silently falling back
+ * to platform would defeat the point of an explicit picker.
  */
 export async function resolveModel(userId: string, selector?: ModelSelector): Promise<ResolvedModel> {
 	if (selector?.kind === 'platform') return platformModel();
