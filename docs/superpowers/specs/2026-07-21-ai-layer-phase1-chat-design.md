@@ -123,7 +123,7 @@ tRPC ai-chat router: list / get / rename / delete   (history CRUD, ownership-sco
    note. BYOK bypasses quota and nothing else.
 4. **Correlation context:** wrap the stream in
    `runWithAiContext({ requestId, userId, surface:'CHAT', functionId:'chat.turn', chatId, byok, resolvedModel, reservationId }, …)`.
-5. **Stream:** `streamText({ model, instructions: PORTFOLIO_ANALYST.text, messages: await convertToModelMessages(history), tools, stopWhen: stepCountIs(MAX_STEPS), abortSignal })` — `estInputTokens` for step 3 is estimated from the serialized loaded history; the exact `stopWhen` helper name is confirmed against the `.d.ts` (§4).
+5. **Stream:** `streamText({ model, instructions: PORTFOLIO_ANALYST.text, messages: await convertToModelMessages(history), tools, stopWhen: isStepCount(MAX_STEPS), abortSignal, telemetry: { functionId: 'chat.turn' }, onFinish })` — `estInputTokens` for step 3 is estimated from the serialized loaded history. Verified v7 names (against the `.d.ts` and the in-repo eval): `isStepCount` (not `stepCountIs`, which is only an alias), `instructions` (not `system`), the app-wide telemetry integration is already registered in `src/instrumentation.ts`.
 6. **Return** `result.toUIMessageStreamResponse({ originalMessages, onFinish })`.
 7. **Settle:** in `onFinish`, price `result.totalUsage` and
    `settle(reservation, actualNanoUsd)`; on error/abort, settle best-effort in a `finally`.
