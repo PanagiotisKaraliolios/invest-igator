@@ -37,6 +37,11 @@ async function handle(req: Request): Promise<Response> {
 	const tools = buildToolset(ctx);
 	const server = buildMcpServer(tools, ctx, requestId);
 
+	// DNS-rebinding/Origin validation is intentionally left off here. That protection exists to
+	// stop a malicious page from riding the browser's ambient cookie to a local/internal server.
+	// This endpoint has no ambient auth: it only accepts a bearer `Authorization` header, which a
+	// cross-origin browser request cannot attach on the victim's behalf. No ambient credential,
+	// no CSRF/rebinding vector.
 	const transport = new WebStandardStreamableHTTPServerTransport({
 		enableJsonResponse: true,
 		sessionIdGenerator: undefined

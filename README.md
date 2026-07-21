@@ -49,6 +49,7 @@ Built with Next.js App Router, tRPC v11, Prisma/PostgreSQL, shadcn/ui, and Influ
   - 🚦 Rate limiting and expiration controls
   - 🔒 SHA-256 hashed keys with secure generation
   - 📊 Usage tracking and management UI
+- 🤖 **MCP server**: read-only [Model Context Protocol](https://modelcontextprotocol.io) endpoint (`/api/mcp`) for external agents — see [docs/mcp.md](docs/mcp.md)
 
 ## 🛠️ Tech stack
 
