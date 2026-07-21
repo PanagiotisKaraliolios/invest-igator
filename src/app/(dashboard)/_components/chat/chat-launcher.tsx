@@ -113,7 +113,13 @@ export function ChatLauncher({ platformConfigured }: { platformConfigured: boole
 
 	return (
 		<>
-			<Button aria-label='Open AI assistant' onClick={() => setOpen(true)} size='icon' variant='ghost'>
+			<Button
+				aria-label='Open AI assistant'
+				data-testid='chat-launcher'
+				onClick={() => setOpen(true)}
+				size='icon'
+				variant='ghost'
+			>
 				<Sparkles />
 			</Button>
 			<Sheet onOpenChange={setOpen} open={open}>
