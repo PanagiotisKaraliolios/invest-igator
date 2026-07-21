@@ -20,8 +20,18 @@ export type AiMessageModel = runtime.Types.Result.DefaultSelection<Prisma.$AiMes
 
 export type AggregateAiMessage = {
   _count: AiMessageCountAggregateOutputType | null
+  _avg: AiMessageAvgAggregateOutputType | null
+  _sum: AiMessageSumAggregateOutputType | null
   _min: AiMessageMinAggregateOutputType | null
   _max: AiMessageMaxAggregateOutputType | null
+}
+
+export type AiMessageAvgAggregateOutputType = {
+  seq: number | null
+}
+
+export type AiMessageSumAggregateOutputType = {
+  seq: number | null
 }
 
 export type AiMessageMinAggregateOutputType = {
@@ -29,6 +39,7 @@ export type AiMessageMinAggregateOutputType = {
   chatId: string | null
   role: string | null
   createdAt: Date | null
+  seq: number | null
 }
 
 export type AiMessageMaxAggregateOutputType = {
@@ -36,6 +47,7 @@ export type AiMessageMaxAggregateOutputType = {
   chatId: string | null
   role: string | null
   createdAt: Date | null
+  seq: number | null
 }
 
 export type AiMessageCountAggregateOutputType = {
@@ -45,15 +57,25 @@ export type AiMessageCountAggregateOutputType = {
   parts: number
   metadata: number
   createdAt: number
+  seq: number
   _all: number
 }
 
+
+export type AiMessageAvgAggregateInputType = {
+  seq?: true
+}
+
+export type AiMessageSumAggregateInputType = {
+  seq?: true
+}
 
 export type AiMessageMinAggregateInputType = {
   id?: true
   chatId?: true
   role?: true
   createdAt?: true
+  seq?: true
 }
 
 export type AiMessageMaxAggregateInputType = {
@@ -61,6 +83,7 @@ export type AiMessageMaxAggregateInputType = {
   chatId?: true
   role?: true
   createdAt?: true
+  seq?: true
 }
 
 export type AiMessageCountAggregateInputType = {
@@ -70,6 +93,7 @@ export type AiMessageCountAggregateInputType = {
   parts?: true
   metadata?: true
   createdAt?: true
+  seq?: true
   _all?: true
 }
 
@@ -111,6 +135,18 @@ export type AiMessageAggregateArgs<ExtArgs extends runtime.Types.Extensions.Inte
   /**
    * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
    * 
+   * Select which fields to average
+  **/
+  _avg?: AiMessageAvgAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
+   * Select which fields to sum
+  **/
+  _sum?: AiMessageSumAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
    * Select which fields to find the minimum value
   **/
   _min?: AiMessageMinAggregateInputType
@@ -141,6 +177,8 @@ export type AiMessageGroupByArgs<ExtArgs extends runtime.Types.Extensions.Intern
   take?: number
   skip?: number
   _count?: AiMessageCountAggregateInputType | true
+  _avg?: AiMessageAvgAggregateInputType
+  _sum?: AiMessageSumAggregateInputType
   _min?: AiMessageMinAggregateInputType
   _max?: AiMessageMaxAggregateInputType
 }
@@ -152,7 +190,10 @@ export type AiMessageGroupByOutputType = {
   parts: runtime.JsonValue
   metadata: runtime.JsonValue | null
   createdAt: Date
+  seq: number
   _count: AiMessageCountAggregateOutputType | null
+  _avg: AiMessageAvgAggregateOutputType | null
+  _sum: AiMessageSumAggregateOutputType | null
   _min: AiMessageMinAggregateOutputType | null
   _max: AiMessageMaxAggregateOutputType | null
 }
@@ -182,6 +223,7 @@ export type AiMessageWhereInput = {
   parts?: Prisma.JsonFilter<"AiMessage">
   metadata?: Prisma.JsonNullableFilter<"AiMessage">
   createdAt?: Prisma.DateTimeFilter<"AiMessage"> | Date | string
+  seq?: Prisma.IntFilter<"AiMessage"> | number
   chat?: Prisma.XOR<Prisma.AiChatScalarRelationFilter, Prisma.AiChatWhereInput>
 }
 
@@ -192,6 +234,7 @@ export type AiMessageOrderByWithRelationInput = {
   parts?: Prisma.SortOrder
   metadata?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  seq?: Prisma.SortOrder
   chat?: Prisma.AiChatOrderByWithRelationInput
 }
 
@@ -205,6 +248,7 @@ export type AiMessageWhereUniqueInput = Prisma.AtLeast<{
   parts?: Prisma.JsonFilter<"AiMessage">
   metadata?: Prisma.JsonNullableFilter<"AiMessage">
   createdAt?: Prisma.DateTimeFilter<"AiMessage"> | Date | string
+  seq?: Prisma.IntFilter<"AiMessage"> | number
   chat?: Prisma.XOR<Prisma.AiChatScalarRelationFilter, Prisma.AiChatWhereInput>
 }, "id">
 
@@ -215,9 +259,12 @@ export type AiMessageOrderByWithAggregationInput = {
   parts?: Prisma.SortOrder
   metadata?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  seq?: Prisma.SortOrder
   _count?: Prisma.AiMessageCountOrderByAggregateInput
+  _avg?: Prisma.AiMessageAvgOrderByAggregateInput
   _max?: Prisma.AiMessageMaxOrderByAggregateInput
   _min?: Prisma.AiMessageMinOrderByAggregateInput
+  _sum?: Prisma.AiMessageSumOrderByAggregateInput
 }
 
 export type AiMessageScalarWhereWithAggregatesInput = {
@@ -230,6 +277,7 @@ export type AiMessageScalarWhereWithAggregatesInput = {
   parts?: Prisma.JsonWithAggregatesFilter<"AiMessage">
   metadata?: Prisma.JsonNullableWithAggregatesFilter<"AiMessage">
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"AiMessage"> | Date | string
+  seq?: Prisma.IntWithAggregatesFilter<"AiMessage"> | number
 }
 
 export type AiMessageCreateInput = {
@@ -238,6 +286,7 @@ export type AiMessageCreateInput = {
   parts: Prisma.JsonNullValueInput | runtime.InputJsonValue
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
+  seq?: number
   chat: Prisma.AiChatCreateNestedOneWithoutMessagesInput
 }
 
@@ -248,6 +297,7 @@ export type AiMessageUncheckedCreateInput = {
   parts: Prisma.JsonNullValueInput | runtime.InputJsonValue
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
+  seq?: number
 }
 
 export type AiMessageUpdateInput = {
@@ -256,6 +306,7 @@ export type AiMessageUpdateInput = {
   parts?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  seq?: Prisma.IntFieldUpdateOperationsInput | number
   chat?: Prisma.AiChatUpdateOneRequiredWithoutMessagesNestedInput
 }
 
@@ -266,6 +317,7 @@ export type AiMessageUncheckedUpdateInput = {
   parts?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  seq?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
 export type AiMessageCreateManyInput = {
@@ -275,6 +327,7 @@ export type AiMessageCreateManyInput = {
   parts: Prisma.JsonNullValueInput | runtime.InputJsonValue
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
+  seq?: number
 }
 
 export type AiMessageUpdateManyMutationInput = {
@@ -283,6 +336,7 @@ export type AiMessageUpdateManyMutationInput = {
   parts?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  seq?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
 export type AiMessageUncheckedUpdateManyInput = {
@@ -292,6 +346,7 @@ export type AiMessageUncheckedUpdateManyInput = {
   parts?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  seq?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
 export type AiMessageListRelationFilter = {
@@ -311,6 +366,11 @@ export type AiMessageCountOrderByAggregateInput = {
   parts?: Prisma.SortOrder
   metadata?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  seq?: Prisma.SortOrder
+}
+
+export type AiMessageAvgOrderByAggregateInput = {
+  seq?: Prisma.SortOrder
 }
 
 export type AiMessageMaxOrderByAggregateInput = {
@@ -318,6 +378,7 @@ export type AiMessageMaxOrderByAggregateInput = {
   chatId?: Prisma.SortOrder
   role?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  seq?: Prisma.SortOrder
 }
 
 export type AiMessageMinOrderByAggregateInput = {
@@ -325,6 +386,11 @@ export type AiMessageMinOrderByAggregateInput = {
   chatId?: Prisma.SortOrder
   role?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  seq?: Prisma.SortOrder
+}
+
+export type AiMessageSumOrderByAggregateInput = {
+  seq?: Prisma.SortOrder
 }
 
 export type AiMessageCreateNestedManyWithoutChatInput = {
@@ -375,6 +441,7 @@ export type AiMessageCreateWithoutChatInput = {
   parts: Prisma.JsonNullValueInput | runtime.InputJsonValue
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
+  seq?: number
 }
 
 export type AiMessageUncheckedCreateWithoutChatInput = {
@@ -383,6 +450,7 @@ export type AiMessageUncheckedCreateWithoutChatInput = {
   parts: Prisma.JsonNullValueInput | runtime.InputJsonValue
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
+  seq?: number
 }
 
 export type AiMessageCreateOrConnectWithoutChatInput = {
@@ -421,6 +489,7 @@ export type AiMessageScalarWhereInput = {
   parts?: Prisma.JsonFilter<"AiMessage">
   metadata?: Prisma.JsonNullableFilter<"AiMessage">
   createdAt?: Prisma.DateTimeFilter<"AiMessage"> | Date | string
+  seq?: Prisma.IntFilter<"AiMessage"> | number
 }
 
 export type AiMessageCreateManyChatInput = {
@@ -429,6 +498,7 @@ export type AiMessageCreateManyChatInput = {
   parts: Prisma.JsonNullValueInput | runtime.InputJsonValue
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
+  seq?: number
 }
 
 export type AiMessageUpdateWithoutChatInput = {
@@ -437,6 +507,7 @@ export type AiMessageUpdateWithoutChatInput = {
   parts?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  seq?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
 export type AiMessageUncheckedUpdateWithoutChatInput = {
@@ -445,6 +516,7 @@ export type AiMessageUncheckedUpdateWithoutChatInput = {
   parts?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  seq?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
 export type AiMessageUncheckedUpdateManyWithoutChatInput = {
@@ -453,6 +525,7 @@ export type AiMessageUncheckedUpdateManyWithoutChatInput = {
   parts?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  seq?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
 
@@ -464,6 +537,7 @@ export type AiMessageSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   parts?: boolean
   metadata?: boolean
   createdAt?: boolean
+  seq?: boolean
   chat?: boolean | Prisma.AiChatDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["aiMessage"]>
 
@@ -474,6 +548,7 @@ export type AiMessageSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ext
   parts?: boolean
   metadata?: boolean
   createdAt?: boolean
+  seq?: boolean
   chat?: boolean | Prisma.AiChatDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["aiMessage"]>
 
@@ -484,6 +559,7 @@ export type AiMessageSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ext
   parts?: boolean
   metadata?: boolean
   createdAt?: boolean
+  seq?: boolean
   chat?: boolean | Prisma.AiChatDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["aiMessage"]>
 
@@ -494,9 +570,10 @@ export type AiMessageSelectScalar = {
   parts?: boolean
   metadata?: boolean
   createdAt?: boolean
+  seq?: boolean
 }
 
-export type AiMessageOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "chatId" | "role" | "parts" | "metadata" | "createdAt", ExtArgs["result"]["aiMessage"]>
+export type AiMessageOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "chatId" | "role" | "parts" | "metadata" | "createdAt" | "seq", ExtArgs["result"]["aiMessage"]>
 export type AiMessageInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   chat?: boolean | Prisma.AiChatDefaultArgs<ExtArgs>
 }
@@ -519,6 +596,7 @@ export type $AiMessagePayload<ExtArgs extends runtime.Types.Extensions.InternalA
     parts: runtime.JsonValue
     metadata: runtime.JsonValue | null
     createdAt: Date
+    seq: number
   }, ExtArgs["result"]["aiMessage"]>
   composites: {}
 }
@@ -949,6 +1027,7 @@ export interface AiMessageFieldRefs {
   readonly parts: Prisma.FieldRef<"AiMessage", 'Json'>
   readonly metadata: Prisma.FieldRef<"AiMessage", 'Json'>
   readonly createdAt: Prisma.FieldRef<"AiMessage", 'DateTime'>
+  readonly seq: Prisma.FieldRef<"AiMessage", 'Int'>
 }
     
 

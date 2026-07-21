@@ -20,7 +20,20 @@ const bodySchema = z.object({
 	// REQUIRED: the client generates the chat id (AI SDK v7) and sends it on every turn, so a NEW
 	// conversation's 2nd turn reuses the same chat instead of spawning a second one.
 	chatId: z.string().min(1),
-	message: z.object({ id: z.string(), parts: z.array(z.any()), role: z.literal('user') }).passthrough(),
+	// A user turn is text only. Restricting `part.type` to 'text' (and bounding sizes) stops a
+	// client from smuggling a fabricated `tool-*`/data part that would be persisted and later
+	// re-rendered as a "real" artifact in its own history. `.passthrough()` on the part tolerates
+	// extra AI-SDK fields (e.g. providerMetadata) without widening the accepted `type`.
+	message: z
+		.object({
+			id: z.string().max(200),
+			parts: z
+				.array(z.object({ text: z.string().min(1).max(8000), type: z.literal('text') }).passthrough())
+				.min(1)
+				.max(16),
+			role: z.literal('user')
+		})
+		.passthrough(),
 	model: z.discriminatedUnion('kind', [
 		z.object({ kind: z.literal('platform') }),
 		z.object({

@@ -67,6 +67,22 @@ describe('Tier 0 (DB) — chat persistence: ownership-scoped create/load/save', 
 		expect(loaded[1]?.parts).toEqual([{ text: 'hello', type: 'text' }]);
 	});
 
+	test('loadTurnHistory orders by seq (insertion), so a createdAt inversion cannot reorder a turn', async () => {
+		const userId = await seedUser('seq-order');
+		const { id: chatId } = await createChat(userId, 'T');
+		await saveTurn({ chatId, messages: [msg('q', 'user', 'question'), msg('a', 'assistant', 'answer')], userId });
+		expect((await loadTurnHistory(chatId, userId)).map((m) => m.id)).toEqual(['q', 'a']);
+
+		// Force a createdAt INVERSION: the first-inserted message (lower seq) is given a LATER
+		// timestamp than the second. A `createdAt`-ordered read would now flip the turn to ['a','q']
+		// — showing the answer above the question. Ordering by the monotonic `seq` must not.
+		await db.aiMessage.update({ data: { createdAt: new Date(Date.now() + 60_000) }, where: { id: 'q' } });
+		expect((await loadTurnHistory(chatId, userId)).map((m) => m.id)).toEqual(['q', 'a']);
+
+		const rows = await db.aiMessage.findMany({ orderBy: { seq: 'asc' }, select: { id: true, seq: true }, where: { chatId } });
+		expect(rows[0]?.seq).toBeLessThan(rows[1]?.seq as number);
+	});
+
 	test('saveTurn upserts by message id: a repeat call with the same id updates parts, not a duplicate row', async () => {
 		const userId = await seedUser('owner');
 		const { id: chatId } = await createChat(userId, 'T');

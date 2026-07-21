@@ -456,6 +456,11 @@ model AiMessage {
   parts     Json // the whole UIMessage.parts array
   metadata  Json?
   createdAt DateTime @default(now())
+  // Monotonic insertion order. `createdAt` is transaction-fixed, so the user + assistant messages
+  // of one turn share a millisecond timestamp; ordering by that leaves same-turn ties to unspecified
+  // heap order (a reload could show the answer above its question). `seq` is a DB sequence, so it is
+  // strictly increasing and gives a stable, deterministic order. loadTurnHistory orders by it.
+  seq       Int      @default(autoincrement())
 
-  @@index([chatId, createdAt])
+  @@index([chatId, seq])
 }
