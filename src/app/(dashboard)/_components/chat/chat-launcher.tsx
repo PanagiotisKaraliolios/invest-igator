@@ -4,6 +4,7 @@ import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, type UIMessage } from 'ai';
 import { Sparkles } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import type { ModelSelector } from '@/server/ai/resolve-model';
@@ -98,9 +99,16 @@ export function ChatLauncher({ platformConfigured }: { platformConfigured: boole
 	}
 
 	async function selectChat(id: string) {
-		const loaded = await utils.aiChat.get.fetch({ chatId: id });
-		pending.current = { id, messages: loaded.messages };
-		setChatId(id);
+		try {
+			const loaded = await utils.aiChat.get.fetch({ chatId: id });
+			pending.current = { id, messages: loaded.messages };
+			setChatId(id);
+		} catch {
+			// The fetch failed (network, or the chat was deleted under us). Leave the current
+			// conversation untouched — no half-switched state — and tell the user rather than
+			// floating an unhandled rejection out of this void click handler.
+			toast.error('Could not load that conversation. Please try again.');
+		}
 	}
 
 	return (

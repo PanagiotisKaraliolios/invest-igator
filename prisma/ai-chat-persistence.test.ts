@@ -149,6 +149,7 @@ describe('Tier 0 (DB) — chat persistence: ownership-scoped create/load/save', 
 		const owner = await seedUser('owner');
 		const attacker = await seedUser('attacker');
 		await ensureChat('collide-id', owner, 'Owner chat');
+		const before = await db.aiChat.findUniqueOrThrow({ select: { updatedAt: true }, where: { id: 'collide-id' } });
 
 		// The attacker reuses the owner's id. `AiChat.id` is globally unique, so the upsert matches
 		// the existing foreign row and the `update: {}` touches nothing — the row stays the owner's.
@@ -159,6 +160,11 @@ describe('Tier 0 (DB) — chat persistence: ownership-scoped create/load/save', 
 		expect(chat.title).toBe('Owner chat');
 		// The attacker gained no chat of their own.
 		expect(await db.aiChat.count({ where: { userId: attacker } })).toBe(0);
+		// Regression guard: the whole no-op rests on Prisma leaving `@updatedAt` untouched for an
+		// empty `update: {}` (behaviour that changed ~Prisma 4.4). If a future upgrade reintroduced
+		// a touch, the collision would silently reorder the victim's recency-sorted history.
+		const after = await db.aiChat.findUniqueOrThrow({ select: { updatedAt: true }, where: { id: 'collide-id' } });
+		expect(after.updatedAt.getTime()).toBe(before.updatedAt.getTime());
 	});
 
 	test("saveTurn refuses to overwrite a message id that already belongs to ANOTHER user's chat (cross-tenant write gate)", async () => {
