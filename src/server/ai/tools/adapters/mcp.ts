@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { dbSink } from '@/server/ai/telemetry';
+import { classifyToolError, dbSink, safeWrite } from '@/server/ai/telemetry';
 import type { AppTool, ToolCtx } from '../types';
 
 const SERVER_INFO = { name: 'invest-igator', version: '0.1.0' } as const;
@@ -44,39 +44,49 @@ export function buildMcpServer(tools: AppTool[], ctx: ToolCtx, requestId: string
 					// The SDK validates `args` against `def.inputSchema` before calling us, so `args`
 					// is already the tool's input type at runtime.
 					const result = await def.execute(args as never, toolCtx);
-					await dbSink.writeToolCall({
-						durationMs: Date.now() - started,
-						errorMessage: null,
-						inputHash: hashToolInput(args),
-						ok: true,
-						requestId,
-						surface: 'MCP',
-						toolCallId,
-						toolName: def.name,
-						userId: ctx.userId
-					});
+					await safeWrite(() =>
+						dbSink.writeToolCall({
+							durationMs: Date.now() - started,
+							errorMessage: null,
+							inputHash: hashToolInput(args),
+							ok: true,
+							requestId,
+							surface: 'MCP',
+							toolCallId,
+							toolName: def.name,
+							userId: ctx.userId
+						})
+					);
 					// `tools: AppTool[]` erases each tool's concrete output type down to the base
 					// `z.ZodType` (Output = unknown), so `result` is `unknown` here even though at
 					// runtime it is whatever `def.outputSchema` (a strictObject, per AppTool's
-					// contract) describes. The SDK itself validates `result` against that same
-					// `outputSchema` before sending it, so this cast — like the `args` cast above —
-					// asserts a runtime type the SDK independently enforces, not an unchecked one.
+					// contract) describes. This cast — like the `args` cast above — asserts a
+					// runtime type the SDK does not check until AFTER we return: the `ok:true` row
+					// above reflects only that the handler returned without throwing, not wire-level
+					// output-schema success. `validateToolOutput` runs on `structuredContent` against
+					// `def.outputSchema` after this function returns, so a schema mismatch here still
+					// surfaces to the client (as an SDK-level error) even though telemetry saw `ok:true`.
 					return {
 						content: [{ text: JSON.stringify(result), type: 'text' as const }],
 						structuredContent: result as Record<string, unknown>
 					};
 				} catch (err) {
-					await dbSink.writeToolCall({
-						durationMs: Date.now() - started,
-						errorMessage: err instanceof Error ? err.message : String(err),
-						inputHash: hashToolInput(args),
-						ok: false,
-						requestId,
-						surface: 'MCP',
-						toolCallId,
-						toolName: def.name,
-						userId: ctx.userId
-					});
+					await safeWrite(() =>
+						dbSink.writeToolCall({
+							durationMs: Date.now() - started,
+							// C1 (see telemetry.ts): a tool's thrown message is user-scoped free text —
+							// positions, symbols, quantities, account identifiers. Persist only the
+							// bounded classification, never the raw message.
+							errorMessage: classifyToolError(err),
+							inputHash: hashToolInput(args),
+							ok: false,
+							requestId,
+							surface: 'MCP',
+							toolCallId,
+							toolName: def.name,
+							userId: ctx.userId
+						})
+					);
 					throw err; // SDK formats the MCP error result (isError: true)
 				}
 			}
