@@ -14,6 +14,21 @@ export async function createChat(userId: string, title: string): Promise<{ id: s
 }
 
 /**
+ * Idempotently ensure a chat row exists for a CLIENT-supplied id (AI SDK v7 pattern: the client
+ * generates the chat id so it survives the first turn's round-trip). Creates the row scoped to
+ * `userId` when the id is new; a no-op `update: {}` when the id already exists.
+ *
+ * Security: `AiChat.id` is globally unique, so a colliding id that already belongs to ANOTHER
+ * user matches the existing foreign row — `update: {}` touches nothing, so the caller gains no
+ * chat and cannot overwrite the owner's title/userId. History stays gated downstream:
+ * `loadTurnHistory`/`saveTurn` re-scope every read/write by `{ id, userId }`, so a caller who
+ * guesses a foreign id still gets `[]` and writes nothing.
+ */
+export async function ensureChat(chatId: string, userId: string, title: string): Promise<void> {
+	await db.aiChat.upsert({ create: { id: chatId, title, userId }, update: {}, where: { id: chatId } });
+}
+
+/**
  * Ownership-scoped. Returns `[]` for a chat the user does not own, or one that does not exist at
  * all — never throws to the caller, and never distinguishes "not yours" from "does not exist" so
  * a caller can't probe for chat ids that belong to someone else.

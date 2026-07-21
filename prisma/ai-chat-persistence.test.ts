@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { UIMessage } from 'ai';
-import { createChat, deriveTitle, loadTurnHistory, saveTurn } from '../src/server/ai/chat/persistence';
+import { createChat, deriveTitle, ensureChat, loadTurnHistory, saveTurn } from '../src/server/ai/chat/persistence';
 import { resetAiTables, seedUser } from '../src/server/ai/evals/db-support';
 import { db } from '../src/server/db';
 
@@ -126,6 +126,39 @@ describe('Tier 0 (DB) — chat persistence: ownership-scoped create/load/save', 
 
 		const after = await db.aiChat.findUniqueOrThrow({ select: { updatedAt: true }, where: { id: chatId } });
 		expect(after.updatedAt.getTime()).toBe(before.updatedAt.getTime());
+	});
+
+	test('ensureChat creates a chat with the client-supplied id, scoped to the caller, when missing', async () => {
+		const userId = await seedUser('owner');
+		await ensureChat('client-uuid-1', userId, 'Hello there');
+		const chat = await db.aiChat.findUniqueOrThrow({ where: { id: 'client-uuid-1' } });
+		expect(chat.userId).toBe(userId);
+		expect(chat.title).toBe('Hello there');
+	});
+
+	test('ensureChat is a no-op when the id already exists — never changes the title or owner', async () => {
+		const userId = await seedUser('owner');
+		await ensureChat('client-uuid-2', userId, 'Original title');
+		await ensureChat('client-uuid-2', userId, 'A different title');
+		const chat = await db.aiChat.findUniqueOrThrow({ where: { id: 'client-uuid-2' } });
+		expect(chat.title).toBe('Original title');
+		expect(chat.userId).toBe(userId);
+	});
+
+	test('ensureChat on an id owned by ANOTHER user does not hand the caller a chat (cross-tenant upsert gate)', async () => {
+		const owner = await seedUser('owner');
+		const attacker = await seedUser('attacker');
+		await ensureChat('collide-id', owner, 'Owner chat');
+
+		// The attacker reuses the owner's id. `AiChat.id` is globally unique, so the upsert matches
+		// the existing foreign row and the `update: {}` touches nothing — the row stays the owner's.
+		await ensureChat('collide-id', attacker, 'Attacker chat');
+
+		const chat = await db.aiChat.findUniqueOrThrow({ where: { id: 'collide-id' } });
+		expect(chat.userId).toBe(owner);
+		expect(chat.title).toBe('Owner chat');
+		// The attacker gained no chat of their own.
+		expect(await db.aiChat.count({ where: { userId: attacker } })).toBe(0);
 	});
 
 	test("saveTurn refuses to overwrite a message id that already belongs to ANOTHER user's chat (cross-tenant write gate)", async () => {

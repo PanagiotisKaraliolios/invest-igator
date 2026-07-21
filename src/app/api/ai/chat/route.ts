@@ -2,7 +2,7 @@ import type { UIMessage } from 'ai';
 import { z } from 'zod';
 import { getServerSession } from '@/lib/auth/get-session';
 import { streamChatTurn } from '@/server/ai/chat/gateway';
-import { createChat, deriveTitle } from '@/server/ai/chat/persistence';
+import { deriveTitle, ensureChat } from '@/server/ai/chat/persistence';
 import { QuotaExceededError } from '@/server/ai/quota';
 import { platformModel } from '@/server/ai/registry';
 import { InvalidCredentialError } from '@/server/ai/resolve-model';
@@ -17,7 +17,9 @@ export const maxDuration = 60;
  * history here would let a caller inject arbitrary prior turns into the model's context.
  */
 const bodySchema = z.object({
-	chatId: z.string().optional(),
+	// REQUIRED: the client generates the chat id (AI SDK v7) and sends it on every turn, so a NEW
+	// conversation's 2nd turn reuses the same chat instead of spawning a second one.
+	chatId: z.string().min(1),
 	message: z.object({ id: z.string(), parts: z.array(z.any()), role: z.literal('user') }).passthrough(),
 	model: z.discriminatedUnion('kind', [
 		z.object({ kind: z.literal('platform') }),
@@ -61,7 +63,7 @@ export async function POST(req: Request): Promise<Response> {
 
 	const parsed = bodySchema.safeParse(await req.json().catch(() => null));
 	if (!parsed.success) return json(400, { error: 'BAD_REQUEST' });
-	const { chatId: incomingChatId, message, model } = parsed.data;
+	const { chatId, message, model } = parsed.data;
 	const userId = session.user.id;
 
 	// Re-validate the client's selector against the user's OWN credentials — never trust the
@@ -77,8 +79,10 @@ export async function POST(req: Request): Promise<Response> {
 		if (owned === null) return json(403, { error: 'NO_SUCH_CREDENTIAL' });
 	}
 
-	// Server owns chat identity: create on the first turn, derive a title from the message text.
-	const chatId = incomingChatId ?? (await createChat(userId, deriveTitle(firstText(message)))).id;
+	// The client owns the chat id; the server upserts it (create-if-missing) so the first turn
+	// persists a row and later turns reuse it. `ensureChat` is a no-op for an id that already
+	// exists — including one owned by another user, which stays theirs (see persistence.ts).
+	await ensureChat(chatId, userId, deriveTitle(firstText(message)));
 
 	try {
 		return await streamChatTurn({

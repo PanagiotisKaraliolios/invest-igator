@@ -46,16 +46,14 @@ mock.module('@/server/ai/registry', () => ({
 	}
 }));
 
-let createChatResult = { id: 'new-chat-id' };
-const createChatCalls: Array<{ userId: string; title: string }> = [];
+const ensureChatCalls: Array<{ chatId: string; userId: string; title: string }> = [];
 mock.module('@/server/ai/chat/persistence', () => ({
-	createChat: async (userId: string, title: string) => {
-		createChatCalls.push({ title, userId });
-		return createChatResult;
-	},
 	deriveTitle: (firstUserText: string) => {
 		const line = firstUserText.split('\n')[0]?.trim() ?? '';
 		return line.length === 0 ? 'New chat' : line.slice(0, 60);
+	},
+	ensureChat: async (chatId: string, userId: string, title: string) => {
+		ensureChatCalls.push({ chatId, title, userId });
 	}
 }));
 
@@ -95,8 +93,7 @@ function resetMocks(): void {
 	session = { user: { id: 'u1' } };
 	ownedCredential = null;
 	platformIsConfigured = true;
-	createChatResult = { id: 'new-chat-id' };
-	createChatCalls.length = 0;
+	ensureChatCalls.length = 0;
 	findFirstCalls.length = 0;
 	gatewayCalls.length = 0;
 	gatewayImpl = async () => new Response('ok');
@@ -181,11 +178,18 @@ describe('POST /api/ai/chat', () => {
 		expect(call.abortSignal).toBeInstanceOf(AbortSignal);
 	});
 
-	test('creates a chat and derives its title from the message when chatId is omitted', async () => {
+	test('400 when chatId is omitted — the client always supplies it now', async () => {
 		resetMocks();
-		createChatResult = { id: 'brand-new-chat' };
+		const res = await post(validBody({ chatId: undefined }));
+		expect(res.status).toBe(400);
+		expect(gatewayCalls).toHaveLength(0);
+		expect(ensureChatCalls).toHaveLength(0);
+	});
+
+	test('ensures the client-supplied chat id exists with a title derived from the message', async () => {
+		resetMocks();
 		const body = validBody({
-			chatId: undefined,
+			chatId: 'client-chat-9',
 			message: {
 				id: 'm1',
 				parts: [{ text: 'What is my portfolio worth?\nExtra line', type: 'text' }],
@@ -194,9 +198,12 @@ describe('POST /api/ai/chat', () => {
 		});
 		const res = await post(body);
 		expect(res.status).toBe(200);
-		expect(createChatCalls).toEqual([{ title: 'What is my portfolio worth?', userId: 'u1' }]);
+		expect(ensureChatCalls).toEqual([
+			{ chatId: 'client-chat-9', title: 'What is my portfolio worth?', userId: 'u1' }
+		]);
+		// The client id flows straight through to the gateway — the server no longer mints its own.
 		const call = gatewayCalls.at(0) as { chatId: string };
-		expect(call.chatId).toBe('brand-new-chat');
+		expect(call.chatId).toBe('client-chat-9');
 	});
 
 	test('429 when the gateway throws QuotaExceededError', async () => {
