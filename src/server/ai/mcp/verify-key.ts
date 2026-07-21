@@ -56,8 +56,11 @@ export type VerifiedKey = { userId: string; scopes: Set<Scope> };
  * Resolves a bearer API key to its owner + tool scopes for the MCP surface, or null.
  *
  * Fast path: `keyHmac` is a UNIQUE indexed column, so `HMAC-SHA256(token, pepper)` is an O(1)
- * `findUnique`. A hit is re-confirmed with a constant-time HMAC compare (satisfies the "no timing
- * oracle" invariant; the lookup itself is already the authentication).
+ * `findUnique`. The real "no timing oracle" protection is structural: an attacker only ever gets
+ * a binary hit/miss from a unique-index lookup on an HMAC (avalanche) digest, never a
+ * warmer/colder signal. The post-hit `constantTimeEqualHex` recheck below is cheap defensive
+ * insurance (the fetched row's `keyHmac` equals the lookup key by construction), not the
+ * load-bearing check.
  *
  * Legacy fallback: keys minted before `keyHmac` was populated have `keyHmac === null` and miss the
  * fast path. They are matched by their `start` bucket + `bcrypt.compareSync`, then `keyHmac` is

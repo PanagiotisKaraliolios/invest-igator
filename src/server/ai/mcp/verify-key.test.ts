@@ -72,7 +72,8 @@ mock.module('@/server/db', () => ({
 	}
 }));
 
-// bcryptjs is used for the legacy fallback; stub compareSync so "raw==='secret'+id" matches its hash.
+// bcryptjs is used for the legacy fallback; stub compareSync so a hash of the form `bcrypt:<raw>`
+// matches its raw token (baseRow()'s `key: 'bcrypt:secret-token'` matches raw token 'secret-token').
 mock.module('bcryptjs', () => ({
 	default: { compareSync: (raw: string, hash: string) => hash === `bcrypt:${raw}` }
 }));
@@ -128,6 +129,18 @@ describe2('verifyMcpKey', () => {
 		const res = await verify('secret-token');
 		expect2(res?.userId).toBe('owner-1');
 		expect2(updates).toEqual([{ id: 'k1', keyHmac: hmacOf('secret-token') }]); // lazily backfilled
+	});
+
+	test2('legacy fallback rejects a disabled key without backfilling it', async () => {
+		rows = [baseRow({ keyHmac: null, enabled: false })];
+		expect2(await verify('secret-token')).toBeNull();
+		expect2(updates).toHaveLength(0); // rejected key must not be backfilled
+	});
+
+	test2('legacy fallback rejects an expired key without backfilling it', async () => {
+		rows = [baseRow({ keyHmac: null, expiresAt: new Date(Date.now() - 1000) })];
+		expect2(await verify('secret-token')).toBeNull();
+		expect2(updates).toHaveLength(0); // rejected key must not be backfilled
 	});
 
 	test2('empty bearer returns null', async () => {
