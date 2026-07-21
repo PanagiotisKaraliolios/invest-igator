@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "react-image-crop/dist/ReactCrop.css";
+@import "streamdown/styles.css";
 
 @custom-variant dark (&:is(.dark *));
 @custom-variant data-starting-style (&[data-starting-style]);
