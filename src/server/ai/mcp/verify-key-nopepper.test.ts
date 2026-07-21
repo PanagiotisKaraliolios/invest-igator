@@ -1,7 +1,9 @@
 import { describe, expect, mock, test } from 'bun:test';
 
 mock.module('@/env', () => ({ env: { AI_API_KEY_PEPPER: undefined } }));
-mock.module('@/server/db', () => ({ db: { apiKey: { findUnique: async () => null, findMany: async () => [], update: async () => null } } }));
+mock.module('@/server/db', () => ({
+	db: { apiKey: { findMany: async () => [], findUnique: async () => null, update: async () => null } }
+}));
 mock.module('bcryptjs', () => ({ default: { compareSync: () => false } }));
 
 const { verifyMcpKey } = await import('./verify-key');

@@ -3,7 +3,7 @@ import { permissionsToScopes } from './verify-key';
 
 describe('permissionsToScopes', () => {
 	test('maps a read action on a tool resource to `${resource}:read`', () => {
-		const scopes = permissionsToScopes(JSON.stringify({ portfolio: ['read'], fx: ['read'] }));
+		const scopes = permissionsToScopes(JSON.stringify({ fx: ['read'], portfolio: ['read'] }));
 		expect([...scopes].sort()).toEqual(['fx:read', 'portfolio:read']);
 	});
 
@@ -13,7 +13,7 @@ describe('permissionsToScopes', () => {
 	});
 
 	test('ignores non-tool resources (account/admin/ai/apiKeys)', () => {
-		const scopes = permissionsToScopes(JSON.stringify({ ai: ['use'], admin: ['read'], account: ['read'] }));
+		const scopes = permissionsToScopes(JSON.stringify({ account: ['read'], admin: ['read'], ai: ['use'] }));
 		expect(scopes.size).toBe(0);
 	});
 
@@ -26,9 +26,21 @@ describe('permissionsToScopes', () => {
 
 	test('a full read-only key yields exactly the five read scopes', () => {
 		const scopes = permissionsToScopes(
-			JSON.stringify({ portfolio: ['read'], transactions: ['read'], watchlist: ['read'], goals: ['read'], fx: ['read'] })
+			JSON.stringify({
+				fx: ['read'],
+				goals: ['read'],
+				portfolio: ['read'],
+				transactions: ['read'],
+				watchlist: ['read']
+			})
 		);
-		expect([...scopes].sort()).toEqual(['fx:read', 'goals:read', 'portfolio:read', 'transactions:read', 'watchlist:read']);
+		expect([...scopes].sort()).toEqual([
+			'fx:read',
+			'goals:read',
+			'portfolio:read',
+			'transactions:read',
+			'watchlist:read'
+		]);
 	});
 });
 
@@ -58,10 +70,10 @@ mock.module('@/env', () => ({ env: { AI_API_KEY_PEPPER: PEPPER } }));
 mock.module('@/server/db', () => ({
 	db: {
 		apiKey: {
-			findUnique: async ({ where }: { where: { keyHmac: string } }) =>
-				rows.find((r) => r.keyHmac === where.keyHmac) ?? null,
 			findMany: async ({ where }: { where: { keyHmac: null; start: string } }) =>
 				rows.filter((r) => r.keyHmac === null && r.start === where.start),
+			findUnique: async ({ where }: { where: { keyHmac: string } }) =>
+				rows.find((r) => r.keyHmac === where.keyHmac) ?? null,
 			update: async ({ where, data }: { where: { id: string }; data: { keyHmac: string } }) => {
 				updates.push({ id: where.id, keyHmac: data.keyHmac });
 				const r = rows.find((x) => x.id === where.id);
@@ -82,13 +94,13 @@ const { verifyMcpKey: verify } = await import('./verify-key');
 
 function baseRow(over: Partial<Row> = {}): Row {
 	return {
+		enabled: true,
+		expiresAt: null,
 		id: 'k1',
 		key: 'bcrypt:secret-token',
 		keyHmac: hmacOf('secret-token'),
-		start: 'secret',
-		enabled: true,
-		expiresAt: null,
 		permissions: JSON.stringify({ portfolio: ['read'] }),
+		start: 'secret',
 		userId: 'owner-1',
 		...over
 	};
@@ -132,13 +144,13 @@ describe2('verifyMcpKey', () => {
 	});
 
 	test2('legacy fallback rejects a disabled key without backfilling it', async () => {
-		rows = [baseRow({ keyHmac: null, enabled: false })];
+		rows = [baseRow({ enabled: false, keyHmac: null })];
 		expect2(await verify('secret-token')).toBeNull();
 		expect2(updates).toHaveLength(0); // rejected key must not be backfilled
 	});
 
 	test2('legacy fallback rejects an expired key without backfilling it', async () => {
-		rows = [baseRow({ keyHmac: null, expiresAt: new Date(Date.now() - 1000) })];
+		rows = [baseRow({ expiresAt: new Date(Date.now() - 1000), keyHmac: null })];
 		expect2(await verify('secret-token')).toBeNull();
 		expect2(updates).toHaveLength(0); // rejected key must not be backfilled
 	});

@@ -1,8 +1,8 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { env } from '@/env';
-import { db } from '@/server/db';
 import type { Scope } from '@/server/ai/tools/types';
+import { db } from '@/server/db';
 
 /** The five tool resources that map to a `Scope`. `account`/`admin`/`ai`/`apiKeys` are not tools. */
 const TOOL_RESOURCES = ['portfolio', 'transactions', 'watchlist', 'goals', 'fx'] as const;
