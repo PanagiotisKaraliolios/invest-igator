@@ -464,3 +464,14 @@ model AiMessage {
 
   @@index([chatId, seq])
 }
+
+/// One row per consumed write-confirmation token. The `jti` PK makes a commit exactly-once:
+/// a replayed/double-clicked token collides here and the whole commit transaction rolls back.
+model AiMutationCommit {
+  jti       String   @id
+  userId    String
+  tool      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}

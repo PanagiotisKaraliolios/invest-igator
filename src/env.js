@@ -31,6 +31,7 @@ export const env = createEnv({
 		AI_API_KEY_PEPPER: process.env.AI_API_KEY_PEPPER,
 		AI_CRED_ACTIVE_KID: process.env.AI_CRED_ACTIVE_KID,
 		AI_CRED_KEYS: process.env.AI_CRED_KEYS,
+		AI_MUTATION_SECRET: process.env.AI_MUTATION_SECRET,
 		APP_NAME: process.env.APP_NAME,
 		AUTH_DISCORD_ID: process.env.AUTH_DISCORD_ID,
 		AUTH_DISCORD_SECRET: process.env.AUTH_DISCORD_SECRET,
@@ -87,6 +88,9 @@ export const env = createEnv({
 		// BYOK keyring: {"k1":"<base64 32 bytes>"}. Parsed lazily in src/server/ai/crypto.ts —
 		// a module-eval JSON.parse throw here would break `next build` when the var is absent.
 		AI_CRED_KEYS: z.string().optional(),
+		// HMAC key for write-confirmation tokens (Phase 3a). Dedicated, NOT AI_API_KEY_PEPPER.
+		// `openssl rand -base64 32`. Unset ⇒ transactions.create is unavailable and commit fails closed.
+		AI_MUTATION_SECRET: z.string().min(32).optional(),
 		APP_NAME: z.string().default('Invest-igator'),
 		AUTH_DISCORD_ID: z.string(),
 		AUTH_DISCORD_SECRET: z.string(),

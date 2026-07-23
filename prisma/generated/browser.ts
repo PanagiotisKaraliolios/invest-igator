@@ -117,3 +117,9 @@ export type AiChat = Prisma.AiChatModel
  * 
  */
 export type AiMessage = Prisma.AiMessageModel
+/**
+ * Model AiMutationCommit
+ * One row per consumed write-confirmation token. The `jti` PK makes a commit exactly-once:
+ * a replayed/double-clicked token collides here and the whole commit transaction rolls back.
+ */
+export type AiMutationCommit = Prisma.AiMutationCommitModel
