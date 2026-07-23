@@ -10,7 +10,9 @@ export default function ThemeSwitch() {
 	const { isLight, setIsLight } = useTheme();
 	return (
 		<div className='flex items-center space-x-2.5'>
-			<Sun className='size-4 text-muted-foreground' />
+			{/* Moon on the left / Sun on the right so the knob points at the ACTIVE state:
+			    `checked={isLight}` moves the knob right in light mode (→ Sun) and left in dark (→ Moon). */}
+			<Moon className='size-4 text-muted-foreground' />
 			{/* Base UI requires a stable controlled/uncontrolled choice: `isLight` is
 			    always a boolean, so keep the Switch controlled for its whole lifetime
 			    (Radix tolerated the undefined-until-mounted pattern; Base UI does not). */}
@@ -20,7 +22,7 @@ export default function ThemeSwitch() {
 				id={id}
 				onCheckedChange={(checked) => setIsLight(Boolean(checked))}
 			/>
-			<Moon className='size-4 text-muted-foreground' />
+			<Sun className='size-4 text-muted-foreground' />
 		</div>
 	);
 }
