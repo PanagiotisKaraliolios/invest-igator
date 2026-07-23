@@ -508,6 +508,16 @@ describe('buildToolset', () => {
 		expect(buildToolset(ctxFor('user-b', { scopes: new Set<Scope>() }))).toEqual([]);
 	});
 
+	test('the real transactions.create write tool is reachable on chat with the write scope, never on mcp', () => {
+		const scopes = new Set<Scope>([...ALL_SCOPES, 'transactions:write']);
+		expect(buildToolset(ctxFor('u', { scopes, surface: 'chat' })).map((t) => t.name)).toContain(
+			'transactions.create'
+		);
+		expect(buildToolset(ctxFor('u', { scopes, surface: 'mcp' })).map((t) => t.name)).not.toContain(
+			'transactions.create'
+		);
+	});
+
 	test('drops mutating tools on the mcp surface, keeps them on chat', () => {
 		const mutating: AppTool = {
 			annotations: {
