@@ -126,6 +126,10 @@ export async function createTransaction(
 			userId
 		}
 	});
+	// Best-effort: ensure the asset is on the watchlist. On the autocommit tRPC path the catch
+	// isolates a rare upsert failure. When `client` is a commit `$transaction`, a Postgres error
+	// has already aborted the tx, so the whole commit fails closed (transaction row + jti roll back,
+	// so the token stays retryable) — safe, just not isolated the way it is on the autocommit path.
 	try {
 		await client.watchlistItem.upsert({
 			create: { symbol: created.symbol, userId },

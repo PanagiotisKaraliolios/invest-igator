@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { env } from '@/env';
 import { type Currency, SUPPORTED_CURRENCIES } from '@/lib/currency';
+import { parseIsoDateUtc } from '@/lib/date';
 import { normalizeSymbol } from '@/lib/validation';
 import { signMutation } from '@/server/ai/mutations/token';
 import { db } from '@/server/db';
@@ -107,6 +108,9 @@ export async function resolveProposed(input: Input, ctx: ToolCtx): Promise<Resol
 	const priceCurrency = input.priceCurrency ?? (isSupportedCurrency(listing) ? listing : userDefault);
 
 	const date = input.date ?? todayIso();
+	// Reject impossible calendar dates (e.g. 2026-02-30) HERE — the regex allows them, but the commit's
+	// isoDateSchema would reject them, so validating now avoids a confirmable card that then errors.
+	if (parseIsoDateUtc(date) === null) return { error: `${date} is not a real calendar date.`, ok: false };
 	if (date > todayIso()) return { error: `The trade date ${date} is in the future.`, ok: false };
 
 	const proposed: ProposedTransaction = {

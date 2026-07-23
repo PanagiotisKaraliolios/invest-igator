@@ -87,4 +87,14 @@ describe('transactions.create tool', () => {
 		if (out.requiresConfirmation) throw new Error('expected error branch');
 		expect(out.error.length).toBeGreaterThan(0);
 	});
+
+	test('rejects an impossible calendar date before signing (no confirmable-then-erroring card)', async () => {
+		existence = 'yes';
+		dailyCurrency = 'USD';
+		const out = await transactionsCreateTool.execute(
+			{ date: '2026-02-30', price: 1, quantity: 1, side: 'BUY', symbol: 'AAPL' },
+			ctx
+		);
+		expect(out.requiresConfirmation).toBe(false);
+	});
 });
