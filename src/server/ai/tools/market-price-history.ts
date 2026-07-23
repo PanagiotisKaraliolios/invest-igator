@@ -40,7 +40,17 @@ export const marketPriceHistoryTool: AppTool<typeof inputSchema, typeof outputSc
 	description:
 		'Daily price history for one symbol over a trailing window (at most 400 days), oldest first. Returns an empty series for an unknown or malformed symbol. If `truncated` is true, the OLDEST days within the window were dropped to fit the response budget — the most recent price is always present; treat the series as starting later than requested, not as the full window.',
 	execute: async (input) => {
-		const points = await getPriceHistory(input.symbol, input.days, input.field);
+		// Degrade gracefully: an unreachable/slow data source (e.g. Influx down) must NOT throw out of
+		// a chat turn — that leaves the assistant with a silent, empty reply. Treat a fetch failure the
+		// same as "no data" (the documented empty-series contract) and log it for ops; the model then
+		// tells the user it has no price data instead of the turn dying.
+		let points: Awaited<ReturnType<typeof getPriceHistory>>;
+		try {
+			points = await getPriceHistory(input.symbol, input.days, input.field);
+		} catch (err) {
+			console.error(`market.priceHistory: price data unavailable for ${input.symbol}:`, err);
+			points = [];
+		}
 		// Numeric-only points, but the same measured guarantee every array-returning tool
 		// uses — this is the bound a reverted/removed clamp would blow through.
 		// Points are ordered oldest -> newest (see getPriceHistory), so a size-based truncation
