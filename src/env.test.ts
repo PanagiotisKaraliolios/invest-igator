@@ -38,6 +38,7 @@ console.log(
 		AZURE_OPENAI_CHAT_DEPLOYMENT: env.AZURE_OPENAI_CHAT_DEPLOYMENT ?? null,
 		AZURE_OPENAI_CHAT_MODEL: env.AZURE_OPENAI_CHAT_MODEL ?? null,
 		AZURE_OPENAI_RESOURCE_NAME: env.AZURE_OPENAI_RESOURCE_NAME ?? null,
+		ENABLE_MCP: env.ENABLE_MCP,
 		POLYGON_API_URL: env.POLYGON_API_URL ?? null
 	})
 );
@@ -99,5 +100,30 @@ describe('env', () => {
 	test('AI_API_KEY_PEPPER is rejected below 32 chars — a weak pepper must not boot', () => {
 		const { exitCode } = probeEnv({ ...REQUIRED, AI_API_KEY_PEPPER: 'too-short' });
 		expect(exitCode).not.toBe(0);
+	});
+
+	// `ENABLE_MCP` is deliberately `z.enum(['true','false']).transform(...)`, NOT
+	// `z.coerce.boolean()` — the latter would make the *string* "false" truthy (any non-empty
+	// string coerces to `true`), silently enabling the MCP surface. These three cases guard
+	// that choice.
+	test('ENABLE_MCP unset defaults to false — the MCP surface is off unless explicitly enabled', () => {
+		const { exitCode, stdout } = probeEnv(REQUIRED);
+		expect(exitCode).toBe(0);
+		const env = JSON.parse(stdout.trim()) as Record<string, unknown>;
+		expect(env.ENABLE_MCP).toBe(false);
+	});
+
+	test('ENABLE_MCP="false" parses to false — z.coerce.boolean() would get this wrong', () => {
+		const { exitCode, stdout } = probeEnv({ ...REQUIRED, ENABLE_MCP: 'false' });
+		expect(exitCode).toBe(0);
+		const env = JSON.parse(stdout.trim()) as Record<string, unknown>;
+		expect(env.ENABLE_MCP).toBe(false);
+	});
+
+	test('ENABLE_MCP="true" parses to true', () => {
+		const { exitCode, stdout } = probeEnv({ ...REQUIRED, ENABLE_MCP: 'true' });
+		expect(exitCode).toBe(0);
+		const env = JSON.parse(stdout.trim()) as Record<string, unknown>;
+		expect(env.ENABLE_MCP).toBe(true);
 	});
 });

@@ -16,11 +16,16 @@ export const ALL_READ_SCOPES: ReadonlySet<Scope> = new Set<Scope>([
  * authenticated session — never from request body or model input — which is what stops a
  * caller from hand-writing `{ userId: someOtherId }` (the Phase 0 concern: ToolCtx was a
  * bare type). Currency is the user's saved preference (default USD), matching the dashboard's
- * currency router (`getCurrency`).
+ * currency router (`getCurrency`). Scopes default to ALL_READ_SCOPES for chat; the MCP route
+ * passes the bearer key's own scope set.
  */
-export async function createToolCtx(session: { user: { id: string } }, surface: ToolCtx['surface']): Promise<ToolCtx> {
+export async function createToolCtx(
+	session: { user: { id: string } },
+	surface: ToolCtx['surface'],
+	scopes: ReadonlySet<Scope> = ALL_READ_SCOPES
+): Promise<ToolCtx> {
 	const userId = session.user.id;
 	const user = await db.user.findUnique({ select: { currency: true }, where: { id: userId } });
 	const currency = (user?.currency ?? 'USD') as Currency;
-	return { currency, scopes: ALL_READ_SCOPES, surface, userId };
+	return { currency, scopes, surface, userId };
 }

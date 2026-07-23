@@ -142,7 +142,7 @@ export function safeErrorMessage(err: unknown): { code: string | null; message: 
  * constructor name — scrubbed (defence in depth, in case the classification itself was
  * attacker/provider-controlled) and hard-capped. No free text ever reaches the row.
  */
-function classifyToolError(err: unknown): string {
+export function classifyToolError(err: unknown): string {
 	if (err === null || err === undefined) return 'unknown_error';
 	if (typeof err !== 'object') return scrubSecrets(String(err)).slice(0, MAX_TOOL_ERROR_CODE);
 
@@ -283,7 +283,7 @@ function forgetTools(ctx: AiCallContext): void {
  * TELEMETRY IS NEVER LOAD-BEARING. A hook that throws propagates into the user's request and turns
  * a transient Postgres blip into a 500 on a chat turn. Swallow, log, move on.
  */
-async function safeWrite(write: () => Promise<void>): Promise<void> {
+export async function safeWrite(write: () => Promise<void>): Promise<void> {
 	try {
 		await write();
 	} catch (e) {

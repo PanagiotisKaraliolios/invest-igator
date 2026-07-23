@@ -48,6 +48,7 @@ export const env = createEnv({
 		DATABASE_URL: process.env.DATABASE_URL,
 		EMAIL_FROM: process.env.EMAIL_FROM,
 		EMAIL_SERVER: process.env.EMAIL_SERVER,
+		ENABLE_MCP: process.env.ENABLE_MCP,
 		INFLUXDB_BUCKET: process.env.INFLUXDB_BUCKET,
 		INFLUXDB_ORG: process.env.INFLUXDB_ORG,
 		INFLUXDB_TOKEN: process.env.INFLUXDB_TOKEN,
@@ -110,6 +111,11 @@ export const env = createEnv({
 		DATABASE_URL: z.url(),
 		EMAIL_FROM: z.email(),
 		EMAIL_SERVER: z.string(),
+		// Off by default — the MCP surface returns 404 unless explicitly enabled.
+		ENABLE_MCP: z
+			.enum(['true', 'false'])
+			.default('false')
+			.transform((v) => v === 'true'),
 		INFLUXDB_BUCKET: z.string(),
 		INFLUXDB_ORG: z.string(),
 		INFLUXDB_TOKEN: z.string(),

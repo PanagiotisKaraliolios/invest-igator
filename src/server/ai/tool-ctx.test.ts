@@ -53,6 +53,18 @@ describe('createToolCtx', () => {
 		const ctx = await createToolCtx({ user: { id: 'user-eur' } }, 'chat');
 		expect(ctx.currency).toBe('EUR');
 	});
+
+	test('honors an explicit scope set and still sources userId from the session arg', async () => {
+		const ctx = await createToolCtx({ user: { id: 'u-scoped' } }, 'mcp', new Set(['portfolio:read'] as const));
+		expect(ctx.userId).toBe('u-scoped');
+		expect(ctx.surface).toBe('mcp');
+		expect([...ctx.scopes]).toEqual(['portfolio:read']);
+	});
+
+	test('defaults to ALL_READ_SCOPES when no scope set is passed (chat behavior unchanged)', async () => {
+		const ctx = await createToolCtx({ user: { id: 'u-default' } }, 'chat');
+		expect(ctx.scopes).toBe(ALL_READ_SCOPES);
+	});
 });
 
 describe('ALL_READ_SCOPES', () => {
