@@ -1,4 +1,7 @@
 import type { Prisma, Transaction } from '@prisma/generated';
+import type { Currency } from '@/lib/currency';
+import { normalizeSymbol } from '@/lib/validation';
+import type { CreateTransactionInput } from '@/server/api/routers/transactions.schemas';
 import { db } from '@/server/db';
 
 /**
@@ -95,4 +98,44 @@ export async function listTransactions(userId: string, filters: TransactionFilte
 		where: buildTransactionWhere(userId, filters)
 	});
 	return rows.map(toTransactionRow);
+}
+
+/**
+ * The single transaction WRITE path, shared by the tRPC `create` mutation and the AI write-commit.
+ * PURE: no Yahoo validation (callers do it — the tRPC path validates the symbol; the commit trusts
+ * the signed token) and NO cache invalidation (callers invalidate after). Accepts a Prisma client
+ * so the commit can run it inside a `$transaction` alongside the single-use `jti` insert.
+ */
+export async function createTransaction(
+	userId: string,
+	input: CreateTransactionInput,
+	client: Pick<typeof db, 'transaction' | 'watchlistItem'> = db
+): Promise<{ id: string }> {
+	const symbol = normalizeSymbol(input.symbol);
+	const created = await client.transaction.create({
+		data: {
+			date: input.date,
+			fee: input.fee,
+			feeCurrency: (input.feeCurrency as Currency | undefined) ?? null,
+			note: input.note,
+			price: input.price,
+			priceCurrency: input.priceCurrency as Currency,
+			quantity: input.quantity,
+			side: input.side,
+			symbol,
+			userId
+		}
+	});
+	// Best-effort: ensure the asset is on the watchlist. On the autocommit tRPC path the catch
+	// isolates a rare upsert failure. When `client` is a commit `$transaction`, a Postgres error
+	// has already aborted the tx, so the whole commit fails closed (transaction row + jti roll back,
+	// so the token stays retryable) — safe, just not isolated the way it is on the autocommit path.
+	try {
+		await client.watchlistItem.upsert({
+			create: { symbol: created.symbol, userId },
+			update: {},
+			where: { userId_symbol: { symbol: created.symbol, userId } }
+		});
+	} catch {}
+	return { id: created.id };
 }

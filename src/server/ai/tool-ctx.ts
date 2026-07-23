@@ -12,6 +12,13 @@ export const ALL_READ_SCOPES: ReadonlySet<Scope> = new Set<Scope>([
 ]);
 
 /**
+ * Chat is interactive + authenticated, so it may reach write tools. The actual write still requires
+ * a human Confirm click hitting a session-authenticated, token-validated mutation. MCP stays
+ * read-only (it passes its API key's own scopes, and `buildToolset` drops mutating tools on MCP).
+ */
+export const CHAT_SCOPES: ReadonlySet<Scope> = new Set<Scope>([...ALL_READ_SCOPES, 'transactions:write']);
+
+/**
  * THE only sanctioned way to build a ToolCtx for a real request. userId comes from the
  * authenticated session — never from request body or model input — which is what stops a
  * caller from hand-writing `{ userId: someOtherId }` (the Phase 0 concern: ToolCtx was a

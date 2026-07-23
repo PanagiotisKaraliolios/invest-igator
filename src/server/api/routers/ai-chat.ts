@@ -1,6 +1,8 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
+import { env } from '@/env';
 import { loadTurnHistory } from '@/server/ai/chat/persistence';
+import { commitPendingTransaction } from '@/server/ai/mutations/commit';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
 
 /**
@@ -10,6 +12,20 @@ import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
  * never a silent no-op (atomic ownership — no separate read-then-write race).
  */
 export const aiChatRouter = createTRPCRouter({
+	/**
+	 * Commit a transaction the `transactions.create` tool previewed. The human clicks Confirm on the
+	 * chat card; this re-validates the signed token (HMAC / expiry / non-transferable) and writes.
+	 * The session is the authority — `userId` never comes from the client, only from the session and
+	 * the token (which must agree). Fails closed if the mutation secret is unconfigured.
+	 */
+	commitPendingTransaction: protectedProcedure
+		.input(z.object({ token: z.string().min(1) }))
+		.mutation(async ({ ctx, input }) => {
+			const secret = env.AI_MUTATION_SECRET;
+			if (!secret)
+				throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Transaction entry is not configured.' });
+			return commitPendingTransaction({ secret, sessionUserId: ctx.session.user.id, token: input.token });
+		}),
 	delete: protectedProcedure.input(z.object({ chatId: z.string() })).mutation(async ({ ctx, input }) => {
 		const { count } = await ctx.db.aiChat.deleteMany({ where: { id: input.chatId, userId: ctx.session.user.id } });
 		if (count === 0) throw new TRPCError({ code: 'NOT_FOUND', message: 'Chat not found' });

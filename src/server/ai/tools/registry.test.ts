@@ -293,21 +293,29 @@ beforeEach(() => {
 });
 
 describe('the Phase 0 tool set', () => {
-	test('is exactly the seven read-only tools', () => {
+	test('is the seven read tools plus the transactions.create write tool', () => {
 		expect(ALL_TOOLS.map((t) => t.name).sort()).toEqual([
 			'fx.rates',
 			'goals.list',
 			'market.priceHistory',
 			'portfolio.performance',
 			'portfolio.structure',
+			'transactions.create',
 			'transactions.search',
 			'watchlist.list'
 		]);
 		for (const t of ALL_TOOLS) {
-			expect(t.mutates).toBe(false);
-			expect(t.annotations.readOnlyHint).toBe(true);
-			expect(t.preview).toBeUndefined();
 			expect(t.description.length).toBeGreaterThan(0);
+			if (t.name === 'transactions.create') {
+				// The one write tool: mutating, with a preview, and NOT a read-only hint.
+				expect(t.mutates).toBe(true);
+				expect(t.annotations.readOnlyHint).toBe(false);
+				expect(typeof t.preview).toBe('function');
+			} else {
+				expect(t.mutates).toBe(false);
+				expect(t.annotations.readOnlyHint).toBe(true);
+				expect(t.preview).toBeUndefined();
+			}
 		}
 	});
 
@@ -498,6 +506,16 @@ describe('buildToolset', () => {
 
 	test('a caller with no scopes gets no tools', () => {
 		expect(buildToolset(ctxFor('user-b', { scopes: new Set<Scope>() }))).toEqual([]);
+	});
+
+	test('the real transactions.create write tool is reachable on chat with the write scope, never on mcp', () => {
+		const scopes = new Set<Scope>([...ALL_SCOPES, 'transactions:write']);
+		expect(buildToolset(ctxFor('u', { scopes, surface: 'chat' })).map((t) => t.name)).toContain(
+			'transactions.create'
+		);
+		expect(buildToolset(ctxFor('u', { scopes, surface: 'mcp' })).map((t) => t.name)).not.toContain(
+			'transactions.create'
+		);
 	});
 
 	test('drops mutating tools on the mcp surface, keeps them on chat', () => {

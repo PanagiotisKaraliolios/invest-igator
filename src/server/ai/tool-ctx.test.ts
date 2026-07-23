@@ -19,7 +19,7 @@ mock.module('@/server/db', () => ({
 	}
 }));
 
-const { ALL_READ_SCOPES, createToolCtx } = await import('./tool-ctx');
+const { ALL_READ_SCOPES, CHAT_SCOPES, createToolCtx } = await import('./tool-ctx');
 
 describe('createToolCtx', () => {
 	test('userId comes from the session, not any argument', async () => {
@@ -76,5 +76,16 @@ describe('ALL_READ_SCOPES', () => {
 			'transactions:read',
 			'watchlist:read'
 		]);
+	});
+});
+
+describe('CHAT_SCOPES', () => {
+	test('adds transactions:write to the read scopes (so chat can reach the write tool)', () => {
+		expect(CHAT_SCOPES.has('transactions:write')).toBe(true);
+		expect(CHAT_SCOPES.has('portfolio:read')).toBe(true);
+	});
+
+	test('is a strict superset of ALL_READ_SCOPES', () => {
+		for (const s of ALL_READ_SCOPES) expect(CHAT_SCOPES.has(s)).toBe(true);
 	});
 });

@@ -2,6 +2,7 @@ import { createElement, type ReactNode } from 'react';
 // Client-safe: ai-sdk.ts imports only `tool` from 'ai' + types (no server/db). This is the
 // single source of truth for the canonical<->SDK name mapping.
 import { fromAiSdkToolName } from '@/server/ai/tools/adapters/ai-sdk';
+import { ConfirmCard } from './confirm-card';
 import { DataTableArtifact } from './data-table-artifact';
 import { PortfolioAllocation } from './portfolio-allocation';
 import { TimeSeries } from './time-series';
@@ -27,6 +28,7 @@ export const ARTIFACT_RENDERERS: Record<string, (output: unknown) => ReactNode> 
 	'market.priceHistory': (o) => createElement(TimeSeries, { kind: 'market.priceHistory', output: o as never }),
 	'portfolio.performance': (o) => createElement(TimeSeries, { kind: 'portfolio.performance', output: o as never }),
 	'portfolio.structure': (o) => createElement(PortfolioAllocation, { output: o as never }),
+	'transactions.create': (o) => createElement(ConfirmCard, { output: o as never }),
 	'transactions.search': (o) => createElement(DataTableArtifact, { kind: 'transactions.search', output: o as never }),
 	'watchlist.list': (o) => createElement(DataTableArtifact, { kind: 'watchlist.list', output: o as never })
 };

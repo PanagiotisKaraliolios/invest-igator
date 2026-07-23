@@ -12,7 +12,7 @@ import {
 import { MAX_STEPS, type ResolvedModel } from '@/server/ai/registry';
 import { type ModelSelector, resolveModel as realResolveModel } from '@/server/ai/resolve-model';
 import { toTokenUsage } from '@/server/ai/telemetry';
-import { createToolCtx } from '@/server/ai/tool-ctx';
+import { CHAT_SCOPES, createToolCtx } from '@/server/ai/tool-ctx';
 import { toAiSdkTools } from '@/server/ai/tools/adapters/ai-sdk';
 import { buildToolset } from '@/server/ai/tools/registry';
 import { loadTurnHistory as realLoad, saveTurn as realSave } from './persistence';
@@ -110,7 +110,7 @@ export async function streamChatTurn(
 	const requestId = randomUUID();
 
 	const resolved = await deps.resolveModel(userId, args.selector);
-	const toolCtx = await createToolCtx(args.session, 'chat');
+	const toolCtx = await createToolCtx(args.session, 'chat', CHAT_SCOPES);
 	const tools = toAiSdkTools(buildToolset(toolCtx), toolCtx);
 
 	const prior = await deps.loadTurnHistory(args.chatId, userId);

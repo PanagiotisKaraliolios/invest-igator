@@ -7,7 +7,7 @@ import { createTransactionInput, updateTransactionInput } from '@/server/api/rou
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
 import { sleep } from '@/server/jobs/yahoo-lib';
 import { invalidatePortfolioCache } from '@/server/portfolio-compute';
-import { buildTransactionWhere, toTransactionRow } from '@/server/services/transactions';
+import { buildTransactionWhere, createTransaction, toTransactionRow } from '@/server/services/transactions';
 import { symbolExistsOnYahoo } from '@/server/yahoo-search';
 
 const supportedCurrencies = SUPPORTED_CURRENCIES;
@@ -126,31 +126,10 @@ export const transactionsRouter = createTRPCRouter({
 				});
 			}
 		}
-		const created = await ctx.db.transaction.create({
-			data: {
-				date: input.date,
-				fee: input.fee,
-				feeCurrency: (input.feeCurrency as Currency | undefined) ?? null,
-				note: input.note,
-				price: input.price,
-				priceCurrency: input.priceCurrency as Currency,
-				quantity: input.quantity,
-				side: input.side,
-				symbol,
-				userId
-			}
-		});
-
-		// Ensure the asset exists in the user's watchlist
-		try {
-			await ctx.db.watchlistItem.upsert({
-				create: { symbol: created.symbol, userId },
-				update: {},
-				where: { userId_symbol: { symbol: created.symbol, userId } }
-			});
-		} catch {}
+		// Symbol validated above; the shared service owns the write (transaction + watchlist upsert).
+		const { id } = await createTransaction(userId, input);
 		await invalidatePortfolioCache(userId);
-		return { id: created.id } as const;
+		return { id } as const;
 	}),
 
 	/**

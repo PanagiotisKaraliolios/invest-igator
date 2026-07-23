@@ -70,7 +70,8 @@ export const ModelName = {
   AiQuota: 'AiQuota',
   AiQuotaReservation: 'AiQuotaReservation',
   AiChat: 'AiChat',
-  AiMessage: 'AiMessage'
+  AiMessage: 'AiMessage',
+  AiMutationCommit: 'AiMutationCommit'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -420,6 +421,16 @@ export const AiMessageScalarFieldEnum = {
 } as const
 
 export type AiMessageScalarFieldEnum = (typeof AiMessageScalarFieldEnum)[keyof typeof AiMessageScalarFieldEnum]
+
+
+export const AiMutationCommitScalarFieldEnum = {
+  jti: 'jti',
+  userId: 'userId',
+  tool: 'tool',
+  createdAt: 'createdAt'
+} as const
+
+export type AiMutationCommitScalarFieldEnum = (typeof AiMutationCommitScalarFieldEnum)[keyof typeof AiMutationCommitScalarFieldEnum]
 
 
 export const SortOrder = {

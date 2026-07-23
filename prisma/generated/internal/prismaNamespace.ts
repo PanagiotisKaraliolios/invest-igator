@@ -403,7 +403,8 @@ export const ModelName = {
   AiQuota: 'AiQuota',
   AiQuotaReservation: 'AiQuotaReservation',
   AiChat: 'AiChat',
-  AiMessage: 'AiMessage'
+  AiMessage: 'AiMessage',
+  AiMutationCommit: 'AiMutationCommit'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -419,7 +420,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "transaction" | "account" | "session" | "user" | "portfolioCache" | "twoFactor" | "verification" | "verificationToken" | "emailChangeToken" | "watchlistItem" | "goal" | "auditLog" | "apiKey" | "aiProviderCredential" | "aiCall" | "aiToolCall" | "aiQuota" | "aiQuotaReservation" | "aiChat" | "aiMessage"
+    modelProps: "transaction" | "account" | "session" | "user" | "portfolioCache" | "twoFactor" | "verification" | "verificationToken" | "emailChangeToken" | "watchlistItem" | "goal" | "auditLog" | "apiKey" | "aiProviderCredential" | "aiCall" | "aiToolCall" | "aiQuota" | "aiQuotaReservation" | "aiChat" | "aiMessage" | "aiMutationCommit"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1903,6 +1904,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    AiMutationCommit: {
+      payload: Prisma.$AiMutationCommitPayload<ExtArgs>
+      fields: Prisma.AiMutationCommitFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.AiMutationCommitFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AiMutationCommitPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.AiMutationCommitFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AiMutationCommitPayload>
+        }
+        findFirst: {
+          args: Prisma.AiMutationCommitFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AiMutationCommitPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.AiMutationCommitFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AiMutationCommitPayload>
+        }
+        findMany: {
+          args: Prisma.AiMutationCommitFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AiMutationCommitPayload>[]
+        }
+        create: {
+          args: Prisma.AiMutationCommitCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AiMutationCommitPayload>
+        }
+        createMany: {
+          args: Prisma.AiMutationCommitCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.AiMutationCommitCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AiMutationCommitPayload>[]
+        }
+        delete: {
+          args: Prisma.AiMutationCommitDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AiMutationCommitPayload>
+        }
+        update: {
+          args: Prisma.AiMutationCommitUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AiMutationCommitPayload>
+        }
+        deleteMany: {
+          args: Prisma.AiMutationCommitDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.AiMutationCommitUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.AiMutationCommitUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AiMutationCommitPayload>[]
+        }
+        upsert: {
+          args: Prisma.AiMutationCommitUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AiMutationCommitPayload>
+        }
+        aggregate: {
+          args: Prisma.AiMutationCommitAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateAiMutationCommit>
+        }
+        groupBy: {
+          args: Prisma.AiMutationCommitGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AiMutationCommitGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.AiMutationCommitCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AiMutationCommitCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -2273,6 +2348,16 @@ export const AiMessageScalarFieldEnum = {
 } as const
 
 export type AiMessageScalarFieldEnum = (typeof AiMessageScalarFieldEnum)[keyof typeof AiMessageScalarFieldEnum]
+
+
+export const AiMutationCommitScalarFieldEnum = {
+  jti: 'jti',
+  userId: 'userId',
+  tool: 'tool',
+  createdAt: 'createdAt'
+} as const
+
+export type AiMutationCommitScalarFieldEnum = (typeof AiMutationCommitScalarFieldEnum)[keyof typeof AiMutationCommitScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -2675,6 +2760,7 @@ export type GlobalOmitConfig = {
   aiQuotaReservation?: Prisma.AiQuotaReservationOmit
   aiChat?: Prisma.AiChatOmit
   aiMessage?: Prisma.AiMessageOmit
+  aiMutationCommit?: Prisma.AiMutationCommitOmit
 }
 
 /* Types for Logging */
