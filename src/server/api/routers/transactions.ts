@@ -8,6 +8,7 @@ import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
 import { invalidatePortfolioCache } from '@/server/portfolio-compute';
 import {
 	bulkCreateTransactions,
+	type CanonicalRecord,
 	createDefaultHeader,
 	detectDuplicates,
 	normalizeFeeCurrencyValue,
@@ -285,17 +286,7 @@ export const transactionsRouter = createTRPCRouter({
 			}
 			const unknownSymbols = await resolveUnknownSymbols(userId, distinctSymbols);
 
-			const records: Array<{
-				date: Date;
-				fee: number | null;
-				feeCurrency: Currency | null;
-				note: string | null;
-				price: number;
-				priceCurrency: Currency;
-				quantity: number;
-				side: 'BUY' | 'SELL';
-				symbol: string;
-			}> = [];
+			const records: CanonicalRecord[] = [];
 			const errors: Array<{ line: number; message: string }> = [];
 			data.forEach((rawRow, index) => {
 				const lineNumber = useHeader ? index + 2 : index + 1;

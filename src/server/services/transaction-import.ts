@@ -19,6 +19,7 @@ export const CANONICAL_HEADER = [
 ] as const;
 export const CSV_NEW_SYMBOL_LIMIT = 50;
 const supportedCurrencies = SUPPORTED_CURRENCIES;
+const supportedCurrencySet = new Set(supportedCurrencies);
 
 export function parseCsv(text: string): string[][] {
 	const rows: string[][] = [];
@@ -157,7 +158,6 @@ export function validateRow(
 		const idx = headerMap.get(name);
 		return idx != null ? (cells[idx] ?? '') : '';
 	};
-	const supportedCurrencySet = new Set(supportedCurrencies);
 	try {
 		const symbol = normalizeSymbol(byColumn('symbol'));
 		if (!symbol) throw new Error('Symbol is required.');
@@ -267,7 +267,7 @@ export type Classified = { record: CanonicalRecord; isDuplicate: boolean; existi
  */
 export type DuplicateDescriptor = { id: string; incoming: Omit<ExistingRow, 'id'>; existing: ExistingRow[] };
 
-/** Existing-row read + dedup classification, extracted from importCsv (lines 409–523). */
+/** Existing-row read + dedup classification, extracted from importCsv. */
 export async function detectDuplicates(
 	userId: string,
 	records: CanonicalRecord[]
