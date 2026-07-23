@@ -24,6 +24,8 @@ export const createTransactionInput = z.object({
 	symbol: symbolSchema
 });
 
+export type CreateTransactionInput = z.infer<typeof createTransactionInput>;
+
 export const updateTransactionInput = z.object({
 	date: isoDateSchema.optional(),
 	fee: z.number().nullable().optional(),
