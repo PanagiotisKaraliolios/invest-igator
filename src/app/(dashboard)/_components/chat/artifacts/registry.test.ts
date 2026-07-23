@@ -32,6 +32,21 @@ function minimalOutputFor(name: string): unknown {
 			return { count: 0, goals: [], hasMore: false };
 		case 'fx.rates':
 			return { base: 'USD', rates: {} };
+		case 'transactions.create':
+			return {
+				confirmationToken: 'tok',
+				expiresAt: '2026-01-01T00:02:00.000Z',
+				preview: 'Buy 1 AAPL @ 1 USD on 2026-01-01',
+				proposed: {
+					date: '2026-01-01',
+					price: 1,
+					priceCurrency: 'USD',
+					quantity: 1,
+					side: 'BUY',
+					symbol: 'AAPL'
+				},
+				requiresConfirmation: true
+			};
 		default:
 			throw new Error(`no minimal output for ${name}`);
 	}
