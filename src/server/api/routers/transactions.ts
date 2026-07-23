@@ -8,6 +8,7 @@ import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
 import { invalidatePortfolioCache } from '@/server/portfolio-compute';
 import {
 	bulkCreateTransactions,
+	CANONICAL_HEADER,
 	type CanonicalRecord,
 	createDefaultHeader,
 	detectDuplicates,
@@ -15,6 +16,7 @@ import {
 	normalizeHeader,
 	parseCsv,
 	resolveUnknownSymbols,
+	toDateOnlyISOString,
 	validateRow
 } from '@/server/services/transaction-import';
 import { buildTransactionWhere, createTransaction, toTransactionRow } from '@/server/services/transactions';
@@ -54,6 +56,58 @@ const supportedCurrencies = SUPPORTED_CURRENCIES;
  * });
  */
 export const transactionsRouter = createTRPCRouter({
+	/**
+	 * Re-validated bulk-write commit for rows already vetted at preview time (e.g. by the AI CSV
+	 * import flow). Every row is re-run through the SAME per-row validator as `importCsv` — never
+	 * trust the client — with an EMPTY unknown-symbols set, since Yahoo existence was already
+	 * checked during preview. Duplicate detection and the write itself reuse `detectDuplicates` /
+	 * `bulkCreateTransactions`, so behavior stays identical to the classic CSV importer.
+	 *
+	 * @input rows - Array of transaction rows (1-2000) matching `createTransactionInput`
+	 *
+	 * @returns Import result with imported/skipped counts and per-row errors
+	 *
+	 * @example
+	 * const result = await api.transactions.bulkImport.mutate({
+	 *   rows: [{ date: '2024-01-15', symbol: 'AAPL', side: 'BUY', quantity: 10, price: 150.5, priceCurrency: 'USD' }]
+	 * });
+	 */
+	bulkImport: protectedProcedure
+		.input(z.object({ rows: z.array(createTransactionInput).min(1).max(2000) }))
+		.mutation(async ({ ctx, input }) => {
+			const userId = ctx.session.user.id;
+			// Re-validate each row through the SAME per-row validator as the CSV path (never trust the
+			// client). createTransactionInput already enforces types/symbol format; validateRow re-checks
+			// currency support + positivity and yields the normalized CanonicalRecord.
+			const headerMap = new Map(CANONICAL_HEADER.map((h, i) => [h, i]));
+			const records: CanonicalRecord[] = [];
+			const errors: Array<{ index: number; message: string }> = [];
+			input.rows.forEach((r, index) => {
+				// `createTransactionInput`'s `isoDateSchema` already transforms `date` from a
+				// `yyyy-mm-dd` string into a UTC-midnight `Date` during zod parsing — convert it
+				// back to the string shape `validateRow`'s `cells` array expects.
+				const cells = [
+					toDateOnlyISOString(r.date),
+					r.symbol,
+					r.side,
+					String(r.quantity),
+					String(r.price),
+					r.priceCurrency ?? 'USD',
+					r.fee != null ? String(r.fee) : '',
+					r.feeCurrency ?? '',
+					r.note ?? ''
+				];
+				const res = validateRow(cells, headerMap, new Set()); // Yahoo existence already vetted at preview
+				if (res.ok) records.push(res.record);
+				else errors.push({ index, message: res.message });
+			});
+			if (records.length === 0) return { errors, imported: 0, skipped: 0 };
+
+			const { toInsert } = await detectDuplicates(userId, records);
+			await bulkCreateTransactions(userId, toInsert, ctx.db);
+			await invalidatePortfolioCache(userId);
+			return { errors, imported: toInsert.length, skipped: records.length - toInsert.length };
+		}),
 	/**
 	 * Removes multiple transactions by their IDs in a single operation.
 	 * Only transactions owned by the user can be deleted.
