@@ -4,6 +4,7 @@ import { createCallerFactory, createTRPCRouter } from '@/server/api/trpc';
 import { adminRouter } from './routers/admin';
 import { aiChatRouter } from './routers/ai-chat';
 import { aiCredentialsRouter } from './routers/ai-credentials';
+import { aiImportRouter } from './routers/ai-import';
 import { aiObservabilityRouter } from './routers/ai-observability';
 import { apiKeysRouter } from './routers/api-keys';
 import { currencyProcedures } from './routers/currency';
@@ -134,6 +135,7 @@ export const appRouter = createTRPCRouter({
 	admin: adminRouter,
 	aiChat: aiChatRouter,
 	aiCredentials: aiCredentialsRouter,
+	aiImport: aiImportRouter,
 	aiObservability: aiObservabilityRouter,
 	apiKeys: apiKeysRouter,
 	currency: currencyProcedures,
