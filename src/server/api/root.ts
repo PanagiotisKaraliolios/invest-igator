@@ -47,6 +47,15 @@ import { transactionsRouter } from './routers/transactions';
  * - `removeUser` - Delete a user
  * - `getStats` - Get admin statistics
  *
+ * ### aiImport
+ * AI-assisted CSV statement import: the model maps arbitrary broker columns onto our canonical
+ * schema (header + a small row sample only, never the whole file); it never writes. All
+ * procedures require authentication.
+ *
+ * Key procedures:
+ * - `preview` - Parse an uploaded CSV, map its columns via the configured model, validate and
+ *   classify each row (ok / duplicate / needs-fix) for review before commit
+ *
  * ### apiKeys
  * API key management for programmatic access.
  * All procedures require authentication.
