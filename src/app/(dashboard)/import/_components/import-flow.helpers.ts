@@ -12,7 +12,7 @@ export type ReviewRowWithInclude = ReviewRow & { include: boolean };
  * `date` is a `Date`; the wire input `bulkImport.mutate()` actually expects is the pre-parse
  * shape, where `date` is still the `yyyy-mm-dd` string this module produces).
  */
-export type CreateTransactionInput = RouterInputs['transactions']['bulkImport']['rows'][number];
+export type BulkImportRowInput = RouterInputs['transactions']['bulkImport']['rows'][number];
 
 /**
  * Reduces the review table's rows to the payload for `transactions.bulkImport`: only rows the
@@ -24,7 +24,7 @@ export type CreateTransactionInput = RouterInputs['transactions']['bulkImport'][
  * validated — `bulkImport` re-runs every row through the same validator the CSV importer uses,
  * so a bad edit here surfaces as a per-row server error rather than a silent bad write.
  */
-export function toBulkImportRows(rows: ReviewRowWithInclude[]): CreateTransactionInput[] {
+export function toBulkImportRows(rows: ReviewRowWithInclude[]): BulkImportRowInput[] {
 	return rows
 		.filter((r) => r.include && r.status !== 'needs-fix')
 		.map((r) => {

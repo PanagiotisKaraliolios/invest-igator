@@ -90,4 +90,20 @@ describe('toBulkImportRows', () => {
 		];
 		expect(toBulkImportRows(rows).map((r) => r.symbol)).toEqual(['AAPL', 'AAPL']);
 	});
+
+	test('falls back to USD when priceCurrency is empty string', () => {
+		expect(toBulkImportRows([row({ values: { ...row().values, priceCurrency: '' } })])).toEqual([
+			{
+				date: '2024-01-15',
+				fee: undefined,
+				feeCurrency: undefined,
+				note: undefined,
+				price: 150.5,
+				priceCurrency: 'USD',
+				quantity: 10,
+				side: 'BUY',
+				symbol: 'AAPL'
+			}
+		]);
+	});
 });
