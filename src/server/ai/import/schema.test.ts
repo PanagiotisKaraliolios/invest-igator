@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { applyMapping, type ColumnMapping, reformatDate } from './schema';
+import { CANONICAL_HEADER } from '@/server/services/transaction-import';
+import { applyMapping, CANONICAL, type ColumnMapping, reformatDate } from './schema';
 
 describe('reformatDate', () => {
 	test('passes ISO through', () => expect(reformatDate('2026-01-15', 'ISO')).toBe('2026-01-15'));
@@ -7,6 +8,12 @@ describe('reformatDate', () => {
 	test('DMY_DOT → ISO', () => expect(reformatDate('15.01.2026', 'DMY_DOT')).toBe('2026-01-15'));
 	test('leaves an unrecognizable value untouched (validateRow will flag it)', () =>
 		expect(reformatDate('nope', 'MDY_SLASH')).toBe('nope'));
+});
+
+describe('CANONICAL', () => {
+	test('matches CANONICAL_HEADER in transaction-import.ts', () => {
+		expect([...CANONICAL]).toEqual([...CANONICAL_HEADER]);
+	});
 });
 
 describe('applyMapping', () => {

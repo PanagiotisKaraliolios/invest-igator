@@ -136,7 +136,12 @@ export const aiImportRouter = createTRPCRouter({
 				return await previewImport(userId, input.csv, (h, s) => mapColumns(resolved.model, h, s));
 			} catch (err) {
 				if (err instanceof TRPCError) throw err;
-				console.error('aiImport.preview failed:', err); // NEVER log input.csv
+				// NEVER log `err` as an object or `input.csv`: an AI-SDK error can carry the request
+				// body (the mapping prompt embeds the CSV header + sample rows). Log name+message only.
+				console.error(
+					'aiImport.preview failed:',
+					err instanceof Error ? `${err.name}: ${err.message}` : String(err)
+				);
 				throw new TRPCError({
 					code: 'BAD_REQUEST',
 					message: "Couldn't read this statement. Please try again."

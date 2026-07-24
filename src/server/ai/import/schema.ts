@@ -33,7 +33,7 @@ export function reformatDate(raw: string, fmt: DateFormat): string {
 }
 
 // Canonical column order MUST match CANONICAL_HEADER in transaction-import.ts.
-const CANONICAL = [
+export const CANONICAL = [
 	'date',
 	'symbol',
 	'side',
@@ -63,4 +63,3 @@ export function applyMapping(dataRows: string[][], mapping: ColumnMapping): stri
 		];
 	});
 }
-void CANONICAL;

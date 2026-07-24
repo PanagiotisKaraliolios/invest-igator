@@ -59,7 +59,13 @@ export function ImportFlow({ platformConfigured }: { platformConfigured: boolean
 	const commit = api.transactions.bulkImport.useMutation({
 		onError: (err) => toast.error(err.message || 'Failed to import transactions'),
 		onSuccess: (res) => {
-			toast.success(`Imported ${res.imported}${res.skipped ? `, skipped ${res.skipped} duplicate(s)` : ''}.`);
+			const failed = res.errors?.length ?? 0;
+			const parts = [`Imported ${res.imported}`];
+			if (res.skipped) parts.push(`skipped ${res.skipped} duplicate(s)`);
+			if (failed) parts.push(`${failed} row(s) could not be imported`);
+			const message = `${parts.join(', ')}.`;
+			if (failed) toast.warning(message);
+			else toast.success(message);
 			void utils.transactions.invalidate();
 			setRows(null);
 			setStats(null);

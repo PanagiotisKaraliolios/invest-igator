@@ -70,7 +70,9 @@ your own data, going to the provider you've configured, for the purpose of impor
   "couldn't read this statement, try again" error; the request never dies silently.
 - **Per-row problems** (bad date, non-positive quantity/price, unsupported currency, unknown
   symbol) — the row is shown as `needs-fix` in the review table and excluded from the commit
-  payload until corrected.
+  payload. Row status is computed server-side once, at preview time, and is not re-evaluated as
+  you edit cells — editing a `needs-fix` row in the table does not change its status or unlock
+  its checkbox. To actually fix a flagged row, correct the source CSV and re-upload it.
 - **Duplicates** — shown as `duplicate`, unchecked by default; you opt in per row.
 - **Re-import / stale review table** — `transactions.bulkImport` re-runs duplicate detection at
   commit time, so re-submitting an already-reviewed set (or an edited one) cannot double-insert
