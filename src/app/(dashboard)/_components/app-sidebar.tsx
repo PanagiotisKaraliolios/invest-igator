@@ -22,11 +22,17 @@ export function AppSidebar({
 	const baseNavItems = [
 		{
 			icon: PieChart,
-			isActive: isNavItemActive([{ url: '/portfolio' }, { url: '/transactions' }, { url: '/watchlist' }]),
+			isActive: isNavItemActive([
+				{ url: '/portfolio' },
+				{ url: '/transactions' },
+				{ url: '/watchlist' },
+				{ url: '/import' }
+			]),
 			items: [
 				{ title: 'Portfolio', url: '/portfolio' },
 				{ title: 'Transactions', url: '/transactions' },
-				{ title: 'Watchlist', url: '/watchlist' }
+				{ title: 'Watchlist', url: '/watchlist' },
+				{ title: 'Import', url: '/import' }
 			],
 			title: 'Dashboard'
 		},
