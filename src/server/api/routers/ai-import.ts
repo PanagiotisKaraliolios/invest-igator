@@ -8,6 +8,7 @@ import {
 	CANONICAL_HEADER,
 	type CanonicalRecord,
 	detectDuplicates,
+	type ExistingRow,
 	parseCsv,
 	resolveUnknownSymbols,
 	toDateOnlyISOString,
@@ -21,7 +22,7 @@ export type ReviewRow = {
 	status: ReviewStatus;
 	values: ReviewValues;
 	message?: string;
-	existing?: unknown[];
+	existing?: ExistingRow[];
 };
 
 const modelSelectorSchema = z.discriminatedUnion('kind', [
