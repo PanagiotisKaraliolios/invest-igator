@@ -4,6 +4,7 @@ import { createCallerFactory, createTRPCRouter } from '@/server/api/trpc';
 import { adminRouter } from './routers/admin';
 import { aiChatRouter } from './routers/ai-chat';
 import { aiCredentialsRouter } from './routers/ai-credentials';
+import { aiImportRouter } from './routers/ai-import';
 import { aiObservabilityRouter } from './routers/ai-observability';
 import { apiKeysRouter } from './routers/api-keys';
 import { currencyProcedures } from './routers/currency';
@@ -45,6 +46,15 @@ import { transactionsRouter } from './routers/transactions';
  * - `unbanUser` - Unban a user
  * - `removeUser` - Delete a user
  * - `getStats` - Get admin statistics
+ *
+ * ### aiImport
+ * AI-assisted CSV statement import: the model maps arbitrary broker columns onto our canonical
+ * schema (header + a small row sample only, never the whole file); it never writes. All
+ * procedures require authentication.
+ *
+ * Key procedures:
+ * - `preview` - Parse an uploaded CSV, map its columns via the configured model, validate and
+ *   classify each row (ok / duplicate / needs-fix) for review before commit
  *
  * ### apiKeys
  * API key management for programmatic access.
@@ -134,6 +144,7 @@ export const appRouter = createTRPCRouter({
 	admin: adminRouter,
 	aiChat: aiChatRouter,
 	aiCredentials: aiCredentialsRouter,
+	aiImport: aiImportRouter,
 	aiObservability: aiObservabilityRouter,
 	apiKeys: apiKeysRouter,
 	currency: currencyProcedures,

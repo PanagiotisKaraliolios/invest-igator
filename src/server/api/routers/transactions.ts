@@ -5,13 +5,24 @@ import { parseIsoDateUtc } from '@/lib/date';
 import { isValidSymbol as isValidSymbolFormat, normalizeSymbol } from '@/lib/validation';
 import { createTransactionInput, updateTransactionInput } from '@/server/api/routers/transactions.schemas';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
-import { sleep } from '@/server/jobs/yahoo-lib';
 import { invalidatePortfolioCache } from '@/server/portfolio-compute';
+import {
+	bulkCreateTransactions,
+	CANONICAL_HEADER,
+	type CanonicalRecord,
+	createDefaultHeader,
+	detectDuplicates,
+	normalizeFeeCurrencyValue,
+	normalizeHeader,
+	parseCsv,
+	resolveUnknownSymbols,
+	toDateOnlyISOString,
+	validateRow
+} from '@/server/services/transaction-import';
 import { buildTransactionWhere, createTransaction, toTransactionRow } from '@/server/services/transactions';
 import { symbolExistsOnYahoo } from '@/server/yahoo-search';
 
 const supportedCurrencies = SUPPORTED_CURRENCIES;
-const CSV_NEW_SYMBOL_LIMIT = 50;
 
 /**
  * Transactions router - manages investment transactions (buys/sells).
@@ -45,6 +56,58 @@ const CSV_NEW_SYMBOL_LIMIT = 50;
  * });
  */
 export const transactionsRouter = createTRPCRouter({
+	/**
+	 * Re-validated bulk-write commit for rows already vetted at preview time (e.g. by the AI CSV
+	 * import flow). Every row is re-run through the SAME per-row validator as `importCsv` — never
+	 * trust the client — with an EMPTY unknown-symbols set, since Yahoo existence was already
+	 * checked during preview. Duplicate detection and the write itself reuse `detectDuplicates` /
+	 * `bulkCreateTransactions`, so behavior stays identical to the classic CSV importer.
+	 *
+	 * @input rows - Array of transaction rows (1-2000) matching `createTransactionInput`
+	 *
+	 * @returns Import result with imported/skipped counts and per-row errors
+	 *
+	 * @example
+	 * const result = await api.transactions.bulkImport.mutate({
+	 *   rows: [{ date: '2024-01-15', symbol: 'AAPL', side: 'BUY', quantity: 10, price: 150.5, priceCurrency: 'USD' }]
+	 * });
+	 */
+	bulkImport: protectedProcedure
+		.input(z.object({ rows: z.array(createTransactionInput).min(1).max(2000) }))
+		.mutation(async ({ ctx, input }) => {
+			const userId = ctx.session.user.id;
+			// Re-validate each row through the SAME per-row validator as the CSV path (never trust the
+			// client). createTransactionInput already enforces types/symbol format; validateRow re-checks
+			// currency support + positivity and yields the normalized CanonicalRecord.
+			const headerMap = new Map(CANONICAL_HEADER.map((h, i) => [h, i]));
+			const records: CanonicalRecord[] = [];
+			const errors: Array<{ index: number; message: string }> = [];
+			input.rows.forEach((r, index) => {
+				// `createTransactionInput`'s `isoDateSchema` already transforms `date` from a
+				// `yyyy-mm-dd` string into a UTC-midnight `Date` during zod parsing — convert it
+				// back to the string shape `validateRow`'s `cells` array expects.
+				const cells = [
+					toDateOnlyISOString(r.date),
+					r.symbol,
+					r.side,
+					String(r.quantity),
+					String(r.price),
+					r.priceCurrency ?? 'USD',
+					r.fee != null ? String(r.fee) : '',
+					r.feeCurrency ?? '',
+					r.note ?? ''
+				];
+				const res = validateRow(cells, headerMap, new Set()); // Yahoo existence already vetted at preview
+				if (res.ok) records.push(res.record);
+				else errors.push({ index, message: res.message });
+			});
+			if (records.length === 0) return { errors, imported: 0, skipped: 0 };
+
+			const { toInsert } = await detectDuplicates(userId, records);
+			await bulkCreateTransactions(userId, toInsert, ctx.db);
+			await invalidatePortfolioCache(userId);
+			return { errors, imported: toInsert.length, skipped: records.length - toInsert.length };
+		}),
 	/**
 	 * Removes multiple transactions by their IDs in a single operation.
 	 * Only transactions owned by the user can be deleted.
@@ -255,22 +318,7 @@ export const transactionsRouter = createTRPCRouter({
 			const [maybeHeader, ...dataRows] = rows;
 			const headerRow = maybeHeader ?? [];
 			const useHeader = input.skipHeader !== false;
-			const headerColumns = useHeader ? normalizeHeader(headerRow) : undefined;
-			const records: Array<{
-				date: Date;
-				fee: number | null;
-				feeCurrency: Currency | null;
-				note: string | null;
-				price: number;
-				priceCurrency: Currency;
-				quantity: number;
-				side: 'BUY' | 'SELL';
-				symbol: string;
-			}> = [];
-			const errors: Array<{ line: number; message: string }> = [];
-
-			const data = useHeader ? dataRows : rows;
-			const header = headerColumns ?? createDefaultHeader(headerRow.length);
+			const header = useHeader ? normalizeHeader(headerRow) : createDefaultHeader(headerRow.length);
 			const headerMap = new Map(header.map((h, idx) => [h, idx]));
 			const requiredColumns = ['date', 'symbol', 'side', 'quantity', 'price'] as const;
 			for (const col of requiredColumns) {
@@ -281,274 +329,33 @@ export const transactionsRouter = createTRPCRouter({
 					});
 				}
 			}
+			const data = useHeader ? dataRows : rows;
 
 			// Pre-validate distinct, format-valid, not-yet-tracked symbols against Yahoo once each.
-			const cellOf = (row: string[], name: string) => {
-				const idx = headerMap.get(name);
-				return idx != null ? (row[idx] ?? '') : '';
-			};
-			const distinctSymbols = new Set<string>();
+			const distinctSymbols: string[] = [];
 			for (const rawRow of data) {
 				if (rawRow.every((cell) => cell.trim() === '')) continue;
-				const s = normalizeSymbol(cellOf(rawRow, 'symbol'));
-				if (s && isValidSymbolFormat(s)) distinctSymbols.add(s);
+				const idx = headerMap.get('symbol');
+				distinctSymbols.push(idx != null ? (rawRow[idx] ?? '') : '');
 			}
-			const trackedRows = distinctSymbols.size
-				? await ctx.db.watchlistItem.findMany({
-						select: { symbol: true },
-						where: { symbol: { in: Array.from(distinctSymbols) }, userId: ctx.session.user.id }
-					})
-				: [];
-			const tracked = new Set(trackedRows.map((r) => r.symbol));
-			const newSymbols = Array.from(distinctSymbols).filter((s) => !tracked.has(s));
-			if (newSymbols.length > CSV_NEW_SYMBOL_LIMIT) {
-				throw new TRPCError({
-					code: 'BAD_REQUEST',
-					message: `This file has ${newSymbols.length} new symbols to verify (max ${CSV_NEW_SYMBOL_LIMIT}). Please split it into smaller files, or add these symbols to your watchlist first.`
-				});
-			}
-			const unknownSymbols = new Set<string>();
-			for (const s of newSymbols) {
-				// Only a definitive "reached Yahoo, no match" ('no') blocks the row; an 'unreachable'
-				// result is given the benefit of the doubt so a Yahoo blip doesn't reject valid symbols.
-				if ((await symbolExistsOnYahoo(s)) === 'no') unknownSymbols.add(s);
-				await sleep(150);
-			}
+			const unknownSymbols = await resolveUnknownSymbols(userId, distinctSymbols);
 
-			const supportedCurrencySet = new Set(supportedCurrencies);
-
+			const records: CanonicalRecord[] = [];
+			const errors: Array<{ line: number; message: string }> = [];
 			data.forEach((rawRow, index) => {
 				const lineNumber = useHeader ? index + 2 : index + 1;
 				if (rawRow.every((cell) => cell.trim() === '')) return;
-				const byColumn = (name: string) => {
-					const idx = headerMap.get(name);
-					return idx != null ? (rawRow[idx] ?? '') : '';
-				};
-
-				try {
-					const symbol = normalizeSymbol(byColumn('symbol'));
-					if (!symbol) throw new Error('Symbol is required.');
-					if (!isValidSymbolFormat(symbol)) {
-						throw new Error('Symbol contains invalid characters.');
-					}
-					if (unknownSymbols.has(symbol)) {
-						throw new Error(`Unknown symbol "${symbol}" — not found on Yahoo Finance.`);
-					}
-
-					const sideRaw = byColumn('side').trim().toUpperCase();
-					if (sideRaw !== 'BUY' && sideRaw !== 'SELL') {
-						throw new Error('Side must be BUY or SELL.');
-					}
-
-					const quantity = Number(byColumn('quantity'));
-					if (!Number.isFinite(quantity) || quantity <= 0) {
-						throw new Error('Quantity must be a positive number.');
-					}
-
-					const price = Number(byColumn('price'));
-					if (!Number.isFinite(price) || price <= 0) {
-						throw new Error('Price must be a positive number.');
-					}
-
-					const priceCurrencyRaw = byColumn('priceCurrency').trim().toUpperCase() || 'USD';
-					if (!supportedCurrencySet.has(priceCurrencyRaw as Currency)) {
-						throw new Error(`Unsupported price currency "${priceCurrencyRaw}".`);
-					}
-
-					let feeCurrency: Currency | null = null;
-					const feeCurrencyValue = byColumn('feeCurrency').trim().toUpperCase();
-					if (feeCurrencyValue) {
-						if (!supportedCurrencySet.has(feeCurrencyValue as Currency)) {
-							throw new Error(`Unsupported fee currency "${feeCurrencyValue}".`);
-						}
-						feeCurrency = feeCurrencyValue as Currency;
-					}
-
-					const feeRaw = byColumn('fee').trim();
-					let fee: number | null = null;
-					if (feeRaw !== '') {
-						const parsedFee = Number(feeRaw);
-						if (!Number.isFinite(parsedFee) || parsedFee < 0) {
-							throw new Error('Fee must be a positive number.');
-						}
-						fee = parsedFee;
-						if (!feeCurrency) {
-							feeCurrency = priceCurrencyRaw as Currency;
-						}
-					}
-
-					const noteRaw = byColumn('note').trim();
-					const dateRaw = byColumn('date').trim();
-					if (!dateRaw) throw new Error('Date is required.');
-					const date = parseIsoDateUtc(dateRaw);
-					if (!date) {
-						throw new Error(`Invalid date "${dateRaw}".`);
-					}
-
-					records.push({
-						date,
-						fee,
-						feeCurrency,
-						note: noteRaw ? noteRaw : null,
-						price,
-						priceCurrency: priceCurrencyRaw as Currency,
-						quantity,
-						side: sideRaw,
-						symbol
-					});
-				} catch (error) {
-					const message = error instanceof Error ? error.message : 'Unknown parsing error';
-					errors.push({ line: lineNumber, message });
-				}
+				const res = validateRow(rawRow, headerMap, unknownSymbols);
+				if (res.ok) records.push(res.record);
+				else errors.push({ line: lineNumber, message: res.message });
 			});
 
 			if (records.length === 0) {
 				return { duplicates: [], errors, imported: 0 } as const;
 			}
 
-			const symbolsInUpload = Array.from(new Set(records.map((r) => r.symbol)));
-			const existing = symbolsInUpload.length
-				? await ctx.db.transaction.findMany({
-						select: {
-							date: true,
-							fee: true,
-							feeCurrency: true,
-							id: true,
-							note: true,
-							price: true,
-							priceCurrency: true,
-							quantity: true,
-							side: true,
-							symbol: true
-						},
-						where: {
-							symbol: { in: symbolsInUpload },
-							userId
-						}
-					})
-				: [];
-			const existingByKey = new Map<string, typeof existing>();
-			for (const row of existing) {
-				const key = makeDuplicateKey({
-					date: row.date,
-					fee: row.fee ?? null,
-					feeCurrency: (row.feeCurrency ?? null) as Currency | null,
-					note: row.note ?? null,
-					price: row.price,
-					priceCurrency: row.priceCurrency as Currency,
-					quantity: row.quantity,
-					side: row.side,
-					symbol: row.symbol
-				});
-				const list = existingByKey.get(key);
-				if (list) {
-					list.push(row);
-				} else {
-					existingByKey.set(key, [row]);
-				}
-			}
-
-			const duplicates: Array<{
-				id: string;
-				incoming: {
-					date: string;
-					fee: number | null;
-					feeCurrency: Currency | null;
-					note: string | null;
-					price: number;
-					priceCurrency: Currency;
-					quantity: number;
-					side: 'BUY' | 'SELL';
-					symbol: string;
-				};
-				existing: Array<{
-					id: string;
-					date: string;
-					fee: number | null;
-					feeCurrency: Currency | null;
-					note: string | null;
-					price: number;
-					priceCurrency: Currency;
-					quantity: number;
-					side: 'BUY' | 'SELL';
-					symbol: string;
-				}>;
-			}> = [];
-			const toInsert: typeof records = [];
-			const duplicateCounts = new Map<string, number>();
-			for (const record of records) {
-				const key = makeDuplicateKey(record);
-				const matches = existingByKey.get(key);
-				if (matches && matches.length > 0) {
-					const indexForKey = duplicateCounts.get(key) ?? 0;
-					duplicateCounts.set(key, indexForKey + 1);
-					const normalizedFeeCurrency = normalizeFeeCurrencyValue(
-						record.fee,
-						record.feeCurrency,
-						record.priceCurrency
-					);
-					duplicates.push({
-						existing: matches.map((row) => ({
-							date: toDateOnlyISOString(row.date),
-							fee: row.fee ?? null,
-							feeCurrency: normalizeFeeCurrencyValue(
-								row.fee ?? null,
-								(row.feeCurrency ?? null) as Currency | null,
-								row.priceCurrency as Currency
-							),
-							id: row.id,
-							note: row.note ?? null,
-							price: row.price,
-							priceCurrency: row.priceCurrency as Currency,
-							quantity: row.quantity,
-							side: row.side,
-							symbol: row.symbol
-						})),
-						id: `${key}#${indexForKey}`,
-						incoming: {
-							date: toDateOnlyISOString(record.date),
-							fee: record.fee,
-							feeCurrency: normalizedFeeCurrency,
-							note: record.note,
-							price: record.price,
-							priceCurrency: record.priceCurrency,
-							quantity: record.quantity,
-							side: record.side,
-							symbol: record.symbol
-						}
-					});
-				} else {
-					toInsert.push(record);
-				}
-			}
-
-			if (toInsert.length > 0) {
-				const uniqueSymbols = Array.from(new Set(toInsert.map((r) => r.symbol)));
-				await ctx.db.$transaction(async (trx) => {
-					await trx.transaction.createMany({
-						data: toInsert.map((r) => ({
-							date: r.date,
-							fee: r.fee,
-							feeCurrency: r.feeCurrency,
-							note: r.note,
-							price: r.price,
-							priceCurrency: r.priceCurrency,
-							quantity: r.quantity,
-							side: r.side,
-							symbol: r.symbol,
-							userId
-						}))
-					});
-
-					for (const symbol of uniqueSymbols) {
-						await trx.watchlistItem.upsert({
-							create: { symbol, userId },
-							update: {},
-							where: { userId_symbol: { symbol, userId } }
-						});
-					}
-				});
-			}
+			const { toInsert, duplicates } = await detectDuplicates(userId, records);
+			await bulkCreateTransactions(userId, toInsert, ctx.db);
 
 			await invalidatePortfolioCache(userId);
 			return { duplicates, errors, imported: toInsert.length } as const;
@@ -843,114 +650,3 @@ export const transactionsRouter = createTRPCRouter({
 		return { success: true } as const;
 	})
 });
-
-function parseCsv(text: string): string[][] {
-	const rows: string[][] = [];
-	let current = '';
-	let inQuotes = false;
-	let row: string[] = [];
-	for (let i = 0; i < text.length; i++) {
-		const char = text[i]!;
-		if (char === '"') {
-			if (inQuotes && text[i + 1] === '"') {
-				current += '"';
-				i++;
-			} else {
-				inQuotes = !inQuotes;
-			}
-		} else if (char === ',' && !inQuotes) {
-			row.push(current);
-			current = '';
-		} else if ((char === '\n' || char === '\r') && !inQuotes) {
-			if (char === '\r' && text[i + 1] === '\n') {
-				i++;
-			}
-			row.push(current);
-			if (row.some((cell) => cell.trim() !== '')) {
-				rows.push(row);
-			}
-			row = [];
-			current = '';
-		} else {
-			current += char;
-		}
-	}
-	if (current !== '' || row.length > 0) {
-		row.push(current);
-		if (row.some((cell) => cell.trim() !== '')) {
-			rows.push(row);
-		}
-	}
-	return rows;
-}
-
-function normalizeHeader(row: string[]): string[] {
-	const alias: Record<string, string> = {
-		currency: 'priceCurrency',
-		date: 'date',
-		fee: 'fee',
-		feecurrency: 'feeCurrency',
-		fees: 'fee',
-		note: 'note',
-		notes: 'note',
-		price: 'price',
-		pricecurrency: 'priceCurrency',
-		qty: 'quantity',
-		quantity: 'quantity',
-		side: 'side',
-		symbol: 'symbol'
-	};
-	return row.map((cell) => {
-		const normalized = cell
-			.trim()
-			.toLowerCase()
-			.replace(/[^a-z]/g, '');
-		return alias[normalized] ?? cell.trim();
-	});
-}
-
-function createDefaultHeader(length: number): string[] {
-	const defaults = ['date', 'symbol', 'side', 'quantity', 'price', 'priceCurrency', 'fee', 'feeCurrency', 'note'];
-	return defaults.slice(0, length);
-}
-
-function toDateOnlyISOString(date: Date): string {
-	return date.toISOString().slice(0, 10);
-}
-
-function normalizeFeeCurrencyValue(
-	fee: number | null,
-	feeCurrency: Currency | null,
-	priceCurrency: Currency
-): Currency | null {
-	if (fee == null) return null;
-	return feeCurrency ?? priceCurrency;
-}
-
-type DuplicateKeyPayload = {
-	date: Date;
-	fee: number | null;
-	feeCurrency: Currency | null;
-	note?: string | null;
-	price: number;
-	priceCurrency: Currency;
-	quantity: number;
-	side: 'BUY' | 'SELL';
-	symbol: string;
-};
-
-function makeDuplicateKey(record: DuplicateKeyPayload): string {
-	const feeCurrency = normalizeFeeCurrencyValue(record.fee, record.feeCurrency, record.priceCurrency);
-	const feePart = record.fee != null ? String(record.fee) : '';
-	const feeCurrencyPart = feeCurrency ?? '';
-	return [
-		toDateOnlyISOString(record.date),
-		record.symbol,
-		record.side,
-		String(record.quantity),
-		String(record.price),
-		record.priceCurrency,
-		feePart,
-		feeCurrencyPart
-	].join('|');
-}
