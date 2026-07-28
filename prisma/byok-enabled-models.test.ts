@@ -31,7 +31,11 @@ describe('AiProviderCredential.enabledModelIds', () => {
 
 	test('the migration backfills a legacy row to exactly its defaultModelId', async () => {
 		// Simulate a pre-migration row: the column exists now, so emulate the legacy state by
-		// clearing it, then run the migration's backfill statement verbatim and assert the result.
+		// clearing it, then run this inlined copy of the backfill UPDATE against a real row and
+		// assert the result. This exercises the backfill SQL's semantics (Postgres array
+		// construction via ARRAY[...] and double-quoted identifier handling), not fidelity to the
+		// shipped migration file byte-for-byte — that file is separately protected by Prisma's
+		// migration checksums, which fail the build if it's edited after being applied.
 		const userId = await seedUser('byok-enabled-backfill');
 		const row = await makeCredential(userId, 'claude-opus-5', []);
 

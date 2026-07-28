@@ -335,7 +335,7 @@ model AiProviderCredential {
   /// Every model this credential may serve. One key often serves a family
   /// (e.g. Anthropic Opus + Sonnet). `defaultModelId` is the primary and MUST
   /// be a member of this list.
-  enabledModelIds String[]
+  enabledModelIds String[] @default([])
 
   label          String?
   enabled        Boolean   @default(true)
