@@ -11,6 +11,26 @@
  * implementation, audited once.
  */
 export function safeProviderErrorMessage(error: unknown, secretPlaintext: string): string {
-	const raw = error instanceof Error ? `${error.name}: ${error.message}` : 'Unknown provider error';
-	return raw.replaceAll(secretPlaintext, '[redacted]').slice(0, 300);
+	if (!(error instanceof Error)) return 'Unknown provider error';
+
+	// A plain `Error` carries no useful type information in `name` — showing "Error: " is
+	// pure noise, and `list-models.ts` already routes its own throw through THIS function
+	// before rethrowing, so a second pass here (e.g. in the tRPC layer) would otherwise
+	// double the prefix into "Error: Error: ...". Named subclasses (TypeError,
+	// InvalidCredentialError, ...) DO carry information — keep the prefix for those.
+	const raw = error.name === 'Error' ? error.message : `${error.name}: ${error.message}`;
+
+	// GOOGLE URL-encodes the secret into the query string (`encodeURIComponent(secret)`),
+	// so a plaintext-only replace leaves the percent-encoded form (which differs whenever
+	// the secret contains `+ / = & :` etc.) sitting in the message, trivially decodable.
+	// Redact both forms whenever they differ.
+	const encoded = encodeURIComponent(secretPlaintext);
+	let redacted = raw.replaceAll(secretPlaintext, '[redacted]');
+	if (encoded !== secretPlaintext) {
+		redacted = redacted.replaceAll(encoded, '[redacted]');
+	}
+
+	// Truncate AFTER every replacement: truncating first could cut a match in half and
+	// leave a live fragment of the secret (or its encoded form) in the final message.
+	return redacted.slice(0, 300);
 }

@@ -31,6 +31,19 @@ function resolveBase(raw: string | null | undefined, fallback: string): string {
 	return trimmed ? normalizeBaseUrl(trimmed) : fallback;
 }
 
+/**
+ * Resolve a RELATIVE `path` (no leading slash) against `base` via the WHATWG `URL`
+ * resolver instead of string concatenation. String concatenation lets a `?` or `#`
+ * embedded in `base` (e.g. a pasted `file:///etc/hostname?`) rewrite the appended path
+ * into the query/fragment instead of the pathname — `URL` resolution cannot be fooled
+ * that way. Unlike resolving a LEADING-slash path (which resets to the root), a
+ * relative path also preserves an existing base path segment, e.g.
+ * `https://gateway.example.com/openai` + `v1/models` -> `.../openai/v1/models`.
+ */
+function urlFor(base: string, path: string): URL {
+	return new URL(path, base.endsWith('/') ? base : `${base}/`);
+}
+
 async function getJson(url: string, headers: Record<string, string>): Promise<unknown> {
 	const controller = new AbortController();
 	const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -79,31 +92,48 @@ function idsFromGoogleModels(payload: unknown): string[] {
 export async function listProviderModels(params: ListModelsParams): Promise<ListModelsResult> {
 	const { baseURL, provider, secret } = params;
 
-	if (provider === 'AZURE') return { supported: false };
-
 	try {
-		if (provider === 'GOOGLE') {
-			const base = resolveBase(baseURL, DEFAULT_BASE_URLS.GOOGLE);
-			const payload = await getJson(`${base}/v1beta/models?key=${encodeURIComponent(secret)}`, {});
-			return { models: idsFromGoogleModels(payload), supported: true };
-		}
+		// A `switch` over the same union `buildByokModel` (resolve-model.ts) dispatches on,
+		// with the same `never`-assignment exhaustiveness check, so adding a provider without
+		// updating both call sites is a compile error rather than a silent 404.
+		switch (provider) {
+			case 'AZURE':
+				return { supported: false };
 
-		if (provider === 'ANTHROPIC') {
-			const base = resolveBase(baseURL, DEFAULT_BASE_URLS.ANTHROPIC);
-			const payload = await getJson(`${base}/v1/models`, {
-				'anthropic-version': ANTHROPIC_VERSION,
-				'x-api-key': secret
-			});
-			return { models: idsFromDataArray(payload), supported: true };
-		}
+			case 'GOOGLE': {
+				const base = resolveBase(baseURL, DEFAULT_BASE_URLS.GOOGLE);
+				const url = urlFor(base, 'v1beta/models');
+				url.searchParams.set('key', secret);
+				const payload = await getJson(url.toString(), {});
+				return { models: idsFromGoogleModels(payload), supported: true };
+			}
 
-		if (provider === 'OPENAI_COMPATIBLE' && !baseURL?.trim()) {
-			throw new Error('A base URL is required to list models for an OpenAI-compatible provider.');
-		}
+			case 'ANTHROPIC': {
+				const base = resolveBase(baseURL, DEFAULT_BASE_URLS.ANTHROPIC);
+				const url = urlFor(base, 'v1/models');
+				const payload = await getJson(url.toString(), {
+					'anthropic-version': ANTHROPIC_VERSION,
+					'x-api-key': secret
+				});
+				return { models: idsFromDataArray(payload), supported: true };
+			}
 
-		const base = resolveBase(baseURL, DEFAULT_BASE_URLS.OPENAI);
-		const payload = await getJson(`${base}/v1/models`, { Authorization: `Bearer ${secret}` });
-		return { models: idsFromDataArray(payload), supported: true };
+			case 'OPENAI':
+			case 'OPENAI_COMPATIBLE': {
+				if (provider === 'OPENAI_COMPATIBLE' && !baseURL?.trim()) {
+					throw new Error('A base URL is required to list models for an OpenAI-compatible provider.');
+				}
+				const base = resolveBase(baseURL, DEFAULT_BASE_URLS.OPENAI);
+				const url = urlFor(base, 'v1/models');
+				const payload = await getJson(url.toString(), { Authorization: `Bearer ${secret}` });
+				return { models: idsFromDataArray(payload), supported: true };
+			}
+
+			default: {
+				const exhaustive: never = provider;
+				throw new Error(`Unsupported provider: ${exhaustive}`);
+			}
+		}
 	} catch (error) {
 		// GOOGLE puts the plaintext key in the URL query string; any error that embeds the
 		// request (a raw fetch rejection, an SDK error, a future provider) must not escape

@@ -60,7 +60,13 @@ const formSchema = z
 		baseURL: z.string().optional(),
 		defaultModelId: z.string().min(1, 'Pick a primary model'),
 		deployment: z.string().optional(),
-		enabledModelIds: z.array(z.string().min(1)).min(1, 'Enable at least one model'),
+		enabledModelIds: z
+			.array(z.string().min(1))
+			.min(1, 'Enable at least one model')
+			// Mirrors the server bound (`createInput.enabledModelIds` in ai-credentials.ts, and
+			// `MAX_MODELS` in list-models.ts) — without this, 150 selected models pass client
+			// validation and die with an opaque zod error from the server instead of this message.
+			.max(100, 'At most 100 models'),
 		label: z.string().optional(),
 		provider: z.enum(['ANTHROPIC', 'AZURE', 'GOOGLE', 'OPENAI', 'OPENAI_COMPATIBLE']),
 		resourceName: z.string().optional(),
@@ -77,10 +83,15 @@ type FormValues = z.infer<typeof formSchema>;
 const MODEL_LISTING_PROVIDERS = new Set<FormValues['provider']>(['ANTHROPIC', 'GOOGLE', 'OPENAI', 'OPENAI_COMPATIBLE']);
 
 // Base UI form controls error when a controlled value flips undefined -> defined, so
-// `provider` and `enabledModelIds` MUST have defaults here (baseui-controlled-uncontrolled).
+// `provider`, `enabledModelIds`, and `defaultModelId` MUST have defaults here
+// (baseui-controlled-uncontrolled) — but the defaults must NOT pre-select a model. A
+// seeded chip survives a provider switch (it is not in the newly-fetched list, so nothing
+// removes it), so the primary-repair logic in the models Combobox's `onValueChange` never
+// fires for it, the server probes the NEW provider with the OLD provider's model id, and
+// the user sees "The provider rejected this credential" for a chip they never added.
 const DEFAULTS: Partial<FormValues> = {
-	defaultModelId: 'gpt-5.4-mini',
-	enabledModelIds: ['gpt-5.4-mini'],
+	defaultModelId: '',
+	enabledModelIds: [],
 	provider: 'AZURE'
 };
 
@@ -130,10 +141,15 @@ export function AiCredentialsCard() {
 	});
 
 	// The typed text becomes a selectable row when it is not already a known model, so a
-	// custom/unlisted id can always be added without a separate free-text field.
+	// custom/unlisted id can always be added without a separate free-text field. Checked
+	// against BOTH `fetchedModels` and the currently enabled models — re-typing an
+	// already-added custom id (one that was never in `fetchedModels`) would otherwise show
+	// a duplicate row tagged "custom" alongside the real chip.
 	const trimmedQuery = modelQuery.trim();
 	const modelItems =
-		trimmedQuery !== '' && !fetchedModels.includes(trimmedQuery) ? [...fetchedModels, trimmedQuery] : fetchedModels;
+		trimmedQuery !== '' && !fetchedModels.includes(trimmedQuery) && !enabledModelIds.includes(trimmedQuery)
+			? [...fetchedModels, trimmedQuery]
+			: fetchedModels;
 
 	const createMutation = api.aiCredentials.create.useMutation({
 		onError: (error) => toast.error(error.message),
@@ -252,7 +268,19 @@ export function AiCredentialsCard() {
 				)}
 			</CardContent>
 
-			<Dialog onOpenChange={setDialogOpen} open={dialogOpen}>
+			<Dialog
+				onOpenChange={(open) => {
+					setDialogOpen(open);
+					// Escape / overlay-click / the X close the dialog through THIS handler, not
+					// through the Cancel button — cleanup must live here too, or those paths leave
+					// the previous provider's fetched list for the next "Add key".
+					if (!open) {
+						setFetchedModels([]);
+						setModelQuery('');
+					}
+				}}
+				open={dialogOpen}
+			>
 				<DialogContent>
 					<form onSubmit={handleSubmit(onSubmit)}>
 						<DialogHeader>
@@ -267,7 +295,17 @@ export function AiCredentialsCard() {
 								<FieldLabel htmlFor='byok-provider'>Provider</FieldLabel>
 								<Select
 									items={PROVIDERS}
-									onValueChange={(value) => setValue('provider', value as FormValues['provider'])}
+									onValueChange={(value) => {
+										setValue('provider', value as FormValues['provider']);
+										// A different provider invalidates every model choice made so far — the
+										// enabled/primary ids belonged to the OLD provider, and a stale
+										// `fetchedModels` list from the old provider would otherwise keep being
+										// offered (rendered untagged, so it looks authoritative).
+										setValue('enabledModelIds', [], { shouldValidate: false });
+										setValue('defaultModelId', '', { shouldValidate: false });
+										setFetchedModels([]);
+										setModelQuery('');
+									}}
 									value={provider}
 								>
 									<SelectTrigger className='w-full' id='byok-provider'>
@@ -454,15 +492,7 @@ export function AiCredentialsCard() {
 						</div>
 
 						<DialogFooter>
-							<Button
-								onClick={() => {
-									setDialogOpen(false);
-									setFetchedModels([]);
-									setModelQuery('');
-								}}
-								type='button'
-								variant='outline'
-							>
+							<Button onClick={() => setDialogOpen(false)} type='button' variant='outline'>
 								Cancel
 							</Button>
 							<Button disabled={createMutation.isPending} type='submit'>

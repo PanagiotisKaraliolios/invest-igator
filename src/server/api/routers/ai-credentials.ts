@@ -10,11 +10,17 @@ import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
 const providerSchema = z.enum(['ANTHROPIC', 'AZURE', 'GOOGLE', 'OPENAI', 'OPENAI_COMPATIBLE']);
 
 // zod v4: `z.url()` is the top-level string-format API. `z.string().url()` is the
-// deprecated v3 spelling.
+// deprecated v3 spelling. Bare `z.url()` imposes NO protocol restriction — it accepts
+// `file:///etc/passwd`, `javascript:`, `ftp:` — and `listProviderModels` does a bare
+// `fetch()` on this value, which makes an unrestricted URL a local-file read oracle.
+// Restrict to http(s) explicitly; `http://localhost:11434` (Ollama) must keep working.
 const createInput = z
 	.object({
 		apiVersion: z.string().max(40).optional(),
-		baseURL: z.url().max(500).optional(),
+		baseURL: z
+			.url({ protocol: /^https?$/ })
+			.max(500)
+			.optional(),
 		defaultModelId: z.string().min(1).max(120),
 		deployment: z.string().max(120).optional(),
 		enabledModelIds: z.array(z.string().min(1).max(120)).min(1).max(100),
@@ -61,7 +67,12 @@ const createInput = z
 
 const listModelsInput = z
 	.object({
-		baseURL: z.url().max(500).optional(),
+		// Same protocol restriction as `createInput.baseURL`, and for the same reason: this
+		// value is fed straight into a `fetch()` inside `listProviderModels`.
+		baseURL: z
+			.url({ protocol: /^https?$/ })
+			.max(500)
+			.optional(),
 		provider: providerSchema,
 		secret: z.string().min(8).max(500)
 	})
