@@ -2,7 +2,9 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { isDateApiVersion, maskHint, normalizeBaseUrl, normalizeResourceName } from '@/server/ai/credential-config';
 import { open, Secret, seal } from '@/server/ai/crypto';
+import { type ListModelsResult, listProviderModels } from '@/server/ai/list-models';
 import { type ByokConfig, type ByokProvider, probeCredential } from '@/server/ai/probe';
+import { safeProviderErrorMessage } from '@/server/ai/provider-errors';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
 
 const providerSchema = z.enum(['ANTHROPIC', 'AZURE', 'GOOGLE', 'OPENAI', 'OPENAI_COMPATIBLE']);
@@ -15,12 +17,20 @@ const createInput = z
 		baseURL: z.url().max(500).optional(),
 		defaultModelId: z.string().min(1).max(120),
 		deployment: z.string().max(120).optional(),
+		enabledModelIds: z.array(z.string().min(1).max(120)).min(1).max(100),
 		label: z.string().max(60).optional(),
 		provider: providerSchema,
 		resourceName: z.string().max(120).optional(),
 		secret: z.string().min(8).max(500)
 	})
 	.superRefine((value, ctx) => {
+		if (!value.enabledModelIds.includes(value.defaultModelId)) {
+			ctx.addIssue({
+				code: 'custom',
+				message: 'The primary model must be one of the enabled models.',
+				path: ['defaultModelId']
+			});
+		}
 		if (value.apiVersion && isDateApiVersion(value.apiVersion)) {
 			ctx.addIssue({
 				code: 'custom',
@@ -44,6 +54,18 @@ const createInput = z
 				});
 			}
 		}
+		if (value.provider === 'OPENAI_COMPATIBLE' && !value.baseURL) {
+			ctx.addIssue({ code: 'custom', message: 'A base URL is required.', path: ['baseURL'] });
+		}
+	});
+
+const listModelsInput = z
+	.object({
+		baseURL: z.url().max(500).optional(),
+		provider: providerSchema,
+		secret: z.string().min(8).max(500)
+	})
+	.superRefine((value, ctx) => {
 		if (value.provider === 'OPENAI_COMPATIBLE' && !value.baseURL) {
 			ctx.addIssue({ code: 'custom', message: 'A base URL is required.', path: ['baseURL'] });
 		}
@@ -135,6 +157,7 @@ export const aiCredentialsRouter = createTRPCRouter({
 				ciphertext,
 				defaultModelId: config.defaultModelId,
 				deployment: config.deployment,
+				enabledModelIds: input.enabledModelIds,
 				iv,
 				kid: blob.kid,
 				label: input.label ?? null,
@@ -151,6 +174,7 @@ export const aiCredentialsRouter = createTRPCRouter({
 				defaultModelId: config.defaultModelId,
 				deployment: config.deployment,
 				enabled: true,
+				enabledModelIds: input.enabledModelIds,
 				iv,
 				kid: blob.kid,
 				label: input.label ?? null,
@@ -235,5 +259,27 @@ export const aiCredentialsRouter = createTRPCRouter({
 				resourceName: row.resourceName
 			};
 		});
+	}),
+
+	/**
+	 * List the models a provider offers, using the key the user has just typed — the
+	 * credential row does not exist yet, so this cannot go through `resolveModel`.
+	 *
+	 * Persists NOTHING. Errors are redacted before they reach the browser: a provider
+	 * error can embed the request config, including the auth header.
+	 */
+	listModels: protectedProcedure.input(listModelsInput).mutation(async ({ input }): Promise<ListModelsResult> => {
+		try {
+			return await listProviderModels({
+				baseURL: input.baseURL ?? null,
+				provider: input.provider,
+				secret: input.secret
+			});
+		} catch (error) {
+			throw new TRPCError({
+				code: 'BAD_REQUEST',
+				message: `Could not list models: ${safeProviderErrorMessage(error, input.secret)}`
+			});
+		}
 	})
 });

@@ -228,6 +228,7 @@ describe('aiCredentials — the secret never crosses the wire', () => {
 	test('create returns a masked hint and never echoes the plaintext secret anywhere', async () => {
 		const result = await callerFor(userA).aiCredentials.create({
 			defaultModelId: 'gpt-5.4-mini',
+			enabledModelIds: ['gpt-5.4-mini'],
 			provider: 'OPENAI',
 			secret: SECRET_A
 		});
@@ -244,6 +245,7 @@ describe('aiCredentials — the secret never crosses the wire', () => {
 		await expect(
 			callerFor(userA).aiCredentials.create({
 				defaultModelId: 'gpt-5.4-mini',
+				enabledModelIds: ['gpt-5.4-mini'],
 				provider: 'OPENAI',
 				secret: 'sk-bad-key-000000'
 			})
@@ -258,6 +260,7 @@ describe('aiCredentials — the secret never crosses the wire', () => {
 		await expect(
 			callerFor('evil|user').aiCredentials.create({
 				defaultModelId: 'gpt-5.4-mini',
+				enabledModelIds: ['gpt-5.4-mini'],
 				provider: 'OPENAI',
 				secret: SECRET_A
 			})
