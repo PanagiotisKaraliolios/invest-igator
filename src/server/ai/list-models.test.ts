@@ -91,4 +91,21 @@ describe('listProviderModels', () => {
 
 		expect(result).toEqual({ models: ['gpt-5'], supported: true });
 	});
+
+	test('a raw fetch rejection cannot leak the secret (Google puts the key in the URL)', async () => {
+		globalThis.fetch = (async () => {
+			throw new Error(
+				'connect ECONNREFUSED https://generativelanguage.googleapis.com/v1beta/models?key=goog-super-secret'
+			);
+		}) as typeof fetch;
+
+		const promise = listProviderModels({ provider: 'GOOGLE', secret: 'goog-super-secret' });
+
+		await expect(promise).rejects.toThrow();
+		await promise.catch((error: unknown) => {
+			const message = error instanceof Error ? error.message : String(error);
+			expect(message).not.toContain('goog-super-secret');
+			expect(message).toContain('[redacted]');
+		});
+	});
 });

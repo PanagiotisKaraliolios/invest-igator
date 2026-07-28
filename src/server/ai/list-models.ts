@@ -1,5 +1,6 @@
 import { normalizeBaseUrl } from '@/server/ai/credential-config';
 import type { ByokProvider } from '@/server/ai/probe';
+import { safeProviderErrorMessage } from '@/server/ai/provider-errors';
 
 export type ListModelsParams = {
 	baseURL?: string | null;
@@ -80,26 +81,34 @@ export async function listProviderModels(params: ListModelsParams): Promise<List
 
 	if (provider === 'AZURE') return { supported: false };
 
-	if (provider === 'GOOGLE') {
-		const base = resolveBase(baseURL, DEFAULT_BASE_URLS.GOOGLE);
-		const payload = await getJson(`${base}/v1beta/models?key=${encodeURIComponent(secret)}`, {});
-		return { models: idsFromGoogleModels(payload), supported: true };
-	}
+	try {
+		if (provider === 'GOOGLE') {
+			const base = resolveBase(baseURL, DEFAULT_BASE_URLS.GOOGLE);
+			const payload = await getJson(`${base}/v1beta/models?key=${encodeURIComponent(secret)}`, {});
+			return { models: idsFromGoogleModels(payload), supported: true };
+		}
 
-	if (provider === 'ANTHROPIC') {
-		const base = resolveBase(baseURL, DEFAULT_BASE_URLS.ANTHROPIC);
-		const payload = await getJson(`${base}/v1/models`, {
-			'anthropic-version': ANTHROPIC_VERSION,
-			'x-api-key': secret
-		});
+		if (provider === 'ANTHROPIC') {
+			const base = resolveBase(baseURL, DEFAULT_BASE_URLS.ANTHROPIC);
+			const payload = await getJson(`${base}/v1/models`, {
+				'anthropic-version': ANTHROPIC_VERSION,
+				'x-api-key': secret
+			});
+			return { models: idsFromDataArray(payload), supported: true };
+		}
+
+		if (provider === 'OPENAI_COMPATIBLE' && !baseURL?.trim()) {
+			throw new Error('A base URL is required to list models for an OpenAI-compatible provider.');
+		}
+
+		const base = resolveBase(baseURL, DEFAULT_BASE_URLS.OPENAI);
+		const payload = await getJson(`${base}/v1/models`, { Authorization: `Bearer ${secret}` });
 		return { models: idsFromDataArray(payload), supported: true };
+	} catch (error) {
+		// GOOGLE puts the plaintext key in the URL query string; any error that embeds the
+		// request (a raw fetch rejection, an SDK error, a future provider) must not escape
+		// this function un-redacted. Route every throw through the shared redactor rather
+		// than relying on callers to remember to do it.
+		throw new Error(safeProviderErrorMessage(error, secret));
 	}
-
-	if (provider === 'OPENAI_COMPATIBLE' && !baseURL?.trim()) {
-		throw new Error('A base URL is required to list models for an OpenAI-compatible provider.');
-	}
-
-	const base = resolveBase(baseURL, DEFAULT_BASE_URLS.OPENAI);
-	const payload = await getJson(`${base}/v1/models`, { Authorization: `Bearer ${secret}` });
-	return { models: idsFromDataArray(payload), supported: true };
 }

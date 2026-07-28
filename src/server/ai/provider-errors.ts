@@ -4,8 +4,11 @@
  * browser (and into any log that captures it). Pick fields explicitly, redact the
  * plaintext defensively, and truncate.
  *
- * Shared by the save-time probe (`probe.ts`) and model listing (`list-models.ts`) so
- * there is exactly one redaction implementation to audit.
+ * Applied at every boundary a provider error can cross on its way to the browser: the
+ * save-time probe (`probe.ts`), model listing (`list-models.ts`, which wraps its own
+ * provider-contacting work in this redactor before rethrowing), and the tRPC layer that
+ * formats whatever error escapes into the response sent to the client. One redaction
+ * implementation, audited once.
  */
 export function safeProviderErrorMessage(error: unknown, secretPlaintext: string): string {
 	const raw = error instanceof Error ? `${error.name}: ${error.message}` : 'Unknown provider error';
