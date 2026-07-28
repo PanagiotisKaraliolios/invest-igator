@@ -55,6 +55,7 @@ export type AiCredentialView = {
 	defaultModelId: string;
 	deployment: string | null;
 	enabled: boolean;
+	enabledModelIds: string[];
 	hint: string | null;
 	id: string;
 	label: string | null;
@@ -164,6 +165,7 @@ export const aiCredentialsRouter = createTRPCRouter({
 			defaultModelId: row.defaultModelId,
 			deployment: row.deployment,
 			enabled: row.enabled,
+			enabledModelIds: row.enabledModelIds,
 			hint: maskHint(input.secret),
 			id: row.id,
 			label: row.label,
@@ -223,6 +225,7 @@ export const aiCredentialsRouter = createTRPCRouter({
 				defaultModelId: row.defaultModelId,
 				deployment: row.deployment,
 				enabled: row.enabled,
+				enabledModelIds: row.enabledModelIds,
 				hint,
 				id: row.id,
 				label: row.label,
