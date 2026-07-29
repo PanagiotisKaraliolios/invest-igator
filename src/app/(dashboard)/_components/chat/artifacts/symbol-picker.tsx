@@ -18,6 +18,12 @@ type SearchOutput = z.infer<typeof symbolSearchTool.outputSchema>;
  *
  * Clicking sends a normal user turn naming the ticker; the model then continues with an exact
  * symbol. Nothing here writes to the app.
+ *
+ * The picker renders as soon as its part reaches `output-available` — typically WHILE the
+ * assistant is still streaming the prose that introduces the candidates, not after. Clicking
+ * mid-stream is therefore the normal case, not an edge case, so the candidate buttons are
+ * disabled whenever a turn is already in flight (`actions.busy`) — otherwise `sendMessage` would
+ * start a second concurrent request for the same chat.
  */
 export function SymbolPicker({ output }: { output: unknown }): ReactNode {
 	const out = output as SearchOutput | null;
@@ -42,7 +48,7 @@ export function SymbolPicker({ output }: { output: unknown }): ReactNode {
 				{out.candidates.map((c) => (
 					<Button
 						className='h-auto justify-start py-1.5 text-left'
-						disabled={actions === null}
+						disabled={actions === null || actions.busy}
 						key={c.symbol}
 						onClick={() => {
 							setPicked(c.symbol);

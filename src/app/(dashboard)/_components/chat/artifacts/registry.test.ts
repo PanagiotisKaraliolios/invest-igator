@@ -23,7 +23,7 @@ function minimalOutputFor(name: string): unknown {
 				unconvertedSymbols: []
 			};
 		case 'market.priceHistory':
-			return { field: 'close', points: [], symbol: 'AAPL', truncated: false };
+			return { fetched: false, field: 'close', points: [], symbol: 'AAPL', truncated: false };
 		case 'transactions.search':
 			return { count: 0, hasMore: false, transactions: [] };
 		case 'watchlist.list':

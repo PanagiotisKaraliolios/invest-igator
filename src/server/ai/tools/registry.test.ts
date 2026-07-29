@@ -288,6 +288,25 @@ mock.module('@/server/yahoo-search', () => ({
 	// any test below (none call transactions.create's execute), so a type-correct stub is enough.
 	symbolExistsOnYahoo: async () => 'unreachable' as const
 }));
+/**
+ * market-price-history.ts's on-demand backfill imports these two directly (not through
+ * `@/server/services/market`, which IS mocked above). Every fixture in this file returns
+ * non-empty `getPriceHistory` points, so gate 1 (`points.length === 0`) never actually opens and
+ * neither of these is exercised today — but without a stub here, a future empty fixture would
+ * fall through to the REAL Influx client and the REAL yahoo-lib.ts (which itself pulls
+ * `@/server/db`, a real Postgres client), silently breaking this suite's "no Postgres, no
+ * Influx" claim. Type-correct stubs only, same pattern as the yahoo-search stub above.
+ */
+mock.module('@/server/influx', () => ({
+	symbolHasAnyData: async () => false
+}));
+mock.module('@/server/jobs/yahoo-lib', () => ({
+	// transactions-create.ts also imports this; never exercised by any test below either.
+	fetchYahooDaily: async () => {
+		throw new Error('fetchYahooDaily should not be called by any test in this suite');
+	},
+	ingestYahooSymbol: async () => ({}) as never
+}));
 
 const { ALL_TOOLS, buildToolset } = await import('./registry');
 // Dynamic, like the import above: a static top-level import would load `./symbol-search`

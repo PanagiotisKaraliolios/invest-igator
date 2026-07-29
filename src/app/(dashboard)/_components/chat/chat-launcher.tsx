@@ -86,6 +86,11 @@ export function ChatLauncher({ platformConfigured }: { platformConfigured: boole
 		transport
 	});
 
+	// SAME predicate chat-drawer.tsx uses to drive the composer's Send/Stop swap — an artifact
+	// (e.g. the symbol picker) that read a different condition here could disagree with the
+	// composer about whether a turn is in flight and let a second one start underneath it.
+	const busy = status === 'streaming' || status === 'submitted';
+
 	// Loading a past conversation: `useChat` recreates its internal Chat DURING the render that
 	// changes `id` (resetting messages), and `setMessages` writes to whichever instance is current
 	// at call time. Calling it inline right after `setChatId` would therefore populate the OLD
@@ -135,6 +140,7 @@ export function ChatLauncher({ platformConfigured }: { platformConfigured: boole
 					side='right'
 				>
 					<ChatActionsProvider
+						busy={busy}
 						sendMessage={(text) => {
 							void sendMessage({ text });
 						}}
