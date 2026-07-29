@@ -14,7 +14,8 @@ const SOURCE = readFileSync(join(import.meta.dir, 'portfolio-analyst.ts'), 'utf8
  * `version`, add a new entry — never edit an existing one.
  */
 const GOLDEN_HASHES: Record<number, string> = {
-	2: 'cecfc9fbe2d2d35e4192aa629791340e4b2694b2bad9ce2a94a79925fb9b43c3'
+	2: 'cecfc9fbe2d2d35e4192aa629791340e4b2694b2bad9ce2a94a79925fb9b43c3',
+	3: '481409293724dc1edc78df292b55b2bcd558e5b37188a7825dba844f10774a86'
 };
 
 /**
@@ -66,7 +67,7 @@ function scanForOffSwitchViolations(source: string): string[] {
 describe('PORTFOLIO_ANALYST identity', () => {
 	test('is versioned and stably identified', () => {
 		expect(PORTFOLIO_ANALYST.id).toBe('portfolio-analyst');
-		expect(PORTFOLIO_ANALYST.version).toBe(2);
+		expect(PORTFOLIO_ANALYST.version).toBe(3);
 	});
 
 	test('hash is the sha256 of text, computed at module load', () => {
@@ -176,6 +177,15 @@ describe('EU AI Act Art. 50(1) disclosure', () => {
 	test('the disclosure duty is in the prompt', () => {
 		expect(PORTFOLIO_ANALYST.text).toContain('You are an AI');
 		expect(PORTFOLIO_ANALYST.text).toContain('not a financial adviser');
+	});
+
+	test("the disclosure is scoped to once, in the model's own words — not a verbatim every-turn recital", () => {
+		// The v2 prompt ordered "State this plainly the first time you speak in every conversation",
+		// which weaker models echoed verbatim on every turn. v3 scopes it to the first reply, in the
+		// model's own words, and forbids repetition — while the literal duty (asserted above) stays.
+		expect(PORTFOLIO_ANALYST.text).toContain('in your own words');
+		expect(PORTFOLIO_ANALYST.text).toContain('first reply only');
+		expect(PORTFOLIO_ANALYST.text).not.toContain('the first time you speak in every conversation');
 	});
 
 	test('the disclosure is not conditional on any env var or flag', () => {
