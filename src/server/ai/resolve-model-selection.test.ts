@@ -94,6 +94,11 @@ describe('resolveModel with a model-level selector', () => {
 		expect(resolved.modelId).toBe('claude-sonnet-5');
 		// resolvedModel is what usage is priced on — it must follow the selection.
 		expect(resolved.resolvedModel).toBe('claude-sonnet-5');
+		// Pin the model ACTUALLY BUILT, not just the ids reported alongside it: modelId and
+		// resolvedModel above are both derived from the same `effective` local in resolve-model.ts,
+		// so a regression to buildByokModel(cfg, ...) (dropping the selected model) would still pass
+		// both assertions above while silently building -- and billing -- the DEFAULT model.
+		expect((resolved.model as { modelId: string }).modelId).toBe('claude-sonnet-5');
 	});
 
 	test('falls back to defaultModelId when the requested model is NOT enabled', async () => {
@@ -123,5 +128,8 @@ describe('resolveModel with a model-level selector', () => {
 		// The call routes on the deployment, so pricing must stay on the default model.
 		expect(resolved.modelId).toBe('my-deployment');
 		expect(resolved.resolvedModel).toBe('gpt-5.4-mini');
+		// Pin the model ACTUALLY BUILT: proves Azure routes the real request on the deployment,
+		// not the requested (or default) model id.
+		expect((resolved.model as { modelId: string }).modelId).toBe('my-deployment');
 	});
 });

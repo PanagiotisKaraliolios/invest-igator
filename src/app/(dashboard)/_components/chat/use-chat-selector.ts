@@ -49,10 +49,19 @@ export function buildSelectorOptions(
 			continue;
 		}
 
+		// An EMPTY enabledModelIds falls back to `[c.defaultModelId]` above so the label can still
+		// name the model — but that id isn't actually in the (empty) enabled set, so the route's
+		// re-check (`enabledModelIds.includes(modelId)`) would 403 it as NO_SUCH_MODEL. Emit the
+		// selector WITHOUT modelId here, same as the models.length === 0 branch, so the option
+		// round-trips through the route; `resolveModel` falls back to defaultModelId either way.
+		const modelIdIsEnabled = (c.enabledModelIds?.length ?? 0) > 0;
+
 		for (const modelId of models) {
 			opts.push({
 				label: `${providerLabel} · ${modelId}`,
-				value: { kind: 'byok', modelId, provider: c.provider as never }
+				value: modelIdIsEnabled
+					? { kind: 'byok', modelId, provider: c.provider as never }
+					: { kind: 'byok', provider: c.provider as never }
 			});
 		}
 	}

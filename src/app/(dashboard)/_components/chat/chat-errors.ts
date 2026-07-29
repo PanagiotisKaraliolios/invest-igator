@@ -9,6 +9,7 @@ const COPY: Record<string, string> = {
 	CREDENTIAL_REJECTED: 'Your provider key was rejected — check Settings → AI.',
 	NO_PLATFORM_MODEL: 'No platform model is configured. Add your own key in Settings → AI.',
 	NO_SUCH_CREDENTIAL: 'That provider is not set up. Add a key in Settings → AI.',
+	NO_SUCH_MODEL: 'That model is no longer enabled for your key. Pick another model.',
 	QUOTA_EXCEEDED: 'You have hit your usage limit.'
 };
 

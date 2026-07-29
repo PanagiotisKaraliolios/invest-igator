@@ -8,8 +8,12 @@ import type { SelectorOption } from './use-chat-selector';
  * `ModelSelector` isn't a primitive Base UI `Select` can key on directly — collapse it to a
  * string. The model id is part of the key: without it, two models on the same provider would
  * collide onto one option and the picker could not tell them apart.
+ *
+ * Exported so `ChatLauncher`'s selector-repair effect can compare the held selector against
+ * `options` using the SAME identity this component uses to render them — a second, parallel key
+ * implementation there could drift from this one and repair against the wrong notion of "same".
  */
-function keyOf(selector: ModelSelector): string {
+export function keyOf(selector: ModelSelector): string {
 	if (selector.kind === 'platform') return 'platform';
 	return selector.modelId === undefined
 		? `byok:${selector.provider}`
