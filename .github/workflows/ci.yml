@@ -178,8 +178,17 @@ jobs:
             -e POSTGRES_DB=investigator \
             -p 5432:5432 \
             pgvector/pgvector:0.8.5-pg16
-          # Wait for PostgreSQL to be ready
-          timeout 30 bash -c 'until docker exec postgres pg_isready -U postgres; do sleep 1; done'
+          # Wait for PostgreSQL to be ready — over TCP, against the target database.
+          #
+          # `pg_isready -U postgres` (no -h) checks the LOCAL SOCKET, which the image's entrypoint
+          # brings up on a TEMPORARY server while it runs initdb and creates POSTGRES_DB. That
+          # probe can therefore pass, the temporary server then shuts down, and the next step
+          # connects over TCP mid-restart and dies with "FATAL: the database system is starting up"
+          # (observed on PR #109). Forcing -h 127.0.0.1 skips the socket the temporary server owns,
+          # and running a real query against `investigator` also proves the DB exists and the
+          # server is past startup — strictly stronger than pg_isready.
+          timeout 60 bash -c 'until docker exec -e PGPASSWORD=postgres postgres \
+            psql -h 127.0.0.1 -U postgres -d investigator -c "select 1" >/dev/null 2>&1; do sleep 1; done'
 
       - name: Run Prisma migrations
         run: bun run db:push
@@ -247,8 +256,17 @@ jobs:
             -e POSTGRES_DB=investigator \
             -p 5432:5432 \
             pgvector/pgvector:0.8.5-pg16
-          # Wait for PostgreSQL to be ready
-          timeout 30 bash -c 'until docker exec postgres pg_isready -U postgres; do sleep 1; done'
+          # Wait for PostgreSQL to be ready — over TCP, against the target database.
+          #
+          # `pg_isready -U postgres` (no -h) checks the LOCAL SOCKET, which the image's entrypoint
+          # brings up on a TEMPORARY server while it runs initdb and creates POSTGRES_DB. That
+          # probe can therefore pass, the temporary server then shuts down, and the next step
+          # connects over TCP mid-restart and dies with "FATAL: the database system is starting up"
+          # (observed on PR #109). Forcing -h 127.0.0.1 skips the socket the temporary server owns,
+          # and running a real query against `investigator` also proves the DB exists and the
+          # server is past startup — strictly stronger than pg_isready.
+          timeout 60 bash -c 'until docker exec -e PGPASSWORD=postgres postgres \
+            psql -h 127.0.0.1 -U postgres -d investigator -c "select 1" >/dev/null 2>&1; do sleep 1; done'
 
       - name: Apply migrations
         run: bun run db:migrate
@@ -290,8 +308,17 @@ jobs:
             -e POSTGRES_DB=investigator \
             -p 5432:5432 \
             pgvector/pgvector:0.8.5-pg16
-          # Wait for PostgreSQL to be ready
-          timeout 30 bash -c 'until docker exec postgres pg_isready -U postgres; do sleep 1; done'
+          # Wait for PostgreSQL to be ready — over TCP, against the target database.
+          #
+          # `pg_isready -U postgres` (no -h) checks the LOCAL SOCKET, which the image's entrypoint
+          # brings up on a TEMPORARY server while it runs initdb and creates POSTGRES_DB. That
+          # probe can therefore pass, the temporary server then shuts down, and the next step
+          # connects over TCP mid-restart and dies with "FATAL: the database system is starting up"
+          # (observed on PR #109). Forcing -h 127.0.0.1 skips the socket the temporary server owns,
+          # and running a real query against `investigator` also proves the DB exists and the
+          # server is past startup — strictly stronger than pg_isready.
+          timeout 60 bash -c 'until docker exec -e PGPASSWORD=postgres postgres \
+            psql -h 127.0.0.1 -U postgres -d investigator -c "select 1" >/dev/null 2>&1; do sleep 1; done'
 
       - name: Apply migrations
         run: bun run db:migrate

@@ -6,17 +6,23 @@ afterEach(() => {
 	globalThis.fetch = originalFetch;
 });
 
-/** Records the requests the module makes, and replies with a fixed JSON body. */
-function mockFetch(body: unknown, init?: { ok?: boolean; status?: number }) {
+/**
+ * Records the requests the module makes, and replies with a fixed JSON body.
+ *
+ * Uses a REAL `Response` so the body is a genuine readable stream: the module reads bodies
+ * through a streaming size cap, and a hand-rolled stub with only `json()` would silently bypass
+ * the very code path the size-bound tests below exercise.
+ */
+function mockFetch(body: unknown, init?: { ok?: boolean; status?: number; contentLength?: string }) {
 	const calls: Array<{ url: string; headers: Record<string, string> }> = [];
 	globalThis.fetch = (async (input: RequestInfo | URL, options?: RequestInit) => {
 		calls.push({ headers: (options?.headers ?? {}) as Record<string, string>, url: String(input) });
-		return {
-			json: async () => body,
-			ok: init?.ok ?? true,
-			status: init?.status ?? 200,
-			statusText: 'OK'
-		} as Response;
+		const headers = new Headers({ 'content-type': 'application/json' });
+		if (init?.contentLength !== undefined) headers.set('content-length', init.contentLength);
+		return new Response(typeof body === 'string' ? body : JSON.stringify(body), {
+			headers,
+			status: init?.status ?? (init?.ok === false ? 500 : 200)
+		});
 	}) as typeof fetch;
 	return calls;
 }
@@ -106,6 +112,59 @@ describe('listProviderModels', () => {
 			const message = error instanceof Error ? error.message : String(error);
 			expect(message).not.toContain('goog-super-secret');
 			expect(message).toContain('[redacted]');
+		});
+	});
+});
+
+describe('listProviderModels response size bound', () => {
+	test('rejects on a declared content-length over the cap, before reading the body', async () => {
+		// The body itself is small and perfectly valid, so the ONLY way this can fail is the
+		// content-length pre-check firing first — which is exactly what we want to pin.
+		mockFetch({ data: [{ id: 'gpt-5' }] }, { contentLength: '999999999' });
+
+		await expect(listProviderModels({ provider: 'OPENAI', secret: 'sk-test-key' })).rejects.toThrow(
+			/too large \(999999999 bytes\)/
+		);
+	});
+
+	test('rejects an oversized body that declares no content-length, and stops reading it', async () => {
+		// A 1 MB chunk repeated forever: a naive `response.text()` would buffer until it OOMs.
+		const chunk = new TextEncoder().encode('x'.repeat(1_000_000));
+		let chunksServed = 0;
+		let cancelled = false;
+		globalThis.fetch = (async () => {
+			const stream = new ReadableStream<Uint8Array>({
+				cancel() {
+					cancelled = true;
+				},
+				pull(controller) {
+					chunksServed += 1;
+					controller.enqueue(chunk);
+				}
+			});
+			// Deliberately NO content-length, so only the streaming cap can save us.
+			return new Response(stream, { status: 200 });
+		}) as typeof fetch;
+
+		await expect(listProviderModels({ provider: 'OPENAI', secret: 'sk-test-key' })).rejects.toThrow(/too large/);
+		// Bound is 2 MB, so it must give up after a handful of 1 MB chunks — not stream forever.
+		expect(chunksServed).toBeLessThan(5);
+		expect(cancelled).toBe(true);
+	});
+
+	test('a normal-sized body is still parsed correctly', async () => {
+		mockFetch({ data: [{ id: 'gpt-5' }] }, { contentLength: '32' });
+		const result = await listProviderModels({ provider: 'OPENAI', secret: 'sk-test-key' });
+		expect(result).toEqual({ models: ['gpt-5'], supported: true });
+	});
+
+	test('a malformed JSON body fails without leaking the secret', async () => {
+		mockFetch('not json at all');
+		const promise = listProviderModels({ provider: 'OPENAI', secret: 'sk-super-secret' });
+
+		await expect(promise).rejects.toThrow();
+		await promise.catch((error: unknown) => {
+			expect(String(error)).not.toContain('sk-super-secret');
 		});
 	});
 });

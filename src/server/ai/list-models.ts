@@ -44,6 +44,49 @@ function urlFor(base: string, path: string): URL {
 	return new URL(path, base.endsWith('/') ? base : `${base}/`);
 }
 
+/**
+ * The `baseURL` is user-supplied, so the endpoint on the other end is untrusted: it can return a
+ * body of any size. A real model list is a few KB, so 2 MB is generous while still bounding the
+ * blast radius of a hostile or broken endpoint.
+ */
+const MAX_RESPONSE_BYTES = 2_000_000;
+
+/**
+ * Read a response body without letting an untrusted endpoint decide how much memory we spend.
+ *
+ * `response.text()` alone is NOT sufficient: it buffers the whole body first, so a multi-gigabyte
+ * response would exhaust memory before any size check could run. Streaming lets us stop reading
+ * (and cancel the transfer) the moment the cap is passed. `content-length`, when the server
+ * bothers to send it, short-circuits before we read a single byte.
+ *
+ * Falls back to `text()` when the response exposes no readable stream (a stubbed Response in a
+ * test, or any runtime that omits `body`), so the caller's contract does not change.
+ */
+async function readBounded(response: Response): Promise<string> {
+	const declared = Number(response.headers?.get?.('content-length') ?? Number.NaN);
+	if (Number.isFinite(declared) && declared > MAX_RESPONSE_BYTES) {
+		throw new Error(`The provider's response is too large (${declared} bytes).`);
+	}
+
+	const reader = response.body?.getReader?.();
+	if (!reader) return await response.text();
+
+	const decoder = new TextDecoder();
+	let text = '';
+	let total = 0;
+	for (;;) {
+		const { done, value } = await reader.read();
+		if (done) break;
+		total += value.byteLength;
+		if (total > MAX_RESPONSE_BYTES) {
+			await reader.cancel();
+			throw new Error("The provider's response is too large.");
+		}
+		text += decoder.decode(value, { stream: true });
+	}
+	return text + decoder.decode();
+}
+
 async function getJson(url: string, headers: Record<string, string>): Promise<unknown> {
 	const controller = new AbortController();
 	const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -52,7 +95,7 @@ async function getJson(url: string, headers: Record<string, string>): Promise<un
 		if (!response.ok) {
 			throw new Error(`The provider returned ${response.status} ${response.statusText}`);
 		}
-		return await response.json();
+		return JSON.parse(await readBounded(response)) as unknown;
 	} finally {
 		clearTimeout(timer);
 	}
