@@ -2,25 +2,41 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { isDateApiVersion, maskHint, normalizeBaseUrl, normalizeResourceName } from '@/server/ai/credential-config';
 import { open, Secret, seal } from '@/server/ai/crypto';
+import { type ListModelsResult, listProviderModels } from '@/server/ai/list-models';
 import { type ByokConfig, type ByokProvider, probeCredential } from '@/server/ai/probe';
+import { safeProviderErrorMessage } from '@/server/ai/provider-errors';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
 
 const providerSchema = z.enum(['ANTHROPIC', 'AZURE', 'GOOGLE', 'OPENAI', 'OPENAI_COMPATIBLE']);
 
 // zod v4: `z.url()` is the top-level string-format API. `z.string().url()` is the
-// deprecated v3 spelling.
+// deprecated v3 spelling. Bare `z.url()` imposes NO protocol restriction — it accepts
+// `file:///etc/passwd`, `javascript:`, `ftp:` — and `listProviderModels` does a bare
+// `fetch()` on this value, which makes an unrestricted URL a local-file read oracle.
+// Restrict to http(s) explicitly; `http://localhost:11434` (Ollama) must keep working.
 const createInput = z
 	.object({
 		apiVersion: z.string().max(40).optional(),
-		baseURL: z.url().max(500).optional(),
+		baseURL: z
+			.url({ protocol: /^https?$/ })
+			.max(500)
+			.optional(),
 		defaultModelId: z.string().min(1).max(120),
 		deployment: z.string().max(120).optional(),
+		enabledModelIds: z.array(z.string().min(1).max(120)).min(1).max(100),
 		label: z.string().max(60).optional(),
 		provider: providerSchema,
 		resourceName: z.string().max(120).optional(),
 		secret: z.string().min(8).max(500)
 	})
 	.superRefine((value, ctx) => {
+		if (!value.enabledModelIds.includes(value.defaultModelId)) {
+			ctx.addIssue({
+				code: 'custom',
+				message: 'The primary model must be one of the enabled models.',
+				path: ['defaultModelId']
+			});
+		}
 		if (value.apiVersion && isDateApiVersion(value.apiVersion)) {
 			ctx.addIssue({
 				code: 'custom',
@@ -49,12 +65,30 @@ const createInput = z
 		}
 	});
 
+const listModelsInput = z
+	.object({
+		// Same protocol restriction as `createInput.baseURL`, and for the same reason: this
+		// value is fed straight into a `fetch()` inside `listProviderModels`.
+		baseURL: z
+			.url({ protocol: /^https?$/ })
+			.max(500)
+			.optional(),
+		provider: providerSchema,
+		secret: z.string().min(8).max(500)
+	})
+	.superRefine((value, ctx) => {
+		if (value.provider === 'OPENAI_COMPATIBLE' && !value.baseURL) {
+			ctx.addIssue({ code: 'custom', message: 'A base URL is required.', path: ['baseURL'] });
+		}
+	});
+
 /** What the client is ever allowed to see. The secret is NEVER in this shape. */
 export type AiCredentialView = {
 	createdAt: Date;
 	defaultModelId: string;
 	deployment: string | null;
 	enabled: boolean;
+	enabledModelIds: string[];
 	hint: string | null;
 	id: string;
 	label: string | null;
@@ -134,6 +168,7 @@ export const aiCredentialsRouter = createTRPCRouter({
 				ciphertext,
 				defaultModelId: config.defaultModelId,
 				deployment: config.deployment,
+				enabledModelIds: input.enabledModelIds,
 				iv,
 				kid: blob.kid,
 				label: input.label ?? null,
@@ -150,6 +185,7 @@ export const aiCredentialsRouter = createTRPCRouter({
 				defaultModelId: config.defaultModelId,
 				deployment: config.deployment,
 				enabled: true,
+				enabledModelIds: input.enabledModelIds,
 				iv,
 				kid: blob.kid,
 				label: input.label ?? null,
@@ -164,6 +200,7 @@ export const aiCredentialsRouter = createTRPCRouter({
 			defaultModelId: row.defaultModelId,
 			deployment: row.deployment,
 			enabled: row.enabled,
+			enabledModelIds: row.enabledModelIds,
 			hint: maskHint(input.secret),
 			id: row.id,
 			label: row.label,
@@ -223,6 +260,7 @@ export const aiCredentialsRouter = createTRPCRouter({
 				defaultModelId: row.defaultModelId,
 				deployment: row.deployment,
 				enabled: row.enabled,
+				enabledModelIds: row.enabledModelIds,
 				hint,
 				id: row.id,
 				label: row.label,
@@ -232,5 +270,27 @@ export const aiCredentialsRouter = createTRPCRouter({
 				resourceName: row.resourceName
 			};
 		});
+	}),
+
+	/**
+	 * List the models a provider offers, using the key the user has just typed — the
+	 * credential row does not exist yet, so this cannot go through `resolveModel`.
+	 *
+	 * Persists NOTHING. Errors are redacted before they reach the browser: a provider
+	 * error can embed the request config, including the auth header.
+	 */
+	listModels: protectedProcedure.input(listModelsInput).mutation(async ({ input }): Promise<ListModelsResult> => {
+		try {
+			return await listProviderModels({
+				baseURL: input.baseURL ?? null,
+				provider: input.provider,
+				secret: input.secret
+			});
+		} catch (error) {
+			throw new TRPCError({
+				code: 'BAD_REQUEST',
+				message: `Could not list models: ${safeProviderErrorMessage(error, input.secret)}`
+			});
+		}
 	})
 });

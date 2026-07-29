@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
-import { BadgeCheck, KeyRound, Plus, ShieldAlert, Trash2 } from 'lucide-react';
+import { BadgeCheck, Download, KeyRound, Plus, ShieldAlert, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -20,6 +20,17 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+	Combobox,
+	ComboboxChip,
+	ComboboxChips,
+	ComboboxChipsInput,
+	ComboboxContent,
+	ComboboxEmpty,
+	ComboboxItem,
+	ComboboxList,
+	ComboboxValue
+} from '@/components/ui/combobox';
 import {
 	Dialog,
 	DialogContent,
@@ -43,22 +54,46 @@ const PROVIDERS = {
 	OPENAI_COMPATIBLE: 'OpenAI-compatible'
 } as const;
 
-const formSchema = z.object({
-	apiVersion: z.string().optional(),
-	baseURL: z.string().optional(),
-	defaultModelId: z.string().min(1, 'The real model id is required — this is what we price on'),
-	deployment: z.string().optional(),
-	label: z.string().optional(),
-	provider: z.enum(['ANTHROPIC', 'AZURE', 'GOOGLE', 'OPENAI', 'OPENAI_COMPATIBLE']),
-	resourceName: z.string().optional(),
-	secret: z.string().min(8, 'Enter your API key')
-});
+const formSchema = z
+	.object({
+		apiVersion: z.string().optional(),
+		baseURL: z.string().optional(),
+		defaultModelId: z.string().min(1, 'Pick a primary model'),
+		deployment: z.string().optional(),
+		enabledModelIds: z
+			.array(z.string().min(1))
+			.min(1, 'Enable at least one model')
+			// Mirrors the server bound (`createInput.enabledModelIds` in ai-credentials.ts, and
+			// `MAX_MODELS` in list-models.ts) — without this, 150 selected models pass client
+			// validation and die with an opaque zod error from the server instead of this message.
+			.max(100, 'At most 100 models'),
+		label: z.string().optional(),
+		provider: z.enum(['ANTHROPIC', 'AZURE', 'GOOGLE', 'OPENAI', 'OPENAI_COMPATIBLE']),
+		resourceName: z.string().optional(),
+		secret: z.string().min(8, 'Enter your API key')
+	})
+	.refine((value) => value.enabledModelIds.includes(value.defaultModelId), {
+		message: 'The primary model must be one of the enabled models',
+		path: ['defaultModelId']
+	});
 
 type FormValues = z.infer<typeof formSchema>;
 
+/** Providers that expose a model list. Azure lists deployments, not models. */
+const MODEL_LISTING_PROVIDERS = new Set<FormValues['provider']>(['ANTHROPIC', 'GOOGLE', 'OPENAI', 'OPENAI_COMPATIBLE']);
+
 // Base UI form controls error when a controlled value flips undefined -> defined, so
-// `provider` MUST have a default here (see baseui-controlled-uncontrolled lesson).
-const DEFAULTS: Partial<FormValues> = { defaultModelId: 'gpt-5.4-mini', provider: 'AZURE' };
+// `provider`, `enabledModelIds`, and `defaultModelId` MUST have defaults here
+// (baseui-controlled-uncontrolled) — but the defaults must NOT pre-select a model. A
+// seeded chip survives a provider switch (it is not in the newly-fetched list, so nothing
+// removes it), so the primary-repair logic in the models Combobox's `onValueChange` never
+// fires for it, the server probes the NEW provider with the OLD provider's model id, and
+// the user sees "The provider rejected this credential" for a chip they never added.
+const DEFAULTS: Partial<FormValues> = {
+	defaultModelId: '',
+	enabledModelIds: [],
+	provider: 'AZURE'
+};
 
 export function AiCredentialsCard() {
 	const [dialogOpen, setDialogOpen] = useState(false);
@@ -69,6 +104,7 @@ export function AiCredentialsCard() {
 
 	const {
 		formState: { errors },
+		getValues,
 		handleSubmit,
 		register,
 		reset,
@@ -81,6 +117,40 @@ export function AiCredentialsCard() {
 
 	const provider = watch('provider');
 
+	const [modelQuery, setModelQuery] = useState('');
+	const [fetchedModels, setFetchedModels] = useState<string[]>([]);
+
+	const enabledModelIds = watch('enabledModelIds') ?? [];
+	const defaultModelId = watch('defaultModelId');
+	const canListModels = MODEL_LISTING_PROVIDERS.has(provider);
+
+	const listModelsMutation = api.aiCredentials.listModels.useMutation({
+		onError: (error) => toast.error(error.message),
+		onSuccess: (result) => {
+			if (!result.supported) {
+				toast.info('Model listing is not available for this provider — type the model id instead.');
+				return;
+			}
+			setFetchedModels(result.models);
+			toast.success(
+				result.models.length > 0
+					? `Found ${result.models.length} model(s)`
+					: 'The provider returned no models — you can still type an id.'
+			);
+		}
+	});
+
+	// The typed text becomes a selectable row when it is not already a known model, so a
+	// custom/unlisted id can always be added without a separate free-text field. Checked
+	// against BOTH `fetchedModels` and the currently enabled models — re-typing an
+	// already-added custom id (one that was never in `fetchedModels`) would otherwise show
+	// a duplicate row tagged "custom" alongside the real chip.
+	const trimmedQuery = modelQuery.trim();
+	const modelItems =
+		trimmedQuery !== '' && !fetchedModels.includes(trimmedQuery) && !enabledModelIds.includes(trimmedQuery)
+			? [...fetchedModels, trimmedQuery]
+			: fetchedModels;
+
 	const createMutation = api.aiCredentials.create.useMutation({
 		onError: (error) => toast.error(error.message),
 		onSuccess: () => {
@@ -88,6 +158,8 @@ export function AiCredentialsCard() {
 			void utils.aiCredentials.list.invalidate();
 			setDialogOpen(false);
 			reset(DEFAULTS);
+			setFetchedModels([]);
+			setModelQuery('');
 		}
 	});
 
@@ -106,6 +178,7 @@ export function AiCredentialsCard() {
 			baseURL: values.baseURL || undefined,
 			defaultModelId: values.defaultModelId,
 			deployment: values.deployment || undefined,
+			enabledModelIds: values.enabledModelIds,
 			label: values.label || undefined,
 			provider: values.provider,
 			resourceName: values.resourceName || undefined,
@@ -152,7 +225,17 @@ export function AiCredentialsCard() {
 							<div className='min-w-0 space-y-1'>
 								<div className='flex flex-wrap items-center gap-2'>
 									<span className='font-medium'>{PROVIDERS[credential.provider]}</span>
-									<Badge variant='outline'>{credential.defaultModelId}</Badge>
+									{(credential.enabledModelIds.length > 0
+										? credential.enabledModelIds
+										: [credential.defaultModelId]
+									).map((model) => (
+										<Badge
+											key={model}
+											variant={model === credential.defaultModelId ? 'default' : 'outline'}
+										>
+											{model}
+										</Badge>
+									))}
 									{credential.lastVerifiedAt ? (
 										<Badge variant='secondary'>
 											<BadgeCheck className='size-3' />
@@ -185,7 +268,19 @@ export function AiCredentialsCard() {
 				)}
 			</CardContent>
 
-			<Dialog onOpenChange={setDialogOpen} open={dialogOpen}>
+			<Dialog
+				onOpenChange={(open) => {
+					setDialogOpen(open);
+					// Escape / overlay-click / the X close the dialog through THIS handler, not
+					// through the Cancel button — cleanup must live here too, or those paths leave
+					// the previous provider's fetched list for the next "Add key".
+					if (!open) {
+						setFetchedModels([]);
+						setModelQuery('');
+					}
+				}}
+				open={dialogOpen}
+			>
 				<DialogContent>
 					<form onSubmit={handleSubmit(onSubmit)}>
 						<DialogHeader>
@@ -200,7 +295,17 @@ export function AiCredentialsCard() {
 								<FieldLabel htmlFor='byok-provider'>Provider</FieldLabel>
 								<Select
 									items={PROVIDERS}
-									onValueChange={(value) => setValue('provider', value as FormValues['provider'])}
+									onValueChange={(value) => {
+										setValue('provider', value as FormValues['provider']);
+										// A different provider invalidates every model choice made so far — the
+										// enabled/primary ids belonged to the OLD provider, and a stale
+										// `fetchedModels` list from the old provider would otherwise keep being
+										// offered (rendered untagged, so it looks authoritative).
+										setValue('enabledModelIds', [], { shouldValidate: false });
+										setValue('defaultModelId', '', { shouldValidate: false });
+										setFetchedModels([]);
+										setModelQuery('');
+									}}
 									value={provider}
 								>
 									<SelectTrigger className='w-full' id='byok-provider'>
@@ -223,13 +328,114 @@ export function AiCredentialsCard() {
 							</Field>
 
 							<Field>
-								<FieldLabel htmlFor='byok-model'>Model id</FieldLabel>
-								<Input id='byok-model' placeholder='gpt-5.4-mini' {...register('defaultModelId')} />
+								<div className='flex items-center justify-between gap-2'>
+									<FieldLabel htmlFor='byok-model'>Models</FieldLabel>
+									<Button
+										disabled={
+											!canListModels ||
+											listModelsMutation.isPending ||
+											(watch('secret') ?? '').length < 8 ||
+											(provider === 'OPENAI_COMPATIBLE' && !watch('baseURL'))
+										}
+										onClick={() =>
+											listModelsMutation.mutate({
+												baseURL: watch('baseURL') || undefined,
+												provider,
+												secret: watch('secret')
+											})
+										}
+										size='sm'
+										type='button'
+										variant='outline'
+									>
+										{listModelsMutation.isPending ? <Spinner /> : <Download className='size-4' />}
+										Fetch models
+									</Button>
+								</div>
+
+								<Combobox
+									inputValue={modelQuery}
+									items={modelItems}
+									multiple
+									onInputValueChange={setModelQuery}
+									onValueChange={(next: string[]) => {
+										setValue('enabledModelIds', next, { shouldValidate: true });
+										// Keep the primary valid: default to the first enabled model.
+										if (next.length > 0 && !next.includes(getValues('defaultModelId'))) {
+											setValue('defaultModelId', next[0] as string, { shouldValidate: true });
+										}
+										setModelQuery('');
+									}}
+									value={enabledModelIds}
+								>
+									<ComboboxChips>
+										<ComboboxValue>
+											{(value: string[]) => (
+												<>
+													{value.map((model) => (
+														<ComboboxChip aria-label={model} key={model}>
+															{model}
+														</ComboboxChip>
+													))}
+													<ComboboxChipsInput
+														id='byok-model'
+														placeholder={value.length > 0 ? '' : 'gpt-5.4-mini'}
+													/>
+												</>
+											)}
+										</ComboboxValue>
+									</ComboboxChips>
+									<ComboboxContent>
+										<ComboboxEmpty>Type a model id to add it.</ComboboxEmpty>
+										<ComboboxList>
+											{(item: string) => (
+												<ComboboxItem key={item} value={item}>
+													{item}
+													{!fetchedModels.includes(item) ? (
+														<span className='ml-auto text-muted-foreground text-xs'>
+															custom
+														</span>
+													) : null}
+												</ComboboxItem>
+											)}
+										</ComboboxList>
+									</ComboboxContent>
+								</Combobox>
+
 								<p className='text-muted-foreground text-xs'>
-									The real model name. On Azure this is NOT the deployment name — we price on this.
+									{canListModels
+										? 'Fetch the list, or type any model id to add it. One key often serves several models.'
+										: 'Azure lists deployments rather than models — type the model id. This is NOT the deployment name.'}
 								</p>
-								<FieldError errors={[errors.defaultModelId]} />
+								<p className='text-muted-foreground text-xs'>
+									A model we have no published price for is recorded as an unknown-price call.
+								</p>
+								<FieldError errors={[errors.enabledModelIds, errors.defaultModelId]} />
 							</Field>
+
+							{enabledModelIds.length > 1 ? (
+								<Field>
+									<FieldLabel htmlFor='byok-primary'>Primary model</FieldLabel>
+									<Select
+										onValueChange={(value) => setValue('defaultModelId', value as string)}
+										value={defaultModelId}
+									>
+										<SelectTrigger className='w-full' id='byok-primary'>
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											{enabledModelIds.map((model) => (
+												<SelectItem key={model} value={model}>
+													{model}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+									<p className='text-muted-foreground text-xs'>
+										Used when a request does not name a model — and the one we verify on save.
+									</p>
+								</Field>
+							) : null}
 
 							{provider === 'AZURE' ? (
 								<>

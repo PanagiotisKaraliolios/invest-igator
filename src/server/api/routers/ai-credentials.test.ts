@@ -228,6 +228,7 @@ describe('aiCredentials — the secret never crosses the wire', () => {
 	test('create returns a masked hint and never echoes the plaintext secret anywhere', async () => {
 		const result = await callerFor(userA).aiCredentials.create({
 			defaultModelId: 'gpt-5.4-mini',
+			enabledModelIds: ['gpt-5.4-mini'],
 			provider: 'OPENAI',
 			secret: SECRET_A
 		});
@@ -239,11 +240,40 @@ describe('aiCredentials — the secret never crosses the wire', () => {
 		expect(dump).not.toContain('authTag');
 	});
 
+	// FIX 9a: this is a stated global constraint (`createInput`'s `superRefine`) with no
+	// coverage before this test — the primary model must always be one of the enabled ones.
+	test('create rejects when defaultModelId is not a member of enabledModelIds', async () => {
+		await expect(
+			callerFor(userA).aiCredentials.create({
+				defaultModelId: 'gpt-5.4-mini',
+				enabledModelIds: ['claude-opus-5'],
+				provider: 'OPENAI',
+				secret: SECRET_A
+			})
+		).rejects.toThrow(/primary model must be one of the enabled models/i);
+		expect(await db.aiProviderCredential.count({ where: { userId: userA } })).toBe(0);
+	});
+
+	// FIX 9b / pins FIX 1a: bare `z.url()` (zod 4) imposes NO protocol restriction and
+	// accepts `file:///etc/passwd` — which `listProviderModels` would then `fetch()`,
+	// turning the endpoint into a local-file oracle. The schema is not exported, so this
+	// goes through the real procedure/caller rather than exporting internals for the test.
+	test('listModels rejects a non-http(s) baseURL instead of treating it as fetchable', async () => {
+		await expect(
+			callerFor(userA).aiCredentials.listModels({
+				baseURL: 'file:///etc/passwd',
+				provider: 'OPENAI_COMPATIBLE',
+				secret: 'sk-test-key-12345'
+			})
+		).rejects.toThrow();
+	});
+
 	test('create surfaces a rejected credential as BAD_REQUEST, not a 500, and persists nothing', async () => {
 		probeResult = { error: 'AuthenticationError: 401 invalid api key', ok: false };
 		await expect(
 			callerFor(userA).aiCredentials.create({
 				defaultModelId: 'gpt-5.4-mini',
+				enabledModelIds: ['gpt-5.4-mini'],
 				provider: 'OPENAI',
 				secret: 'sk-bad-key-000000'
 			})
@@ -258,6 +288,7 @@ describe('aiCredentials — the secret never crosses the wire', () => {
 		await expect(
 			callerFor('evil|user').aiCredentials.create({
 				defaultModelId: 'gpt-5.4-mini',
+				enabledModelIds: ['gpt-5.4-mini'],
 				provider: 'OPENAI',
 				secret: SECRET_A
 			})

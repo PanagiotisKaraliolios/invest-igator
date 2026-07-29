@@ -1,6 +1,7 @@
 import { generateText, type LanguageModel } from 'ai';
 import type { Secret } from '@/server/ai/crypto';
 import { applyGuardrails } from '@/server/ai/guardrails';
+import { safeProviderErrorMessage } from '@/server/ai/provider-errors';
 import { type ByokConfig, buildByokModel as buildRawByokModel } from '@/server/ai/resolve-model';
 
 export type { ByokConfig } from '@/server/ai/resolve-model';
@@ -29,17 +30,6 @@ export function buildByokModel(config: ByokConfig, secret: Secret): LanguageMode
 }
 
 /**
- * R8: provider SDK errors embed the request config, INCLUDING the auth header.
- * `JSON.stringify(err)` into a tRPC error body leaks the user's key straight back to
- * the browser (and into any log that captures it). Pick fields explicitly, truncate,
- * and redact the plaintext defensively.
- */
-function safeErrorMessage(error: unknown, secret: Secret): string {
-	const raw = error instanceof Error ? `${error.name}: ${error.message}` : 'Unknown provider error';
-	return raw.replaceAll(secret.expose(), '[redacted]').slice(0, 300);
-}
-
-/**
  * A live, minimal probe. Azure's multi-field config makes silent misconfiguration the
  * DEFAULT failure mode; catching it here rather than mid-conversation is worth one request.
  *
@@ -60,6 +50,6 @@ export async function probeCredential(config: ByokConfig, secret: Secret): Promi
 		});
 		return { ok: true };
 	} catch (error) {
-		return { error: safeErrorMessage(error, secret), ok: false };
+		return { error: safeProviderErrorMessage(error, secret.expose()), ok: false };
 	}
 }

@@ -332,6 +332,11 @@ model AiProviderCredential {
   deployment     String? // AZURE ONLY: the string passed as the SDK "model id"
   defaultModelId String // the REAL model ('gpt-5.4-mini'). This is what we price on.
 
+  /// Every model this credential may serve. One key often serves a family
+  /// (e.g. Anthropic Opus + Sonnet). `defaultModelId` is the primary and MUST
+  /// be a member of this list.
+  enabledModelIds String[] @default([])
+
   label          String?
   enabled        Boolean   @default(true)
   lastVerifiedAt DateTime?

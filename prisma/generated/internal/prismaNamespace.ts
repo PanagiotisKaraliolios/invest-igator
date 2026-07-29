@@ -2234,6 +2234,7 @@ export const AiProviderCredentialScalarFieldEnum = {
   apiVersion: 'apiVersion',
   deployment: 'deployment',
   defaultModelId: 'defaultModelId',
+  enabledModelIds: 'enabledModelIds',
   label: 'label',
   enabled: 'enabled',
   lastVerifiedAt: 'lastVerifiedAt',

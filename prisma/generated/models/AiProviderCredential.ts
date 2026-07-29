@@ -79,6 +79,7 @@ export type AiProviderCredentialCountAggregateOutputType = {
   apiVersion: number
   deployment: number
   defaultModelId: number
+  enabledModelIds: number
   label: number
   enabled: number
   lastVerifiedAt: number
@@ -144,6 +145,7 @@ export type AiProviderCredentialCountAggregateInputType = {
   apiVersion?: true
   deployment?: true
   defaultModelId?: true
+  enabledModelIds?: true
   label?: true
   enabled?: true
   lastVerifiedAt?: true
@@ -238,6 +240,7 @@ export type AiProviderCredentialGroupByOutputType = {
   apiVersion: string | null
   deployment: string | null
   defaultModelId: string
+  enabledModelIds: string[]
   label: string | null
   enabled: boolean
   lastVerifiedAt: Date | null
@@ -280,6 +283,7 @@ export type AiProviderCredentialWhereInput = {
   apiVersion?: Prisma.StringNullableFilter<"AiProviderCredential"> | string | null
   deployment?: Prisma.StringNullableFilter<"AiProviderCredential"> | string | null
   defaultModelId?: Prisma.StringFilter<"AiProviderCredential"> | string
+  enabledModelIds?: Prisma.StringNullableListFilter<"AiProviderCredential">
   label?: Prisma.StringNullableFilter<"AiProviderCredential"> | string | null
   enabled?: Prisma.BoolFilter<"AiProviderCredential"> | boolean
   lastVerifiedAt?: Prisma.DateTimeNullableFilter<"AiProviderCredential"> | Date | string | null
@@ -302,6 +306,7 @@ export type AiProviderCredentialOrderByWithRelationInput = {
   apiVersion?: Prisma.SortOrderInput | Prisma.SortOrder
   deployment?: Prisma.SortOrderInput | Prisma.SortOrder
   defaultModelId?: Prisma.SortOrder
+  enabledModelIds?: Prisma.SortOrder
   label?: Prisma.SortOrderInput | Prisma.SortOrder
   enabled?: Prisma.SortOrder
   lastVerifiedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -328,6 +333,7 @@ export type AiProviderCredentialWhereUniqueInput = Prisma.AtLeast<{
   apiVersion?: Prisma.StringNullableFilter<"AiProviderCredential"> | string | null
   deployment?: Prisma.StringNullableFilter<"AiProviderCredential"> | string | null
   defaultModelId?: Prisma.StringFilter<"AiProviderCredential"> | string
+  enabledModelIds?: Prisma.StringNullableListFilter<"AiProviderCredential">
   label?: Prisma.StringNullableFilter<"AiProviderCredential"> | string | null
   enabled?: Prisma.BoolFilter<"AiProviderCredential"> | boolean
   lastVerifiedAt?: Prisma.DateTimeNullableFilter<"AiProviderCredential"> | Date | string | null
@@ -350,6 +356,7 @@ export type AiProviderCredentialOrderByWithAggregationInput = {
   apiVersion?: Prisma.SortOrderInput | Prisma.SortOrder
   deployment?: Prisma.SortOrderInput | Prisma.SortOrder
   defaultModelId?: Prisma.SortOrder
+  enabledModelIds?: Prisma.SortOrder
   label?: Prisma.SortOrderInput | Prisma.SortOrder
   enabled?: Prisma.SortOrder
   lastVerifiedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -377,6 +384,7 @@ export type AiProviderCredentialScalarWhereWithAggregatesInput = {
   apiVersion?: Prisma.StringNullableWithAggregatesFilter<"AiProviderCredential"> | string | null
   deployment?: Prisma.StringNullableWithAggregatesFilter<"AiProviderCredential"> | string | null
   defaultModelId?: Prisma.StringWithAggregatesFilter<"AiProviderCredential"> | string
+  enabledModelIds?: Prisma.StringNullableListFilter<"AiProviderCredential">
   label?: Prisma.StringNullableWithAggregatesFilter<"AiProviderCredential"> | string | null
   enabled?: Prisma.BoolWithAggregatesFilter<"AiProviderCredential"> | boolean
   lastVerifiedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"AiProviderCredential"> | Date | string | null
@@ -397,6 +405,7 @@ export type AiProviderCredentialCreateInput = {
   apiVersion?: string | null
   deployment?: string | null
   defaultModelId: string
+  enabledModelIds?: Prisma.AiProviderCredentialCreateenabledModelIdsInput | string[]
   label?: string | null
   enabled?: boolean
   lastVerifiedAt?: Date | string | null
@@ -419,6 +428,7 @@ export type AiProviderCredentialUncheckedCreateInput = {
   apiVersion?: string | null
   deployment?: string | null
   defaultModelId: string
+  enabledModelIds?: Prisma.AiProviderCredentialCreateenabledModelIdsInput | string[]
   label?: string | null
   enabled?: boolean
   lastVerifiedAt?: Date | string | null
@@ -439,6 +449,7 @@ export type AiProviderCredentialUpdateInput = {
   apiVersion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deployment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   defaultModelId?: Prisma.StringFieldUpdateOperationsInput | string
+  enabledModelIds?: Prisma.AiProviderCredentialUpdateenabledModelIdsInput | string[]
   label?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   enabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -461,6 +472,7 @@ export type AiProviderCredentialUncheckedUpdateInput = {
   apiVersion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deployment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   defaultModelId?: Prisma.StringFieldUpdateOperationsInput | string
+  enabledModelIds?: Prisma.AiProviderCredentialUpdateenabledModelIdsInput | string[]
   label?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   enabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -482,6 +494,7 @@ export type AiProviderCredentialCreateManyInput = {
   apiVersion?: string | null
   deployment?: string | null
   defaultModelId: string
+  enabledModelIds?: Prisma.AiProviderCredentialCreateenabledModelIdsInput | string[]
   label?: string | null
   enabled?: boolean
   lastVerifiedAt?: Date | string | null
@@ -502,6 +515,7 @@ export type AiProviderCredentialUpdateManyMutationInput = {
   apiVersion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deployment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   defaultModelId?: Prisma.StringFieldUpdateOperationsInput | string
+  enabledModelIds?: Prisma.AiProviderCredentialUpdateenabledModelIdsInput | string[]
   label?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   enabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -523,6 +537,7 @@ export type AiProviderCredentialUncheckedUpdateManyInput = {
   apiVersion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deployment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   defaultModelId?: Prisma.StringFieldUpdateOperationsInput | string
+  enabledModelIds?: Prisma.AiProviderCredentialUpdateenabledModelIdsInput | string[]
   label?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   enabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -539,6 +554,14 @@ export type AiProviderCredentialListRelationFilter = {
 
 export type AiProviderCredentialOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
+}
+
+export type StringNullableListFilter<$PrismaModel = never> = {
+  equals?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel> | null
+  has?: string | Prisma.StringFieldRefInput<$PrismaModel> | null
+  hasEvery?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel>
+  hasSome?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel>
+  isEmpty?: boolean
 }
 
 export type AiProviderCredentialUserIdProviderCompoundUniqueInput = {
@@ -559,6 +582,7 @@ export type AiProviderCredentialCountOrderByAggregateInput = {
   apiVersion?: Prisma.SortOrder
   deployment?: Prisma.SortOrder
   defaultModelId?: Prisma.SortOrder
+  enabledModelIds?: Prisma.SortOrder
   label?: Prisma.SortOrder
   enabled?: Prisma.SortOrder
   lastVerifiedAt?: Prisma.SortOrder
@@ -651,12 +675,21 @@ export type AiProviderCredentialUncheckedUpdateManyWithoutUserNestedInput = {
   deleteMany?: Prisma.AiProviderCredentialScalarWhereInput | Prisma.AiProviderCredentialScalarWhereInput[]
 }
 
+export type AiProviderCredentialCreateenabledModelIdsInput = {
+  set: string[]
+}
+
 export type EnumAiProviderFieldUpdateOperationsInput = {
   set?: $Enums.AiProvider
 }
 
 export type BytesFieldUpdateOperationsInput = {
   set?: runtime.Bytes
+}
+
+export type AiProviderCredentialUpdateenabledModelIdsInput = {
+  set?: string[]
+  push?: string | string[]
 }
 
 export type AiProviderCredentialCreateWithoutUserInput = {
@@ -671,6 +704,7 @@ export type AiProviderCredentialCreateWithoutUserInput = {
   apiVersion?: string | null
   deployment?: string | null
   defaultModelId: string
+  enabledModelIds?: Prisma.AiProviderCredentialCreateenabledModelIdsInput | string[]
   label?: string | null
   enabled?: boolean
   lastVerifiedAt?: Date | string | null
@@ -691,6 +725,7 @@ export type AiProviderCredentialUncheckedCreateWithoutUserInput = {
   apiVersion?: string | null
   deployment?: string | null
   defaultModelId: string
+  enabledModelIds?: Prisma.AiProviderCredentialCreateenabledModelIdsInput | string[]
   label?: string | null
   enabled?: boolean
   lastVerifiedAt?: Date | string | null
@@ -741,6 +776,7 @@ export type AiProviderCredentialScalarWhereInput = {
   apiVersion?: Prisma.StringNullableFilter<"AiProviderCredential"> | string | null
   deployment?: Prisma.StringNullableFilter<"AiProviderCredential"> | string | null
   defaultModelId?: Prisma.StringFilter<"AiProviderCredential"> | string
+  enabledModelIds?: Prisma.StringNullableListFilter<"AiProviderCredential">
   label?: Prisma.StringNullableFilter<"AiProviderCredential"> | string | null
   enabled?: Prisma.BoolFilter<"AiProviderCredential"> | boolean
   lastVerifiedAt?: Prisma.DateTimeNullableFilter<"AiProviderCredential"> | Date | string | null
@@ -761,6 +797,7 @@ export type AiProviderCredentialCreateManyUserInput = {
   apiVersion?: string | null
   deployment?: string | null
   defaultModelId: string
+  enabledModelIds?: Prisma.AiProviderCredentialCreateenabledModelIdsInput | string[]
   label?: string | null
   enabled?: boolean
   lastVerifiedAt?: Date | string | null
@@ -781,6 +818,7 @@ export type AiProviderCredentialUpdateWithoutUserInput = {
   apiVersion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deployment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   defaultModelId?: Prisma.StringFieldUpdateOperationsInput | string
+  enabledModelIds?: Prisma.AiProviderCredentialUpdateenabledModelIdsInput | string[]
   label?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   enabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -801,6 +839,7 @@ export type AiProviderCredentialUncheckedUpdateWithoutUserInput = {
   apiVersion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deployment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   defaultModelId?: Prisma.StringFieldUpdateOperationsInput | string
+  enabledModelIds?: Prisma.AiProviderCredentialUpdateenabledModelIdsInput | string[]
   label?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   enabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -821,6 +860,7 @@ export type AiProviderCredentialUncheckedUpdateManyWithoutUserInput = {
   apiVersion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deployment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   defaultModelId?: Prisma.StringFieldUpdateOperationsInput | string
+  enabledModelIds?: Prisma.AiProviderCredentialUpdateenabledModelIdsInput | string[]
   label?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   enabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -844,6 +884,7 @@ export type AiProviderCredentialSelect<ExtArgs extends runtime.Types.Extensions.
   apiVersion?: boolean
   deployment?: boolean
   defaultModelId?: boolean
+  enabledModelIds?: boolean
   label?: boolean
   enabled?: boolean
   lastVerifiedAt?: boolean
@@ -866,6 +907,7 @@ export type AiProviderCredentialSelectCreateManyAndReturn<ExtArgs extends runtim
   apiVersion?: boolean
   deployment?: boolean
   defaultModelId?: boolean
+  enabledModelIds?: boolean
   label?: boolean
   enabled?: boolean
   lastVerifiedAt?: boolean
@@ -888,6 +930,7 @@ export type AiProviderCredentialSelectUpdateManyAndReturn<ExtArgs extends runtim
   apiVersion?: boolean
   deployment?: boolean
   defaultModelId?: boolean
+  enabledModelIds?: boolean
   label?: boolean
   enabled?: boolean
   lastVerifiedAt?: boolean
@@ -910,6 +953,7 @@ export type AiProviderCredentialSelectScalar = {
   apiVersion?: boolean
   deployment?: boolean
   defaultModelId?: boolean
+  enabledModelIds?: boolean
   label?: boolean
   enabled?: boolean
   lastVerifiedAt?: boolean
@@ -918,7 +962,7 @@ export type AiProviderCredentialSelectScalar = {
   updatedAt?: boolean
 }
 
-export type AiProviderCredentialOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "provider" | "kid" | "iv" | "ciphertext" | "authTag" | "resourceName" | "baseURL" | "apiVersion" | "deployment" | "defaultModelId" | "label" | "enabled" | "lastVerifiedAt" | "lastUsedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["aiProviderCredential"]>
+export type AiProviderCredentialOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "provider" | "kid" | "iv" | "ciphertext" | "authTag" | "resourceName" | "baseURL" | "apiVersion" | "deployment" | "defaultModelId" | "enabledModelIds" | "label" | "enabled" | "lastVerifiedAt" | "lastUsedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["aiProviderCredential"]>
 export type AiProviderCredentialInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }
@@ -947,6 +991,12 @@ export type $AiProviderCredentialPayload<ExtArgs extends runtime.Types.Extension
     apiVersion: string | null
     deployment: string | null
     defaultModelId: string
+    /**
+     * Every model this credential may serve. One key often serves a family
+     * (e.g. Anthropic Opus + Sonnet). `defaultModelId` is the primary and MUST
+     * be a member of this list.
+     */
+    enabledModelIds: string[]
     label: string | null
     enabled: boolean
     lastVerifiedAt: Date | null
@@ -1389,6 +1439,7 @@ export interface AiProviderCredentialFieldRefs {
   readonly apiVersion: Prisma.FieldRef<"AiProviderCredential", 'String'>
   readonly deployment: Prisma.FieldRef<"AiProviderCredential", 'String'>
   readonly defaultModelId: Prisma.FieldRef<"AiProviderCredential", 'String'>
+  readonly enabledModelIds: Prisma.FieldRef<"AiProviderCredential", 'String[]'>
   readonly label: Prisma.FieldRef<"AiProviderCredential", 'String'>
   readonly enabled: Prisma.FieldRef<"AiProviderCredential", 'Boolean'>
   readonly lastVerifiedAt: Prisma.FieldRef<"AiProviderCredential", 'DateTime'>
