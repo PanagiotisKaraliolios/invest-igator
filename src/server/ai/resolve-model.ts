@@ -199,16 +199,32 @@ export function buildByokModel(cfg: ByokConfig, apiKey: string): Unguarded {
  * lookup and the back-compat (no-selector) lookup below — the row->model path is identical
  * either way, only the query that produces the row differs.
  */
+/**
+ * Choose the model this request actually runs on.
+ *
+ * AZURE is deliberately excluded from model selection: its SDK "model id" is the DEPLOYMENT, so
+ * a different `modelId` would still hit the same deployment while changing what we priced on —
+ * a silent billing error. Everywhere else, a requested model is honoured ONLY if the credential
+ * enables it; anything else falls back to the primary rather than being sent to the provider.
+ */
+function effectiveModelId(cfg: ByokConfig, enabledModelIds: string[], requested: string | undefined): string {
+	if (requested === undefined || cfg.provider === 'AZURE') return cfg.defaultModelId;
+	return enabledModelIds.includes(requested) ? requested : cfg.defaultModelId;
+}
+
 function byokFromRow(
 	row: Parameters<typeof toByokConfig>[0] & {
 		authTag: Uint8Array;
 		ciphertext: Uint8Array;
+		enabledModelIds: string[];
 		iv: Uint8Array;
 		kid: string;
 	},
-	userId: string
+	userId: string,
+	requestedModelId?: string
 ): ResolvedModel {
 	const cfg = toByokConfig(row);
+	const effective = effectiveModelId(cfg, row.enabledModelIds, requestedModelId);
 
 	// The AAD binds the ciphertext to (CALLER userId, provider): a row copied to another
 	// tenant FAILS to decrypt rather than silently working. Pass the caller's id — never
@@ -224,21 +240,30 @@ function byokFromRow(
 		cfg.provider
 	);
 
-	const model = buildByokModel(cfg, secret.expose());
+	// Build on the EFFECTIVE model, not the credential's default — this is what makes a
+	// per-model selection actually change which model answers the turn.
+	const model = buildByokModel({ ...cfg, defaultModelId: effective }, secret.expose());
 
 	return {
 		byok: true,
 		// The SAME guardrail stack the platform registry uses. BYOK cannot skip it.
 		model: applyGuardrails(model),
-		modelId: cfg.provider === 'AZURE' ? (cfg.deployment ?? cfg.defaultModelId) : cfg.defaultModelId,
+		modelId: cfg.provider === 'AZURE' ? (cfg.deployment ?? effective) : effective,
 		providerId: cfg.provider.toLowerCase(),
-		// The REAL model. NEVER price on modelId — for Azure that is the deployment name.
-		resolvedModel: cfg.defaultModelId
+		// The REAL model, and what usage is priced on. NEVER price on modelId — for Azure that is
+		// the deployment name. `effective` is Azure-safe: `effectiveModelId` pins Azure to its default.
+		resolvedModel: effective
 	};
 }
 
-/** Names either the platform model or one specific BYOK provider — the chat model picker's shape. */
-export type ModelSelector = { kind: 'platform' } | { kind: 'byok'; provider: ByokProvider };
+/**
+ * Names either the platform model, or one specific model on one BYOK provider.
+ *
+ * `modelId` is OPTIONAL and additive: omitted means the credential's `defaultModelId`, which is
+ * the pre-picker behaviour. One key commonly serves several models (an Anthropic key serves both
+ * Opus and Sonnet), so the picker names the model, not just the provider.
+ */
+export type ModelSelector = { kind: 'platform' } | { kind: 'byok'; modelId?: string; provider: ByokProvider };
 
 /**
  * Resolves the model to use for a request. With no selector: BYOK if the user has an enabled
@@ -267,7 +292,7 @@ export async function resolveModel(userId: string, selector?: ModelSelector): Pr
 		if (row === null) {
 			throw new InvalidCredentialError(`No enabled ${selector.provider} credential for this user`);
 		}
-		return byokFromRow(row, userId);
+		return byokFromRow(row, userId, selector.modelId);
 	}
 
 	// No selector: back-compat — most-recent enabled BYOK, else platform.
