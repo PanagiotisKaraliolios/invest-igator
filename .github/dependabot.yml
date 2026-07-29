@@ -1,4 +1,27 @@
 version: 2
+
+# READ THIS BEFORE WONDERING WHY EVERY DEPENDENCY PR IS RED.
+#
+# Dependabot updates `package.json` here but does NOT update `bun.lock`. Every CI job runs
+# `bun install --frozen-lockfile`, so the manifest/lockfile mismatch fails the install in a few
+# seconds and ALL jobs go red. That looks like N broken dependency bumps; it is one systemic
+# problem, and it is not something this file can fix — Bun lives inside the `npm` ecosystem and
+# Dependabot's bun.lock handling does not cope with this lockfile (ours carries the newer
+# `configVersion` field; see dependabot-core#13623 and #14223).
+#
+# Do NOT "fix" it by dropping --frozen-lockfile: that flag is what makes installs reproducible.
+#
+# The procedure that works (see the 2026-07-29 batch, which superseded ten such PRs):
+#   1. branch off main
+#   2. apply the target versions to main's package.json, keyed BY PACKAGE NAME — never check out a
+#      Dependabot PR's package.json wholesale, it is based on an older main
+#   3. `bun install` to regenerate bun.lock, then `bun install --frozen-lockfile` to prove CI will pass
+#   4. run the real gate: typecheck, check, test:unit, test:db, build
+#   5. open one PR and close the superseded Dependabot PRs referencing it
+#
+# GitHub-Action and Docker PRs are unaffected (they touch no dependencies) and can merge normally,
+# but note that a green PR does not exercise the Docker publish workflow — that only runs on main.
+
 updates:
   # Enable version updates for npm
   - package-ecosystem: "npm"
