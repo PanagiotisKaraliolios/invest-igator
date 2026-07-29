@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import type { ModelSelector } from '@/server/ai/resolve-model';
 import { api } from '@/trpc/react';
+import { ChatActionsProvider } from './chat-actions';
 import { ChatDrawer } from './chat-drawer';
 import { keyOf } from './model-picker';
 import { buildSelectorOptions } from './use-chat-selector';
@@ -85,6 +86,11 @@ export function ChatLauncher({ platformConfigured }: { platformConfigured: boole
 		transport
 	});
 
+	// SAME predicate chat-drawer.tsx uses to drive the composer's Send/Stop swap — an artifact
+	// (e.g. the symbol picker) that read a different condition here could disagree with the
+	// composer about whether a turn is in flight and let a second one start underneath it.
+	const busy = status === 'streaming' || status === 'submitted';
+
 	// Loading a past conversation: `useChat` recreates its internal Chat DURING the render that
 	// changes `id` (resetting messages), and `setMessages` writes to whichever instance is current
 	// at call time. Calling it inline right after `setChatId` would therefore populate the OLD
@@ -133,21 +139,28 @@ export function ChatLauncher({ platformConfigured }: { platformConfigured: boole
 					className='flex w-[clamp(400px,36vw,560px)] max-w-[96vw] flex-col gap-0 p-0 sm:max-w-[96vw]'
 					side='right'
 				>
-					<ChatDrawer
-						activeId={chatId ?? null}
-						error={error}
-						messages={messages}
-						onNewChat={startNewChat}
-						onSelectChat={selectChat}
-						onSelectorChange={setSelector}
-						onSend={(text) => {
+					<ChatActionsProvider
+						busy={busy}
+						sendMessage={(text) => {
 							void sendMessage({ text });
 						}}
-						onStop={stop}
-						options={options}
-						selector={selector}
-						status={status}
-					/>
+					>
+						<ChatDrawer
+							activeId={chatId ?? null}
+							error={error}
+							messages={messages}
+							onNewChat={startNewChat}
+							onSelectChat={selectChat}
+							onSelectorChange={setSelector}
+							onSend={(text) => {
+								void sendMessage({ text });
+							}}
+							onStop={stop}
+							options={options}
+							selector={selector}
+							status={status}
+						/>
+					</ChatActionsProvider>
 				</SheetContent>
 			</Sheet>
 		</>

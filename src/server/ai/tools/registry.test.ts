@@ -164,6 +164,36 @@ const STRUCTURE: Record<string, { items: Array<Record<string, unknown>>; totalVa
 	}
 };
 
+/**
+ * Yahoo's longname/exchange/quoteType strings carry no schema-level cap (symbol-search.ts's
+ * outputSchema declares them as plain z.string()) — but unlike a transaction `note` or a
+ * watchlist `description`, which are OUR users' own free text with truly no upstream
+ * constraint, these come from Yahoo's finance search API, which in practice never returns
+ * anything close to an unbounded string for a company/fund name. These lengths are a generous
+ * real-world ceiling (the longest institutional share-class names run to a few hundred
+ * characters), not an arbitrary large number: they are what proves `symbol.search`'s
+ * count cap (`MAX_CANDIDATES`) plus its runtime `boundArrayElements` size bound comfortably
+ * cover the realistic case.
+ *
+ * `'oversized'` is the adversarial companion: content far larger than any real Yahoo response
+ * would ever carry, at exactly MAX_CANDIDATES rows — proving the runtime size bound (not just
+ * the count cap) actually engages when content alone would blow the token budget.
+ */
+const SYMBOL_SEARCH: Record<string, Array<Record<string, string>>> = {
+	oversized: Array.from({ length: 8 }, (_, i) => ({
+		description: `Oversized Name ${i} ${'X'.repeat(3000)}`,
+		exchange: 'Y'.repeat(200),
+		symbol: `SYM${i}${'Z'.repeat(50)}`,
+		type: 'W'.repeat(100)
+	})),
+	'worst case': Array.from({ length: 20 }, (_, i) => ({
+		description: `Institutional Share Class Name ${'X'.repeat(260)} ${i}`,
+		exchange: 'Y'.repeat(60),
+		symbol: `SYM${i}${'Z'.repeat(20)}`,
+		type: 'W'.repeat(30)
+	}))
+};
+
 const dayIso = (i: number): string => new Date(Date.UTC(2023, 0, 1 + i)).toISOString().slice(0, 10);
 
 /** 500 daily points — long enough to prove the tool downsamples instead of dumping the lot. */
@@ -252,8 +282,39 @@ mock.module('@/server/portfolio-compute', () => ({
 mock.module('@/server/fx-history', () => ({
 	getFxMatrix: async () => ({ EUR: { EUR: 1, USD: 1.1 }, USD: { EUR: 0.9, USD: 1 } })
 }));
+mock.module('@/server/yahoo-search', () => ({
+	searchYahooSymbols: async (q: string) => SYMBOL_SEARCH[q] ?? [],
+	// transactions-create.ts also imports this from the same module; it is never exercised by
+	// any test below (none call transactions.create's execute), so a type-correct stub is enough.
+	symbolExistsOnYahoo: async () => 'unreachable' as const
+}));
+/**
+ * market-price-history.ts's on-demand backfill imports these two directly (not through
+ * `@/server/services/market`, which IS mocked above). Every fixture in this file returns
+ * non-empty `getPriceHistory` points, so gate 1 (`points.length === 0`) never actually opens and
+ * neither of these is exercised today — but without a stub here, a future empty fixture would
+ * fall through to the REAL Influx client and the REAL yahoo-lib.ts (which itself pulls
+ * `@/server/db`, a real Postgres client), silently breaking this suite's "no Postgres, no
+ * Influx" claim. Type-correct stubs only, same pattern as the yahoo-search stub above.
+ */
+mock.module('@/server/influx', () => ({
+	symbolHasAnyData: async () => false
+}));
+mock.module('@/server/jobs/yahoo-lib', () => ({
+	// transactions-create.ts also imports this; never exercised by any test below either.
+	fetchYahooDaily: async () => {
+		throw new Error('fetchYahooDaily should not be called by any test in this suite');
+	},
+	ingestYahooSymbol: async () => ({}) as never
+}));
 
 const { ALL_TOOLS, buildToolset } = await import('./registry');
+// Dynamic, like the import above: a static top-level import would load `./symbol-search`
+// (and transitively `@/server/yahoo-search`) before the `mock.module` calls above run,
+// permanently binding it to the REAL provider instead of the mock. By this point
+// `./symbol-search` is already loaded (via `./registry`'s own import graph) with the mock in
+// place, so this just reads the cached module — MAX_CANDIDATES is not itself mock-dependent.
+const { MAX_CANDIDATES } = await import('./symbol-search');
 
 const ALL_SCOPES: Scope[] = ['fx:read', 'goals:read', 'portfolio:read', 'transactions:read', 'watchlist:read'];
 
@@ -293,13 +354,14 @@ beforeEach(() => {
 });
 
 describe('the Phase 0 tool set', () => {
-	test('is the seven read tools plus the transactions.create write tool', () => {
+	test('is the eight read tools plus the transactions.create write tool', () => {
 		expect(ALL_TOOLS.map((t) => t.name).sort()).toEqual([
 			'fx.rates',
 			'goals.list',
 			'market.priceHistory',
 			'portfolio.performance',
 			'portfolio.structure',
+			'symbol.search',
 			'transactions.create',
 			'transactions.search',
 			'watchlist.list'
@@ -603,6 +665,56 @@ describe("Task 8's quota reservation is only sound if these hold: every tool res
 		// The NEWEST day (dayIso(maxDays - 1)) survives; it is the OLDEST that went missing.
 		expect(out.points[out.points.length - 1]?.date).toBe(dayIso(maxDays - 1));
 		expect(out.points[0]?.date).not.toBe(dayIso(0));
+		expect(realTokens(out)).toBeLessThanOrEqual(MAX_TOOL_RESULT_TOKENS);
+	});
+
+	/**
+	 * symbol.search caps on count (`MAX_CANDIDATES`) AND runs the result through
+	 * `boundArrayElements` for a size-based bound. This is the test that proves the count cap
+	 * alone is enough for the realistic case: even at MAX_CANDIDATES with each field near the
+	 * worst case a real Yahoo response would ever contain (see SYMBOL_SEARCH's comment), the
+	 * result still fits under the token budget with no size-based dropping needed.
+	 */
+	test('symbol.search: MAX_CANDIDATES candidates of near-maximal-length strings still fit under MAX_TOOL_RESULT_TOKENS', async () => {
+		const t = byName('symbol.search');
+		const out = (await t.execute(t.inputSchema.parse({ query: 'worst case' }), ctxFor('user-b'))) as {
+			candidates: Array<{ exchange: string; name: string; symbol: string; type: string }>;
+			truncated: boolean;
+		};
+		expect(t.outputSchema.safeParse(out).success).toBe(true);
+		// 20 real matches in the fixture, capped to MAX_CANDIDATES — proving the cap actually engages.
+		expect(out.candidates.length).toBe(MAX_CANDIDATES);
+		expect(out.truncated).toBe(true);
+		expect(realTokens(out)).toBeLessThanOrEqual(MAX_TOOL_RESULT_TOKENS);
+	});
+
+	/**
+	 * The realistic worst case above never forces `boundArrayElements` to actually drop
+	 * anything — the count cap alone happens to be sufficient there. This test proves the
+	 * runtime size bound itself engages: exactly MAX_CANDIDATES candidates (so the COUNT cap
+	 * never fires), each with a multi-kilobyte `name`/`exchange`/`type` far beyond anything a
+	 * real Yahoo response would contain — content the schema does not and cannot cap. Without
+	 * the `boundArrayElements` call in symbol-search.ts, this result would be ~25KB, well over
+	 * MAX_TOOL_RESULT_TOKENS; with it, elements are dropped from the tail (Yahoo already ranks
+	 * by relevance, so the first candidates are the ones worth keeping) until it fits.
+	 */
+	test('symbol.search: oversized candidate CONTENT (not count) forces the runtime size bound to actually drop elements', async () => {
+		const t = byName('symbol.search');
+		const out = (await t.execute(t.inputSchema.parse({ query: 'oversized' }), ctxFor('user-b'))) as {
+			candidates: Array<{ exchange: string; name: string; symbol: string; type: string }>;
+			truncated: boolean;
+		};
+		expect(t.outputSchema.safeParse(out).success).toBe(true);
+		// Exactly MAX_CANDIDATES matched — the COUNT cap never fires here; only the size bound can
+		// explain any shrinkage below that.
+		expect(out.candidates.length).toBeLessThan(MAX_CANDIDATES);
+		expect(out.candidates.length).toBeGreaterThan(0);
+		expect(out.truncated).toBe(true);
+		// The surviving candidates are the FIRST ones (Yahoo's most relevant), not an arbitrary
+		// subset — proves the bound keeps the head and drops from the tail.
+		expect(out.candidates.map((c) => c.symbol)).toEqual(
+			Array.from({ length: out.candidates.length }, (_, i) => `SYM${i}${'Z'.repeat(50)}`)
+		);
 		expect(realTokens(out)).toBeLessThanOrEqual(MAX_TOOL_RESULT_TOKENS);
 	});
 
