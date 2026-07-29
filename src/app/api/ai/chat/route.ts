@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getServerSession } from '@/lib/auth/get-session';
 import { streamChatTurn } from '@/server/ai/chat/gateway';
 import { deriveTitle, ensureChat } from '@/server/ai/chat/persistence';
+import { modelSelectorSchema } from '@/server/ai/model-selector-schema';
 import { QuotaExceededError } from '@/server/ai/quota';
 import { platformModel } from '@/server/ai/registry';
 import { InvalidCredentialError } from '@/server/ai/resolve-model';
@@ -34,13 +35,7 @@ const bodySchema = z.object({
 			role: z.literal('user')
 		})
 		.passthrough(),
-	model: z.discriminatedUnion('kind', [
-		z.object({ kind: z.literal('platform') }),
-		z.object({
-			kind: z.literal('byok'),
-			provider: z.enum(['ANTHROPIC', 'AZURE', 'GOOGLE', 'OPENAI', 'OPENAI_COMPATIBLE'])
-		})
-	])
+	model: modelSelectorSchema
 });
 
 function json(status: number, body: unknown): Response {
@@ -86,10 +81,18 @@ export async function POST(req: Request): Promise<Response> {
 	}
 	if (model.kind === 'byok') {
 		const owned = await db.aiProviderCredential.findFirst({
-			select: { id: true },
+			select: { enabledModelIds: true, id: true },
 			where: { enabled: true, provider: model.provider, userId }
 		});
 		if (owned === null) return json(403, { error: 'NO_SUCH_CREDENTIAL' });
+		// Reject rather than silently falling back: the user picked a specific model, and quietly
+		// answering on a different one would also bill them for a model they did not choose.
+		// (Azure never names a model — `resolveModel` pins it to the credential's default.)
+		if (model.modelId !== undefined && model.provider !== 'AZURE') {
+			if (!owned.enabledModelIds.includes(model.modelId)) {
+				return json(403, { error: 'NO_SUCH_MODEL' });
+			}
+		}
 	}
 
 	// The client owns the chat id; the server upserts it (create-if-missing) so the first turn

@@ -2,7 +2,8 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { mapColumns, SAMPLE_ROWS } from '@/server/ai/import/map-columns';
 import { applyMapping, type ColumnMapping } from '@/server/ai/import/schema';
-import { type ModelSelector, resolveModel } from '@/server/ai/resolve-model';
+import { modelSelectorSchema } from '@/server/ai/model-selector-schema';
+import { resolveModel } from '@/server/ai/resolve-model';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
 import {
 	CANONICAL_HEADER,
@@ -24,14 +25,6 @@ export type ReviewRow = {
 	message?: string;
 	existing?: ExistingRow[];
 };
-
-const modelSelectorSchema = z.discriminatedUnion('kind', [
-	z.object({ kind: z.literal('platform') }),
-	z.object({
-		kind: z.literal('byok'),
-		provider: z.enum(['ANTHROPIC', 'AZURE', 'GOOGLE', 'OPENAI', 'OPENAI_COMPATIBLE'])
-	})
-]);
 
 const cellsToValues = (cells: string[]): ReviewValues => {
 	const v = {} as ReviewValues;
@@ -125,7 +118,7 @@ export const aiImportRouter = createTRPCRouter({
 			const userId = ctx.session.user.id;
 			let resolved: Awaited<ReturnType<typeof resolveModel>>;
 			try {
-				resolved = await resolveModel(userId, input.model as ModelSelector);
+				resolved = await resolveModel(userId, input.model);
 			} catch {
 				throw new TRPCError({
 					code: 'PRECONDITION_FAILED',

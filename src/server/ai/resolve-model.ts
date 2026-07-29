@@ -6,6 +6,7 @@ import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 
 import { open } from '@/server/ai/crypto';
 import { applyGuardrails, markUnguarded, type Unguarded } from '@/server/ai/guardrails';
+import { BYOK_PROVIDERS } from '@/server/ai/model-selector-schema';
 import { platformModel, type ResolvedModel } from '@/server/ai/registry';
 import { db } from '@/server/db';
 
@@ -16,15 +17,11 @@ export class InvalidCredentialError extends Error {
 	}
 }
 
-type ByokProvider = 'AZURE' | 'OPENAI' | 'ANTHROPIC' | 'GOOGLE' | 'OPENAI_COMPATIBLE';
+// The provider union lives in `model-selector-schema.ts` (a zod-only leaf with no server
+// imports) — derive from it here rather than duplicating the literal list a third time.
+type ByokProvider = (typeof BYOK_PROVIDERS)[number];
 
-const PROVIDERS: ReadonlySet<string> = new Set<ByokProvider>([
-	'ANTHROPIC',
-	'AZURE',
-	'GOOGLE',
-	'OPENAI',
-	'OPENAI_COMPATIBLE'
-]);
+const PROVIDERS: ReadonlySet<string> = new Set<ByokProvider>(BYOK_PROVIDERS);
 
 /** The plaintext config half of an AiProviderCredential row. Only the secret is encrypted. */
 export type ByokConfig = {
