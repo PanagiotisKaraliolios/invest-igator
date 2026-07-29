@@ -32,6 +32,8 @@ function minimalOutputFor(name: string): unknown {
 			return { count: 0, goals: [], hasMore: false };
 		case 'fx.rates':
 			return { base: 'USD', rates: {} };
+		case 'symbol.search':
+			return { candidates: [], query: 'VUAA', truncated: false };
 		case 'transactions.create':
 			return {
 				confirmationToken: 'tok',
