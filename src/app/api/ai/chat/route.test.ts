@@ -17,7 +17,11 @@ mock.module('@/lib/auth/get-session', () => ({
 	getServerSession: async () => session
 }));
 
-let ownedCredential: { id: string } | null = null;
+// `enabledModelIds` is OPTIONAL here (unlike the real Prisma row) purely so pre-existing tests
+// that only ever exercise the modelId-omitted path can keep setting `{ id }` without also having
+// to invent a model list they don't care about. Any test that exercises the NO_SUCH_MODEL branch
+// must set it explicitly.
+let ownedCredential: { enabledModelIds?: string[]; id: string } | null = null;
 const findFirstCalls: unknown[] = [];
 mock.module('@/server/db', () => ({
 	db: {
@@ -139,6 +143,44 @@ describe('POST /api/ai/chat', () => {
 	test('200 when byok selector names a provider the user owns', async () => {
 		resetMocks();
 		ownedCredential = { id: 'cred-1' };
+		const res = await post(validBody({ model: { kind: 'byok', provider: 'ANTHROPIC' } }));
+		expect(res.status).toBe(200);
+		expect(gatewayCalls).toHaveLength(1);
+	});
+
+	test('403 NO_SUCH_MODEL when the requested modelId is not in the credential enabled set', async () => {
+		resetMocks();
+		ownedCredential = { enabledModelIds: ['claude-sonnet-5'], id: 'cred-1' };
+		const res = await post(validBody({ model: { kind: 'byok', modelId: 'claude-opus-5', provider: 'ANTHROPIC' } }));
+		expect(res.status).toBe(403);
+		expect(gatewayCalls).toHaveLength(0);
+		// Distinct from NO_SUCH_CREDENTIAL: the credential IS owned, only the model is rejected.
+		expect(await res.json()).toEqual({ error: 'NO_SUCH_MODEL' });
+	});
+
+	test('200 when the requested modelId IS in the credential enabled set', async () => {
+		resetMocks();
+		ownedCredential = { enabledModelIds: ['claude-sonnet-5'], id: 'cred-1' };
+		const res = await post(
+			validBody({ model: { kind: 'byok', modelId: 'claude-sonnet-5', provider: 'ANTHROPIC' } })
+		);
+		expect(res.status).toBe(200);
+		expect(gatewayCalls).toHaveLength(1);
+	});
+
+	test('200 when an AZURE selector names a modelId outside the enabled set — Azure ignores it', async () => {
+		resetMocks();
+		ownedCredential = { enabledModelIds: [], id: 'cred-1' };
+		const res = await post(
+			validBody({ model: { kind: 'byok', modelId: 'not-enabled-anywhere', provider: 'AZURE' } })
+		);
+		expect(res.status).toBe(200);
+		expect(gatewayCalls).toHaveLength(1);
+	});
+
+	test('200 when a byok selector omits modelId entirely — the enabled-set check is skipped', async () => {
+		resetMocks();
+		ownedCredential = { enabledModelIds: ['claude-sonnet-5'], id: 'cred-1' };
 		const res = await post(validBody({ model: { kind: 'byok', provider: 'ANTHROPIC' } }));
 		expect(res.status).toBe(200);
 		expect(gatewayCalls).toHaveLength(1);
