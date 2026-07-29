@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
-import { BadgeCheck, Download, KeyRound, Plus, ShieldAlert, Trash2 } from 'lucide-react';
+import { BadgeCheck, KeyRound, Pencil, Plus, ShieldAlert, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -21,17 +21,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-	Combobox,
-	ComboboxChip,
-	ComboboxChips,
-	ComboboxChipsInput,
-	ComboboxContent,
-	ComboboxEmpty,
-	ComboboxItem,
-	ComboboxList,
-	ComboboxValue
-} from '@/components/ui/combobox';
-import {
 	Dialog,
 	DialogContent,
 	DialogDescription,
@@ -44,7 +33,9 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
+import type { AiCredentialView } from '@/server/api/routers/ai-credentials';
 import { api } from '@/trpc/react';
+import { ModelSetField } from './model-set-field';
 
 const PROVIDERS = {
 	ANTHROPIC: 'Anthropic',
@@ -99,6 +90,14 @@ export function AiCredentialsCard() {
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [toDelete, setToDelete] = useState<string | null>(null);
 
+	// Kept separate from the add dialog's `useForm` state so the two dialogs cannot corrupt
+	// each other — opening "Edit" must not touch the add form, and vice versa.
+	const [editing, setEditing] = useState<AiCredentialView | null>(null);
+	const [editModels, setEditModels] = useState<string[]>([]);
+	const [editPrimary, setEditPrimary] = useState('');
+	const [editQuery, setEditQuery] = useState('');
+	const [editFetched, setEditFetched] = useState<string[]>([]);
+
 	const utils = api.useUtils();
 	const { data: credentials, isLoading } = api.aiCredentials.list.useQuery();
 
@@ -140,17 +139,6 @@ export function AiCredentialsCard() {
 		}
 	});
 
-	// The typed text becomes a selectable row when it is not already a known model, so a
-	// custom/unlisted id can always be added without a separate free-text field. Checked
-	// against BOTH `fetchedModels` and the currently enabled models — re-typing an
-	// already-added custom id (one that was never in `fetchedModels`) would otherwise show
-	// a duplicate row tagged "custom" alongside the real chip.
-	const trimmedQuery = modelQuery.trim();
-	const modelItems =
-		trimmedQuery !== '' && !fetchedModels.includes(trimmedQuery) && !enabledModelIds.includes(trimmedQuery)
-			? [...fetchedModels, trimmedQuery]
-			: fetchedModels;
-
 	const createMutation = api.aiCredentials.create.useMutation({
 		onError: (error) => toast.error(error.message),
 		onSuccess: () => {
@@ -171,6 +159,48 @@ export function AiCredentialsCard() {
 			setToDelete(null);
 		}
 	});
+
+	const listStoredModelsMutation = api.aiCredentials.listStoredModels.useMutation({
+		onError: (error) => toast.error(error.message),
+		onSuccess: (result) => {
+			if (!result.supported) {
+				toast.info('Model listing is not available for this provider — type the model id instead.');
+				return;
+			}
+			setEditFetched(result.models);
+			toast.success(
+				result.models.length > 0
+					? `Found ${result.models.length} model(s)`
+					: 'The provider returned no models — you can still type an id.'
+			);
+		}
+	});
+
+	const updateModelsMutation = api.aiCredentials.updateModels.useMutation({
+		onError: (error) => toast.error(error.message),
+		onSuccess: () => {
+			toast.success('Models updated');
+			void utils.aiCredentials.list.invalidate();
+			setEditing(null);
+		}
+	});
+
+	// A pre-migration row can have an empty `enabledModelIds` — seed from `[defaultModelId]`
+	// so it still edits sensibly instead of opening on an empty chooser.
+	const openEdit = (credential: AiCredentialView) => {
+		const seeded = credential.enabledModelIds.length > 0 ? credential.enabledModelIds : [credential.defaultModelId];
+		setEditing(credential);
+		setEditModels(seeded);
+		setEditPrimary(credential.defaultModelId);
+		setEditQuery('');
+		setEditFetched([]);
+	};
+
+	const closeEdit = () => {
+		setEditing(null);
+		setEditQuery('');
+		setEditFetched([]);
+	};
 
 	const onSubmit = (values: FormValues) => {
 		createMutation.mutate({
@@ -255,14 +285,24 @@ export function AiCredentialsCard() {
 									{credential.resourceName ? ` · ${credential.resourceName}` : ''}
 								</p>
 							</div>
-							<Button
-								aria-label={`Delete ${PROVIDERS[credential.provider]} key`}
-								onClick={() => setToDelete(credential.id)}
-								size='icon'
-								variant='ghost'
-							>
-								<Trash2 className='size-4' />
-							</Button>
+							<div className='flex items-center gap-1'>
+								<Button
+									aria-label={`Edit ${PROVIDERS[credential.provider]} models`}
+									onClick={() => openEdit(credential)}
+									size='icon'
+									variant='ghost'
+								>
+									<Pencil className='size-4' />
+								</Button>
+								<Button
+									aria-label={`Delete ${PROVIDERS[credential.provider]} key`}
+									onClick={() => setToDelete(credential.id)}
+									size='icon'
+									variant='ghost'
+								>
+									<Trash2 className='size-4' />
+								</Button>
+							</div>
 						</div>
 					))
 				)}
@@ -327,115 +367,38 @@ export function AiCredentialsCard() {
 								<FieldError errors={[errors.secret]} />
 							</Field>
 
-							<Field>
-								<div className='flex items-center justify-between gap-2'>
-									<FieldLabel htmlFor='byok-model'>Models</FieldLabel>
-									<Button
-										disabled={
-											!canListModels ||
-											listModelsMutation.isPending ||
-											(watch('secret') ?? '').length < 8 ||
-											(provider === 'OPENAI_COMPATIBLE' && !watch('baseURL'))
-										}
-										onClick={() =>
-											listModelsMutation.mutate({
-												baseURL: watch('baseURL') || undefined,
-												provider,
-												secret: watch('secret')
-											})
-										}
-										size='sm'
-										type='button'
-										variant='outline'
-									>
-										{listModelsMutation.isPending ? <Spinner /> : <Download className='size-4' />}
-										Fetch models
-									</Button>
-								</div>
-
-								<Combobox
-									inputValue={modelQuery}
-									items={modelItems}
-									multiple
-									onInputValueChange={setModelQuery}
-									onValueChange={(next: string[]) => {
-										setValue('enabledModelIds', next, { shouldValidate: true });
-										// Keep the primary valid: default to the first enabled model.
-										if (next.length > 0 && !next.includes(getValues('defaultModelId'))) {
-											setValue('defaultModelId', next[0] as string, { shouldValidate: true });
-										}
-										setModelQuery('');
-									}}
-									value={enabledModelIds}
-								>
-									<ComboboxChips>
-										<ComboboxValue>
-											{(value: string[]) => (
-												<>
-													{value.map((model) => (
-														<ComboboxChip aria-label={model} key={model}>
-															{model}
-														</ComboboxChip>
-													))}
-													<ComboboxChipsInput
-														id='byok-model'
-														placeholder={value.length > 0 ? '' : 'gpt-5.4-mini'}
-													/>
-												</>
-											)}
-										</ComboboxValue>
-									</ComboboxChips>
-									<ComboboxContent>
-										<ComboboxEmpty>Type a model id to add it.</ComboboxEmpty>
-										<ComboboxList>
-											{(item: string) => (
-												<ComboboxItem key={item} value={item}>
-													{item}
-													{!fetchedModels.includes(item) ? (
-														<span className='ml-auto text-muted-foreground text-xs'>
-															custom
-														</span>
-													) : null}
-												</ComboboxItem>
-											)}
-										</ComboboxList>
-									</ComboboxContent>
-								</Combobox>
-
-								<p className='text-muted-foreground text-xs'>
-									{canListModels
-										? 'Fetch the list, or type any model id to add it. One key often serves several models.'
-										: 'Azure lists deployments rather than models — type the model id. This is NOT the deployment name.'}
-								</p>
-								<p className='text-muted-foreground text-xs'>
-									A model we have no published price for is recorded as an unknown-price call.
-								</p>
-								<FieldError errors={[errors.enabledModelIds, errors.defaultModelId]} />
-							</Field>
-
-							{enabledModelIds.length > 1 ? (
-								<Field>
-									<FieldLabel htmlFor='byok-primary'>Primary model</FieldLabel>
-									<Select
-										onValueChange={(value) => setValue('defaultModelId', value as string)}
-										value={defaultModelId}
-									>
-										<SelectTrigger className='w-full' id='byok-primary'>
-											<SelectValue />
-										</SelectTrigger>
-										<SelectContent>
-											{enabledModelIds.map((model) => (
-												<SelectItem key={model} value={model}>
-													{model}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
-									<p className='text-muted-foreground text-xs'>
-										Used when a request does not name a model — and the one we verify on save.
-									</p>
-								</Field>
-							) : null}
+							<ModelSetField
+								canListModels={canListModels}
+								defaultModelId={defaultModelId}
+								enabledModelIds={enabledModelIds}
+								error={<FieldError errors={[errors.enabledModelIds, errors.defaultModelId]} />}
+								fetchDisabled={
+									!canListModels ||
+									listModelsMutation.isPending ||
+									(watch('secret') ?? '').length < 8 ||
+									(provider === 'OPENAI_COMPATIBLE' && !watch('baseURL'))
+								}
+								fetchedModels={fetchedModels}
+								fetching={listModelsMutation.isPending}
+								idPrefix='byok'
+								modelQuery={modelQuery}
+								onEnabledChange={(next) => {
+									setValue('enabledModelIds', next, { shouldValidate: true });
+									// Keep the primary valid: default to the first enabled model.
+									if (next.length > 0 && !next.includes(getValues('defaultModelId'))) {
+										setValue('defaultModelId', next[0] as string, { shouldValidate: true });
+									}
+								}}
+								onFetch={() =>
+									listModelsMutation.mutate({
+										baseURL: watch('baseURL') || undefined,
+										provider,
+										secret: watch('secret')
+									})
+								}
+								onModelQueryChange={setModelQuery}
+								onPrimaryChange={(value) => setValue('defaultModelId', value)}
+							/>
 
 							{provider === 'AZURE' ? (
 								<>
@@ -524,6 +487,77 @@ export function AiCredentialsCard() {
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
+
+			{/*
+			 * No provider select and no API-key field here — the stored key is reused, so the
+			 * server never needs the browser to re-send a secret it does not have.
+			 */}
+			<Dialog
+				onOpenChange={(open) => {
+					if (!open) closeEdit();
+				}}
+				open={editing !== null}
+			>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Edit {editing ? PROVIDERS[editing.provider] : ''} models</DialogTitle>
+						<DialogDescription>
+							The saved key is reused — it is never sent to the browser. The new primary model is
+							re-verified with the provider on save.
+						</DialogDescription>
+					</DialogHeader>
+
+					{editing ? (
+						<div className='space-y-4 py-4'>
+							<ModelSetField
+								canListModels={MODEL_LISTING_PROVIDERS.has(editing.provider)}
+								defaultModelId={editPrimary}
+								enabledModelIds={editModels}
+								fetchDisabled={!MODEL_LISTING_PROVIDERS.has(editing.provider)}
+								fetchedModels={editFetched}
+								fetching={listStoredModelsMutation.isPending}
+								idPrefix='edit'
+								modelQuery={editQuery}
+								onEnabledChange={(next) => {
+									setEditModels(next);
+									// Keep the primary valid: default to the first enabled model.
+									if (next.length > 0 && !next.includes(editPrimary)) {
+										setEditPrimary(next[0] as string);
+									}
+								}}
+								onFetch={() => listStoredModelsMutation.mutate({ provider: editing.provider })}
+								onModelQueryChange={setEditQuery}
+								onPrimaryChange={setEditPrimary}
+							/>
+						</div>
+					) : null}
+
+					<DialogFooter>
+						<Button onClick={closeEdit} type='button' variant='outline'>
+							Cancel
+						</Button>
+						<Button
+							disabled={
+								updateModelsMutation.isPending ||
+								editModels.length === 0 ||
+								!editModels.includes(editPrimary)
+							}
+							onClick={() => {
+								if (!editing) return;
+								updateModelsMutation.mutate({
+									defaultModelId: editPrimary,
+									enabledModelIds: editModels,
+									provider: editing.provider
+								});
+							}}
+							type='button'
+						>
+							{updateModelsMutation.isPending ? <Spinner /> : null}
+							Save
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</Card>
 	);
 }
