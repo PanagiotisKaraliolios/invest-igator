@@ -1,12 +1,13 @@
 import { z } from 'zod';
 import { searchYahooSymbols } from '@/server/yahoo-search';
+import { boundArrayElements } from './result-bounds';
 import type { AppTool } from './types';
 
 /**
  * Enough listings to disambiguate a multi-exchange ETF (VUAA lists on ~6 venues) without
  * spending the tool-result budget on a long tail the user will never pick.
  */
-const MAX_CANDIDATES = 8;
+export const MAX_CANDIDATES = 8;
 
 const inputSchema = z.strictObject({
 	query: z.string().min(1).max(64)
@@ -22,7 +23,11 @@ const outputSchema = z.strictObject({
 		})
 	),
 	query: z.string(),
-	/** true when more listings matched than were returned. */
+	/**
+	 * true when fewer candidates were returned than actually matched — either more listings
+	 * matched than MAX_CANDIDATES allows, or the (already count-capped) list still had to be
+	 * trimmed to fit the token budget.
+	 */
 	truncated: z.boolean()
 });
 
@@ -56,8 +61,26 @@ export const symbolSearchTool: AppTool<typeof inputSchema, typeof outputSchema> 
 			symbol: r.symbol,
 			type: r.type
 		}));
+		const cappedByCount = results.length > candidates.length;
 
-		return { candidates, query: input.query, truncated: results.length > candidates.length };
+		// `name`/`exchange`/`type` come from Yahoo with no schema-level length cap, so the count
+		// cap above (MAX_CANDIDATES) alone does not bound the serialized size. Re-measure the
+		// actual size and drop from the tail if needed — Yahoo already ranks by relevance, so the
+		// FIRST candidates are the ones worth keeping (the `keep: 'head'` default does this).
+		const bounded = boundArrayElements(candidates, (slice) => ({
+			candidates: slice,
+			query: input.query,
+			truncated: false
+		}));
+
+		return {
+			candidates: bounded.items,
+			query: input.query,
+			// truncated means "the model is not seeing every match" for EITHER reason: more
+			// listings existed than MAX_CANDIDATES allows, or the size bound had to drop some
+			// of the (already count-capped) candidates to fit MAX_TOOL_RESULT_TOKENS.
+			truncated: cappedByCount || bounded.truncated
+		};
 	},
 	inputSchema,
 	mutates: false,
