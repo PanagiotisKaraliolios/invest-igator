@@ -15,7 +15,8 @@ const SOURCE = readFileSync(join(import.meta.dir, 'portfolio-analyst.ts'), 'utf8
  */
 const GOLDEN_HASHES: Record<number, string> = {
 	2: 'cecfc9fbe2d2d35e4192aa629791340e4b2694b2bad9ce2a94a79925fb9b43c3',
-	3: '481409293724dc1edc78df292b55b2bcd558e5b37188a7825dba844f10774a86'
+	3: '481409293724dc1edc78df292b55b2bcd558e5b37188a7825dba844f10774a86',
+	4: '4222d5be6b979da23aa7976fa80511309c3dde8fbcbb7a11a1558e01944b72d5'
 };
 
 /**
@@ -67,7 +68,7 @@ function scanForOffSwitchViolations(source: string): string[] {
 describe('PORTFOLIO_ANALYST identity', () => {
 	test('is versioned and stably identified', () => {
 		expect(PORTFOLIO_ANALYST.id).toBe('portfolio-analyst');
-		expect(PORTFOLIO_ANALYST.version).toBe(3);
+		expect(PORTFOLIO_ANALYST.version).toBe(4);
 	});
 
 	test('hash is the sha256 of text, computed at module load', () => {
@@ -233,5 +234,16 @@ describe('untrusted content handling (§5.8 layer 3)', () => {
 		// a recommendation, even though the model didn't write the opinion itself.
 		expect(PORTFOLIO_ANALYST.text).toContain('STRONG BUY');
 		expect(PORTFOLIO_ANALYST.text).toContain('transaction note');
+	});
+});
+
+describe('symbol resolution', () => {
+	test('tells the model to resolve an ambiguous instrument rather than guess a listing', () => {
+		expect(PORTFOLIO_ANALYST.text).toContain('symbol.search');
+		expect(PORTFOLIO_ANALYST.text).toContain('Do not guess a listing');
+	});
+
+	test('warns that an empty series is not proof the instrument has no prices', () => {
+		expect(PORTFOLIO_ANALYST.text).toContain('fetched on demand');
 	});
 });
