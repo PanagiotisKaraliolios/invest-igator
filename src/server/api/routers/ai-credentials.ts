@@ -82,6 +82,24 @@ const listModelsInput = z
 		}
 	});
 
+const storedProviderInput = z.object({ provider: providerSchema });
+
+const updateModelsInput = z
+	.object({
+		defaultModelId: z.string().min(1).max(120),
+		enabledModelIds: z.array(z.string().min(1).max(120)).min(1).max(100),
+		provider: providerSchema
+	})
+	.superRefine((value, ctx) => {
+		if (!value.enabledModelIds.includes(value.defaultModelId)) {
+			ctx.addIssue({
+				code: 'custom',
+				message: 'The primary model must be one of the enabled models.',
+				path: ['defaultModelId']
+			});
+		}
+	});
+
 /** What the client is ever allowed to see. The secret is NEVER in this shape. */
 export type AiCredentialView = {
 	createdAt: Date;
@@ -109,6 +127,36 @@ export type AiCredentialView = {
  */
 function isCredentialInputError(error: unknown): boolean {
 	return error instanceof Error && /must not be empty|delimiter/.test(error.message);
+}
+
+/**
+ * Load the caller's OWN enabled credential for a provider and decrypt its secret.
+ *
+ * This is what lets the edit flow work without the browser re-sending the key: the plaintext
+ * exists only inside this request. Scoped by `userId`, so a provider the caller does not own is
+ * a NOT_FOUND rather than another tenant's row.
+ *
+ * A decrypt failure is NOT "this row is corrupt, delete it" — the sealing key may simply have
+ * been retired from the keyring. Surface it as an actionable precondition instead.
+ */
+async function loadOwnCredential(db: typeof import('@/server/db').db, userId: string, provider: ByokProvider) {
+	const row = await db.aiProviderCredential.findFirst({ where: { enabled: true, provider, userId } });
+	if (row === null) {
+		throw new TRPCError({ code: 'NOT_FOUND', message: 'No saved key for this provider.' });
+	}
+	try {
+		const secret = open(
+			{ authTag: row.authTag, ciphertext: row.ciphertext, iv: row.iv, kid: row.kid },
+			userId,
+			provider
+		);
+		return { row, secret };
+	} catch {
+		throw new TRPCError({
+			code: 'PRECONDITION_FAILED',
+			message: 'This key cannot be read — the encryption key that sealed it was retired. Re-add the key.'
+		});
+	}
 }
 
 export const aiCredentialsRouter = createTRPCRouter({
@@ -292,5 +340,81 @@ export const aiCredentialsRouter = createTRPCRouter({
 				message: `Could not list models: ${safeProviderErrorMessage(error, input.secret)}`
 			});
 		}
-	})
+	}),
+
+	/**
+	 * List a SAVED credential's available models, using the stored key. The browser never sends
+	 * the secret for an existing credential — it does not have it. Persists nothing.
+	 */
+	listStoredModels: protectedProcedure
+		.input(storedProviderInput)
+		.mutation(async ({ ctx, input }): Promise<ListModelsResult> => {
+			const { row, secret } = await loadOwnCredential(ctx.db, ctx.session.user.id, input.provider);
+			try {
+				return await listProviderModels({
+					baseURL: row.baseURL,
+					provider: input.provider,
+					secret: secret.expose()
+				});
+			} catch (error) {
+				throw new TRPCError({
+					code: 'BAD_REQUEST',
+					message: `Could not list models: ${safeProviderErrorMessage(error, secret.expose())}`
+				});
+			}
+		}),
+
+	/**
+	 * Change which models a saved credential serves, without touching the key.
+	 *
+	 * The NEW primary is probed with the stored secret, so choosing a model this key cannot serve
+	 * fails here rather than mid-conversation. Only the primary is probed — enabling N models must
+	 * not cost N provider calls.
+	 */
+	updateModels: protectedProcedure
+		.input(updateModelsInput)
+		.mutation(async ({ ctx, input }): Promise<AiCredentialView> => {
+			const { row, secret } = await loadOwnCredential(ctx.db, ctx.session.user.id, input.provider);
+
+			const config: ByokConfig = {
+				apiVersion: row.apiVersion,
+				baseURL: row.baseURL,
+				defaultModelId: input.defaultModelId,
+				deployment: row.deployment,
+				provider: input.provider,
+				resourceName: row.resourceName
+			};
+			const probe = await probeCredential(config, secret);
+			if (!probe.ok) {
+				throw new TRPCError({
+					code: 'BAD_REQUEST',
+					message: `The provider rejected this model: ${probe.error}`
+				});
+			}
+
+			// `row` was already scoped by userId, so updating by its id cannot cross tenants.
+			const updated = await ctx.db.aiProviderCredential.update({
+				data: {
+					defaultModelId: input.defaultModelId,
+					enabledModelIds: input.enabledModelIds,
+					lastVerifiedAt: new Date()
+				},
+				where: { id: row.id }
+			});
+
+			return {
+				createdAt: updated.createdAt,
+				defaultModelId: updated.defaultModelId,
+				deployment: updated.deployment,
+				enabled: updated.enabled,
+				enabledModelIds: updated.enabledModelIds,
+				hint: maskHint(secret.expose()),
+				id: updated.id,
+				label: updated.label,
+				lastUsedAt: updated.lastUsedAt,
+				lastVerifiedAt: updated.lastVerifiedAt,
+				provider: updated.provider,
+				resourceName: updated.resourceName
+			};
+		})
 });
