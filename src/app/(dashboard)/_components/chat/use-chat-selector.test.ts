@@ -42,9 +42,10 @@ describe('buildSelectorOptions', () => {
 			{ defaultModelId: 'gpt-5', enabledModelIds: [], provider: 'OPENAI' }
 		]);
 
-		expect(options).toEqual([
-			{ label: 'OpenAI · gpt-5', value: { kind: 'byok', modelId: 'gpt-5', provider: 'OPENAI' } }
-		]);
+		// The label still names the model, but modelId is omitted from the emitted selector: an
+		// EMPTY enabledModelIds means the route's `enabledModelIds.includes(modelId)` re-check would
+		// 403 this as NO_SUCH_MODEL, so the option must round-trip as a bare provider selector.
+		expect(options).toEqual([{ label: 'OpenAI · gpt-5', value: { kind: 'byok', provider: 'OPENAI' } }]);
 	});
 
 	test('a credential with neither still yields a usable provider-only entry', () => {
