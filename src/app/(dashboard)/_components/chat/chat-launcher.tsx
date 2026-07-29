@@ -10,6 +10,7 @@ import { Sheet, SheetContent } from '@/components/ui/sheet';
 import type { ModelSelector } from '@/server/ai/resolve-model';
 import { api } from '@/trpc/react';
 import { ChatDrawer } from './chat-drawer';
+import { keyOf } from './model-picker';
 import { buildSelectorOptions } from './use-chat-selector';
 
 /**
@@ -47,13 +48,18 @@ export function ChatLauncher({ platformConfigured }: { platformConfigured: boole
 		setChatId((prev) => prev ?? crypto.randomUUID());
 	}, []);
 
-	// If the platform model isn't actually configured, the default `{ kind: 'platform' }` selector
-	// is unusable — fall back to the first available BYOK option once credentials load.
+	// Repair a `selector` that no longer corresponds to any offered option. Two ways that happens:
+	// the default `{ kind: 'platform' }` selector when the platform model isn't actually
+	// configured, or (routinely, since un-enabling a model is an ordinary Settings action) a held
+	// byok+model selector whose model was un-enabled and so dropped out of `options`. Left alone,
+	// the picker would show its placeholder while the transport keeps sending the stale selector.
+	// Compare with `options`' own `keyOf` (not a second key implementation) so "no longer offered"
+	// means exactly what the picker itself considers "not one of these options".
 	useEffect(() => {
-		if (selector.kind === 'platform' && !platformConfigured && options.length > 0) {
-			setSelector(options[0]!.value);
-		}
-	}, [options, platformConfigured, selector]);
+		if (options.length === 0) return;
+		const stillOffered = options.some((option) => keyOf(option.value) === keyOf(selector));
+		if (!stillOffered) setSelector(options[0]!.value);
+	}, [options, selector]);
 
 	// The transport is created once and kept stable; it reads the CURRENT selector through a ref so
 	// switching models never has to recreate it (or the underlying chat).

@@ -12,6 +12,10 @@ describe('errorCopy', () => {
 		expect(errorCopy('CREDENTIAL_REJECTED')).toMatch(/Settings/i);
 	});
 
+	test('NO_SUCH_MODEL mentions picking another model', () => {
+		expect(errorCopy('NO_SUCH_MODEL')).toMatch(/pick another model/i);
+	});
+
 	test('NO_PLATFORM_MODEL and CHAT_FAILED map to non-empty copy', () => {
 		expect(errorCopy('NO_PLATFORM_MODEL').length).toBeGreaterThan(0);
 		expect(errorCopy('CHAT_FAILED').length).toBeGreaterThan(0);

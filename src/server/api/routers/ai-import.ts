@@ -2,7 +2,8 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { mapColumns, SAMPLE_ROWS } from '@/server/ai/import/map-columns';
 import { applyMapping, type ColumnMapping } from '@/server/ai/import/schema';
-import { type ModelSelector, resolveModel } from '@/server/ai/resolve-model';
+import { modelSelectorSchema } from '@/server/ai/model-selector-schema';
+import { resolveModel } from '@/server/ai/resolve-model';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
 import {
 	CANONICAL_HEADER,
@@ -24,14 +25,6 @@ export type ReviewRow = {
 	message?: string;
 	existing?: ExistingRow[];
 };
-
-const modelSelectorSchema = z.discriminatedUnion('kind', [
-	z.object({ kind: z.literal('platform') }),
-	z.object({
-		kind: z.literal('byok'),
-		provider: z.enum(['ANTHROPIC', 'AZURE', 'GOOGLE', 'OPENAI', 'OPENAI_COMPATIBLE'])
-	})
-]);
 
 const cellsToValues = (cells: string[]): ReviewValues => {
 	const v = {} as ReviewValues;
@@ -125,7 +118,14 @@ export const aiImportRouter = createTRPCRouter({
 			const userId = ctx.session.user.id;
 			let resolved: Awaited<ReturnType<typeof resolveModel>>;
 			try {
-				resolved = await resolveModel(userId, input.model as ModelSelector);
+				// Unlike the chat route, this does NOT re-check `input.model.modelId` against the
+				// credential's enabled set before calling resolveModel — a stale selection (a model
+				// un-enabled after the picker loaded) silently falls back to defaultModelId instead of
+				// being rejected. Acceptable here: the fallback only affects column mapping (never
+				// user-facing content), and pricing still follows whatever model resolveModel actually
+				// resolved to and ran, so there is no billing error — just possibly a different mapper
+				// model than the one the user picked.
+				resolved = await resolveModel(userId, input.model);
 			} catch {
 				throw new TRPCError({
 					code: 'PRECONDITION_FAILED',
