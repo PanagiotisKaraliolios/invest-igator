@@ -164,6 +164,25 @@ const STRUCTURE: Record<string, { items: Array<Record<string, unknown>>; totalVa
 	}
 };
 
+/**
+ * Yahoo's longname/exchange/quoteType strings carry no schema-level cap (symbol-search.ts's
+ * outputSchema declares them as plain z.string()) — but unlike a transaction `note` or a
+ * watchlist `description`, which are OUR users' own free text with truly no upstream
+ * constraint, these come from Yahoo's finance search API, which in practice never returns
+ * anything close to an unbounded string for a company/fund name. These lengths are a generous
+ * real-world ceiling (the longest institutional share-class names run to a few hundred
+ * characters), not an arbitrary large number: they are what proves `symbol.search`'s
+ * count-only cap (`MAX_CANDIDATES`, no runtime `boundArrayElements`) is still sufficient.
+ */
+const SYMBOL_SEARCH: Record<string, Array<Record<string, string>>> = {
+	'worst case': Array.from({ length: 20 }, (_, i) => ({
+		description: `Institutional Share Class Name ${'X'.repeat(260)} ${i}`,
+		exchange: 'Y'.repeat(60),
+		symbol: `SYM${i}${'Z'.repeat(20)}`,
+		type: 'W'.repeat(30)
+	}))
+};
+
 const dayIso = (i: number): string => new Date(Date.UTC(2023, 0, 1 + i)).toISOString().slice(0, 10);
 
 /** 500 daily points — long enough to prove the tool downsamples instead of dumping the lot. */
@@ -252,6 +271,12 @@ mock.module('@/server/portfolio-compute', () => ({
 mock.module('@/server/fx-history', () => ({
 	getFxMatrix: async () => ({ EUR: { EUR: 1, USD: 1.1 }, USD: { EUR: 0.9, USD: 1 } })
 }));
+mock.module('@/server/yahoo-search', () => ({
+	searchYahooSymbols: async (q: string) => SYMBOL_SEARCH[q] ?? [],
+	// transactions-create.ts also imports this from the same module; it is never exercised by
+	// any test below (none call transactions.create's execute), so a type-correct stub is enough.
+	symbolExistsOnYahoo: async () => 'unreachable' as const
+}));
 
 const { ALL_TOOLS, buildToolset } = await import('./registry');
 
@@ -293,13 +318,14 @@ beforeEach(() => {
 });
 
 describe('the Phase 0 tool set', () => {
-	test('is the seven read tools plus the transactions.create write tool', () => {
+	test('is the eight read tools plus the transactions.create write tool', () => {
 		expect(ALL_TOOLS.map((t) => t.name).sort()).toEqual([
 			'fx.rates',
 			'goals.list',
 			'market.priceHistory',
 			'portfolio.performance',
 			'portfolio.structure',
+			'symbol.search',
 			'transactions.create',
 			'transactions.search',
 			'watchlist.list'
@@ -603,6 +629,25 @@ describe("Task 8's quota reservation is only sound if these hold: every tool res
 		// The NEWEST day (dayIso(maxDays - 1)) survives; it is the OLDEST that went missing.
 		expect(out.points[out.points.length - 1]?.date).toBe(dayIso(maxDays - 1));
 		expect(out.points[0]?.date).not.toBe(dayIso(0));
+		expect(realTokens(out)).toBeLessThanOrEqual(MAX_TOOL_RESULT_TOKENS);
+	});
+
+	/**
+	 * symbol.search has no runtime `boundArrayElements` size bound — it caps purely on count
+	 * (`MAX_CANDIDATES`, 8). This is the test that proves that count-only cap is enough: even at
+	 * MAX_CANDIDATES with each field near the realistic worst case a real Yahoo response would
+	 * ever contain (see SYMBOL_SEARCH's comment), the result still fits under the token budget.
+	 */
+	test('symbol.search: MAX_CANDIDATES (8) candidates of near-maximal-length strings still fit under MAX_TOOL_RESULT_TOKENS', async () => {
+		const t = byName('symbol.search');
+		const out = (await t.execute(t.inputSchema.parse({ query: 'worst case' }), ctxFor('user-b'))) as {
+			candidates: Array<{ exchange: string; name: string; symbol: string; type: string }>;
+			truncated: boolean;
+		};
+		expect(t.outputSchema.safeParse(out).success).toBe(true);
+		// 20 real matches in the fixture, capped to MAX_CANDIDATES — proving the cap actually engages.
+		expect(out.candidates.length).toBe(8);
+		expect(out.truncated).toBe(true);
 		expect(realTokens(out)).toBeLessThanOrEqual(MAX_TOOL_RESULT_TOKENS);
 	});
 
