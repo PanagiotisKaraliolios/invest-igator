@@ -195,11 +195,6 @@ export function buildByokModel(cfg: ByokConfig, apiKey: string): Unguarded {
 }
 
 /**
- * Decrypt + build a `ResolvedModel` from a credential row. Shared by the selector-driven
- * lookup and the back-compat (no-selector) lookup below — the row->model path is identical
- * either way, only the query that produces the row differs.
- */
-/**
  * Choose the model this request actually runs on.
  *
  * AZURE is deliberately excluded from model selection: its SDK "model id" is the DEPLOYMENT, so
@@ -212,6 +207,11 @@ function effectiveModelId(cfg: ByokConfig, enabledModelIds: string[], requested:
 	return enabledModelIds.includes(requested) ? requested : cfg.defaultModelId;
 }
 
+/**
+ * Decrypt + build a `ResolvedModel` from a credential row. Shared by the selector-driven
+ * lookup and the back-compat (no-selector) lookup below — the row->model path is identical
+ * either way, only the query that produces the row differs.
+ */
 function byokFromRow(
 	row: Parameters<typeof toByokConfig>[0] & {
 		authTag: Uint8Array;
