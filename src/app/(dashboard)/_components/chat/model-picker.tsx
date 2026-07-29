@@ -4,9 +4,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import type { ModelSelector } from '@/server/ai/resolve-model';
 import type { SelectorOption } from './use-chat-selector';
 
-/** `ModelSelector` isn't a primitive Base UI `Select` can key on directly — collapse it to a string. */
+/**
+ * `ModelSelector` isn't a primitive Base UI `Select` can key on directly — collapse it to a
+ * string. The model id is part of the key: without it, two models on the same provider would
+ * collide onto one option and the picker could not tell them apart.
+ */
 function keyOf(selector: ModelSelector): string {
-	return selector.kind === 'platform' ? 'platform' : `byok:${selector.provider}`;
+	if (selector.kind === 'platform') return 'platform';
+	return selector.modelId === undefined
+		? `byok:${selector.provider}`
+		: `byok:${selector.provider}:${selector.modelId}`;
 }
 
 /**
