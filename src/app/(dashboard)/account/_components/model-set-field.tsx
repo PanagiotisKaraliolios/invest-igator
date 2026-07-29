@@ -17,6 +17,7 @@ import {
 import { Field, FieldLabel } from '@/components/ui/field';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
+import { computeModelItems } from './model-set-field.helpers';
 
 export type ModelSetFieldProps = {
 	/** Distinguishes element ids between the add and edit dialogs. */
@@ -61,16 +62,10 @@ export function ModelSetField({
 	const modelInputId = `${idPrefix}-model`;
 	const primaryId = `${idPrefix}-primary`;
 
-	// The typed text becomes a selectable row when it is not already a known model, so a
-	// custom/unlisted id can always be added without a separate free-text field. Checked
-	// against BOTH `fetchedModels` and the currently enabled models — re-typing an
-	// already-added custom id (one that was never in `fetchedModels`) would otherwise show
-	// a duplicate row tagged "custom" alongside the real chip.
-	const trimmedQuery = modelQuery.trim();
-	const modelItems =
-		trimmedQuery !== '' && !fetchedModels.includes(trimmedQuery) && !enabledModelIds.includes(trimmedQuery)
-			? [...fetchedModels, trimmedQuery]
-			: fetchedModels;
+	// See `computeModelItems` for the rule: the typed text becomes a selectable row when it is
+	// not already a known model, so a custom/unlisted id can always be added without a separate
+	// free-text field.
+	const modelItems = computeModelItems(modelQuery, fetchedModels, enabledModelIds);
 
 	return (
 		<>
@@ -159,7 +154,8 @@ export function ModelSetField({
 						</SelectContent>
 					</Select>
 					<p className='text-muted-foreground text-xs'>
-						Used when a request does not name a model — and the one we verify on save.
+						Used when a request does not name a model, and is what we verify on save — except on Azure,
+						where the deployment name is sent to the provider instead, so this id is never exercised.
 					</p>
 				</Field>
 			) : null}

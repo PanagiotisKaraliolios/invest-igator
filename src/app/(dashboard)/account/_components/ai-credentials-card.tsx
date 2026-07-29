@@ -160,9 +160,19 @@ export function AiCredentialsCard() {
 		}
 	});
 
+	// Both edit mutations are guarded by comparing `variables.provider` (tRPC v11's 2nd
+	// callback arg) against whichever row is CURRENTLY open, not whichever row started the
+	// request. Without this, a slow response from a dialog the user has since escaped out of
+	// lands in whatever dialog happens to be open next: `listStoredModels`'s response would
+	// repopulate `editFetched` with the WRONG provider's models — rendered untagged, since the
+	// `custom` tag only marks ids absent from `fetchedModels`, so they'd look authoritative —
+	// and `updateModels`'s success would force-close a DIFFERENT row's dialog and silently
+	// discard whatever the user had changed there. The write itself still happened, so the
+	// list is still invalidated either way; only the dialog-local `setEditing`/toast is skipped.
 	const listStoredModelsMutation = api.aiCredentials.listStoredModels.useMutation({
 		onError: (error) => toast.error(error.message),
-		onSuccess: (result) => {
+		onSuccess: (result, variables) => {
+			if (variables.provider !== editing?.provider) return;
 			if (!result.supported) {
 				toast.info('Model listing is not available for this provider — type the model id instead.');
 				return;
@@ -178,9 +188,12 @@ export function AiCredentialsCard() {
 
 	const updateModelsMutation = api.aiCredentials.updateModels.useMutation({
 		onError: (error) => toast.error(error.message),
-		onSuccess: () => {
-			toast.success('Models updated');
+		onSuccess: (_result, variables) => {
+			// The write happened regardless of which dialog is open now, so the list must
+			// reflect it either way — only closing the dialog / toasting is scoped.
 			void utils.aiCredentials.list.invalidate();
+			if (variables.provider !== editing?.provider) return;
+			toast.success('Models updated');
 			setEditing(null);
 		}
 	});
@@ -194,6 +207,11 @@ export function AiCredentialsCard() {
 		setEditPrimary(credential.defaultModelId);
 		setEditQuery('');
 		setEditFetched([]);
+		// A new edit session must never start carrying a previous session's pending/error/data
+		// status from these mutations (e.g. a stale `isPending` disabling Save, or a leftover
+		// error from the row edited before this one).
+		listStoredModelsMutation.reset();
+		updateModelsMutation.reset();
 	};
 
 	const closeEdit = () => {
@@ -288,6 +306,7 @@ export function AiCredentialsCard() {
 							<div className='flex items-center gap-1'>
 								<Button
 									aria-label={`Edit ${PROVIDERS[credential.provider]} models`}
+									disabled={credential.hint === null}
 									onClick={() => openEdit(credential)}
 									size='icon'
 									variant='ghost'
@@ -502,8 +521,12 @@ export function AiCredentialsCard() {
 					<DialogHeader>
 						<DialogTitle>Edit {editing ? PROVIDERS[editing.provider] : ''} models</DialogTitle>
 						<DialogDescription>
-							The saved key is reused — it is never sent to the browser. The new primary model is
-							re-verified with the provider on save.
+							The saved key is reused — it is never sent to the browser.{' '}
+							{editing?.provider === 'AZURE'
+								? // Azure's SDK model id IS the deployment (see `buildByokModel`'s AZURE
+									// branch) — the primary model id chosen here is never what gets sent.
+									'On Azure, saving re-verifies the deployment, not this model id, with the provider.'
+								: 'The new primary model is re-verified with the provider on save.'}
 						</DialogDescription>
 					</DialogHeader>
 
@@ -513,6 +536,19 @@ export function AiCredentialsCard() {
 								canListModels={MODEL_LISTING_PROVIDERS.has(editing.provider)}
 								defaultModelId={editPrimary}
 								enabledModelIds={editModels}
+								error={
+									<FieldError
+										errors={[
+											editModels.length === 0
+												? { message: 'Enable at least one model.' }
+												: undefined,
+											editModels.length > 100 ? { message: 'At most 100 models.' } : undefined,
+											editModels.length > 0 && !editModels.includes(editPrimary)
+												? { message: 'The primary model must be one of the enabled models.' }
+												: undefined
+										]}
+									/>
+								}
 								fetchDisabled={!MODEL_LISTING_PROVIDERS.has(editing.provider)}
 								fetchedModels={editFetched}
 								fetching={listStoredModelsMutation.isPending}
@@ -540,6 +576,7 @@ export function AiCredentialsCard() {
 							disabled={
 								updateModelsMutation.isPending ||
 								editModels.length === 0 ||
+								editModels.length > 100 ||
 								!editModels.includes(editPrimary)
 							}
 							onClick={() => {
