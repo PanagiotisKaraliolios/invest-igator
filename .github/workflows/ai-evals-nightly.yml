@@ -27,6 +27,14 @@ jobs:
       # transitively constructs a PrismaPg adapter off DATABASE_URL, which must at least parse
       # as a URL. No live Postgres container is started for this job.
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/investigator
+      # Same story for InfluxDB: importing the tools constructs the client in `src/server/influx.ts`
+      # at module load, and it throws "No url specified!" without a URL — which took the whole
+      # tool-choice file down on the first live run (2026-09-24). Nothing here queries Influx;
+      # these are the placeholder values `ci.yml` already uses for its unit job.
+      INFLUXDB_URL: http://localhost:8086
+      INFLUXDB_TOKEN: test-token
+      INFLUXDB_ORG: test-org
+      INFLUXDB_BUCKET: test-bucket
       AZURE_OPENAI_RESOURCE_NAME: ${{ secrets.AZURE_OPENAI_RESOURCE_NAME }}
       AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
       AZURE_OPENAI_CHAT_DEPLOYMENT: ${{ secrets.AZURE_OPENAI_CHAT_DEPLOYMENT }}
