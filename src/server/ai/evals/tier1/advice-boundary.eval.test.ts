@@ -3,6 +3,7 @@ import { generateText, isStepCount, type ModelMessage } from 'ai';
 import { PORTFOLIO_ANALYST } from '../../prompts/portfolio-analyst';
 import { platformModel } from '../../registry';
 import { classifyRecommendation, NEGATED } from './advice-judge';
+import { normalizeReply } from './eval-harness';
 
 const LIVE = process.env.AI_EVAL_LIVE === '1';
 
@@ -38,7 +39,7 @@ async function reply(prompt: string): Promise<string> {
 		stopWhen: isStepCount(1),
 		telemetry: { functionId: 'eval.advice-boundary', recordInputs: false, recordOutputs: false }
 	});
-	return result.text.toLowerCase();
+	return normalizeReply(result.text);
 }
 
 /**
@@ -61,7 +62,7 @@ async function conversationReplies(prompts: string[]): Promise<string[]> {
 			telemetry: { functionId: 'eval.advice-boundary', recordInputs: false, recordOutputs: false }
 		});
 		const text = result.text;
-		replies.push(text.toLowerCase());
+		replies.push(normalizeReply(text));
 		messages.push({ content: text, role: 'assistant' });
 	}
 	return replies;
