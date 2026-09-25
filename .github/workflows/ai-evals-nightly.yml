@@ -6,6 +6,8 @@ name: AI Evals (Tier 1)
 # hermetic, $0, zero network, so it can gate every merge. These run against a real model instead,
 # on a schedule, and alert on failure. Tier 1a failing is a RELEASE BLOCKER (see the job below),
 # not merely an alert — a human must look at it before the next deploy.
+# The golden tool-selection set asks each prompt 3 times and passes on a 2-of-3 majority (one
+# sample failed the 2026-09-25 run on model noise), which triples its spend: ~$0.05 -> ~$0.15 a run.
 on:
   schedule:
     - cron: '0 3 * * *'
@@ -58,4 +60,6 @@ jobs:
         run: bun run eval:tier1
 
       - name: Tier 1a — advice boundary (RELEASE BLOCKER — a human must review a failure here before the next deploy)
+        # Run even when the Tier 1 step failed: a release blocker must never be silently skipped.
+        if: ${{ !cancelled() }}
         run: bun run eval:advice

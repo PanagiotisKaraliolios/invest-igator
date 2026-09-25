@@ -3,6 +3,7 @@ import { generateText, isStepCount, type ToolSet, tool } from 'ai';
 import { PORTFOLIO_ANALYST } from '../../prompts/portfolio-analyst';
 import { platformModel } from '../../registry';
 import { ALL_TOOLS } from '../../tools/registry';
+import { judgeToolChoices, sampleToolChoices } from './eval-harness';
 
 const LIVE = process.env.AI_EVAL_LIVE === '1';
 
@@ -15,7 +16,10 @@ const LIVE = process.env.AI_EVAL_LIVE === '1';
  * ('portfolio.structure' -> 'portfolio_structure'); dots are illegal in AI SDK tool keys.
  *
  * NOTE: no `temperature`, no `seed`. Azure GPT-5.x returns 400 on both.
- * Determinism comes from asserting on tool names, never on prose.
+ * Determinism comes from asserting on tool names, never on prose, and from asking each prompt
+ * `TOOL_CHOICE_SAMPLES` (3) times and passing on a 2-of-3 majority: one sample failed the
+ * 2026-09-25 nightly on model noise alone. See `./eval-harness.ts`, tested hermetically in
+ * `eval-harness.test.ts`, for the sampling, the vote, and why invalid tool calls are not voted on.
  *
  * `describe.skipIf(!LIVE)` below means this whole suite is SKIPPED (not run, not a network
  * call) whenever AI_EVAL_LIVE is unset — which is every merge-gate run of `bun test src`.
@@ -27,58 +31,55 @@ const SELECTION_TOOLS: ToolSet = Object.fromEntries(
 	])
 );
 
-async function chosenTools(prompt: string): Promise<string[]> {
+/**
+ * `expected`: the tool `prompt` must call, or `null` for no tool at all. On failure the message
+ * lists every sample's tool calls, finish reason and the start of its reply.
+ */
+async function expectToolChoice(prompt: string, expected: string | null): Promise<void> {
 	const { model } = platformModel();
-	const result = await generateText({
-		instructions: PORTFOLIO_ANALYST.text,
-		model,
-		prompt,
-		stopWhen: isStepCount(1),
-		telemetry: { functionId: 'eval.tool-choice', recordInputs: false, recordOutputs: false },
-		tools: SELECTION_TOOLS
-	});
-	// A hallucinated tool name (or unparsable input, with no `repairToolCall` configured) is
-	// swallowed by the AI SDK into `dynamicToolCalls` as `{ dynamic: true, invalid: true }`
-	// rather than thrown — verified directly against node_modules/ai/dist/index.js
-	// (`parseToolCall`'s outer catch), NOT assumed. It never appears in `result.toolCalls`, so a
-	// suite that only reads `toolCalls` would never notice the model naming a tool that does
-	// not exist. Assert it on every call, not just the golden-set ones — a hallucination can
-	// show up right alongside a correct pick.
-	expect(result.dynamicToolCalls.filter((c) => c.invalid)).toEqual([]);
-	return result.toolCalls.map((c) => c.toolName).sort();
+	const samples = await sampleToolChoices(() =>
+		generateText({
+			instructions: PORTFOLIO_ANALYST.text,
+			model,
+			prompt,
+			stopWhen: isStepCount(1),
+			telemetry: { functionId: 'eval.tool-choice', recordInputs: false, recordOutputs: false },
+			tools: SELECTION_TOOLS
+		})
+	);
+	const verdict = judgeToolChoices(samples, expected);
+	expect(verdict.pass, `${JSON.stringify(prompt)}: ${verdict.report}`).toBe(true);
 }
 
 describe.skipIf(!LIVE)(
-	'Tier 1 — golden tool-selection set (nightly; ~$0.05/run; alerts, does not gate a merge)',
+	'Tier 1 — golden tool-selection set (nightly; best of 3 per prompt, ~$0.15/run; alerts, does not gate a merge)',
 	() => {
 		test('"what is in my portfolio?" -> portfolio_structure', async () => {
-			expect(await chosenTools('What is in my portfolio right now?')).toContain('portfolio_structure');
+			await expectToolChoice('What is in my portfolio right now?', 'portfolio_structure');
 		});
 
 		test('"how have I done this year?" -> portfolio_performance', async () => {
-			expect(await chosenTools('How has my portfolio performed this year?')).toContain('portfolio_performance');
+			await expectToolChoice('How has my portfolio performed this year?', 'portfolio_performance');
 		});
 
 		test('"what did I buy in March?" -> transactions_search', async () => {
-			expect(await chosenTools('What did I buy in March 2026?')).toContain('transactions_search');
+			await expectToolChoice('What did I buy in March 2026?', 'transactions_search');
 		});
 
 		test('"show my watchlist" -> watchlist_list', async () => {
-			expect(await chosenTools('Show me my watchlist.')).toContain('watchlist_list');
+			await expectToolChoice('Show me my watchlist.', 'watchlist_list');
 		});
 
 		test('"AAPL last 30 days" -> market_priceHistory', async () => {
-			expect(await chosenTools("What has AAPL's close done over the last 30 days?")).toContain(
-				'market_priceHistory'
-			);
+			await expectToolChoice("What has AAPL's close done over the last 30 days?", 'market_priceHistory');
 		});
 
 		test('NEGATIVE: "who are you?" calls no tool at all', async () => {
-			expect(await chosenTools('Who are you?')).toEqual([]);
+			await expectToolChoice('Who are you?', null);
 		});
 
 		test('NEGATIVE: "what is a stock split?" calls no tool at all', async () => {
-			expect(await chosenTools('What is a stock split?')).toEqual([]);
+			await expectToolChoice('What is a stock split?', null);
 		});
 	}
 );
