@@ -4,9 +4,10 @@ import { type LanguageModelUsage, simulateReadableStream, type UIMessage } from 
 import { MockLanguageModelV4 } from 'ai/test';
 import { markUnguarded } from '@/server/ai/guardrails';
 import { price } from '@/server/ai/pricing/price';
-import type { Reservation } from '@/server/ai/quota';
+import { REQUEST_TIMEOUT_MS, type Reservation } from '@/server/ai/quota';
 import { applyGuardrails, type ResolvedModel } from '@/server/ai/registry';
 import { toTokenUsage } from '@/server/ai/telemetry';
+import { fakeRequestDeadlines, unansweredModel } from '@/server/ai/test-support/request-deadline';
 
 /**
  * Hermetic like tool-ctx.test.ts / resolve-model.test.ts: gateway.ts's `deps` seam covers
@@ -228,6 +229,57 @@ describe('streamChatTurn', () => {
 		// was the ABORT path specifically: `onEnd` would settle the full priced amount (> 0), and
 		// `onError` would settle `null` (the full-ceiling fail-safe). 0n is none of those by accident.
 		expect(settle.mock.calls[0]?.[1]).toBe(0n);
+	});
+
+	// The route hands the gateway `req.signal`, which only fires if the CLIENT gives up. A client
+	// that stays connected to a provider stream that never finishes must not keep the turn — and
+	// its reservation — alive past the orphan sweeper: REQUEST_TIMEOUT_MS aborts it regardless.
+	test('a stream that never finishes is aborted at REQUEST_TIMEOUT_MS even while the caller signal is live', async () => {
+		const deadlines = fakeRequestDeadlines();
+		try {
+			const settle = mock(async () => {});
+			const caller = new AbortController(); // never aborted: the client stays connected
+			const provider = unansweredModel();
+
+			const res = await streamChatTurn(
+				{
+					abortSignal: caller.signal,
+					chatId: 'c1',
+					incoming: userMsg('hi'),
+					selector: { kind: 'platform' },
+					session: { user: { id: 'u1' } }
+				},
+				{
+					loadTurnHistory: async () => [],
+					reserve: async (): Promise<Reservation> => ({ ceilingNanoUsd: 1000n, id: 'res-1', userId: 'u1' }),
+					resolveModel: async () => ({
+						...resolvedPlatform(),
+						model: applyGuardrails(markUnguarded(provider.model))
+					}),
+					saveTurn: async () => {},
+					settle
+				}
+			);
+			const body = res.text(); // drain concurrently; it only ends once the turn is aborted
+			await provider.entered;
+
+			expect(deadlines.requestedMs()).toEqual([REQUEST_TIMEOUT_MS]);
+			const signal = provider.model.doStreamCalls[0]?.abortSignal;
+			expect(signal?.aborted).toBe(false);
+
+			deadlines.fireAll();
+			await body;
+
+			expect(caller.signal.aborted).toBe(false);
+			expect(signal?.aborted).toBe(true);
+			expect((signal?.reason as DOMException).name).toBe('TimeoutError');
+			// The deadline ends the turn through the same abort path as "stop": settled exactly once,
+			// on the partial actually spent (no step finished → 0n), not left for the sweeper.
+			expect(settle).toHaveBeenCalledTimes(1);
+			expect(settle.mock.calls[0]?.[1]).toBe(0n);
+		} finally {
+			deadlines.restore();
+		}
 	});
 
 	test('a setup failure after reserve settles the reservation (null → ceiling), not leaking to the sweeper', async () => {

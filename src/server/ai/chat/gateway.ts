@@ -7,7 +7,8 @@ import {
 	estimateRequestCeilingNanoUsd,
 	type Reservation,
 	reserve as realReserve,
-	settle as realSettle
+	settle as realSettle,
+	requestAbortSignal
 } from '@/server/ai/quota';
 import { MAX_STEPS, type ResolvedModel } from '@/server/ai/registry';
 import { type ModelSelector, resolveModel as realResolveModel } from '@/server/ai/resolve-model';
@@ -86,7 +87,8 @@ function sumStepUsage(steps: ReadonlyArray<{ usage: LanguageModelUsage }>): Toke
  * hitting "stop" — and on a non-resetting $1 default limit a few of those can transiently 429 a
  * legitimate user):
  *   - `onEnd`   (success): price the aggregate `usage` and settle the exact actual.
- *   - `onAbort` (user "stop" / signal): price the SUM of the finished `steps`' usage — the
+ *   - `onAbort` (user "stop" / signal, including the `REQUEST_TIMEOUT_MS` deadline that
+ *                `requestAbortSignal` adds): price the SUM of the finished `steps`' usage — the
  *                partial actually spent — never the full ceiling.
  *   - `onError` (stream/provider failure): `{ error }` carries no usage, so settle `null`;
  *                `settle()` coalesces null to the full ceiling (fail-safe — bill the worst case).
@@ -151,7 +153,10 @@ export async function streamChatTurn(
 				// a failure here settles the reservation rather than leaking it past the callbacks.
 				const modelMessages = await convertToModelMessages(uiMessages);
 				const result = streamText({
-					abortSignal: args.abortSignal,
+					// The caller's signal (the route's `req.signal`) AND the `REQUEST_TIMEOUT_MS`
+					// deadline: a client that stays connected to a stream that never finishes must
+					// not keep this turn — and its reservation — alive past the orphan sweeper.
+					abortSignal: requestAbortSignal(args.abortSignal),
 					instructions: PORTFOLIO_ANALYST.text,
 					messages: modelMessages,
 					model: resolved.model,
