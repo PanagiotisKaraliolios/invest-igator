@@ -153,4 +153,29 @@ describe('docker-compose scheduled jobs', () => {
 			expect({ job, user: label?.[1] }).toStrictEqual({ job, user });
 		}
 	});
+
+	// Ofelia parses schedules with a leading SECONDS field. A standard 5-field cron spec is read
+	// seconds-first, so '*/5 * * * *' fires every 5 seconds and '15 2 * * *' every hour at :02:15.
+	// That shipped from July to 2026-09-25; pin the intended times so it cannot drift back.
+	test('every Ofelia schedule has the leading seconds field and fires when intended', async () => {
+		const compose = (await Bun.file(join(REPO_ROOT, 'docker-compose.yml')).text())
+			.split('\n')
+			.map((line) => line.replace(/#.*$/, ''))
+			.join('\n');
+		const schedules = Object.fromEntries(
+			[...compose.matchAll(/ofelia\.job-exec\.([\w-]+)\.schedule:\s*['"]?([^'"\n]+?)['"]?\s*$/gm)].map((m) => [
+				m[1],
+				m[2].trim()
+			])
+		);
+
+		expect(schedules).toStrictEqual({
+			'ingest-fx': '0 0 6,18 * * *',
+			'ingest-yahoo': '0 15 2 * * *',
+			'sweep-ai-reservations': '0 */5 * * * *'
+		});
+		for (const spec of Object.values(schedules)) {
+			expect(spec.startsWith('@') || spec.split(/\s+/).length === 6).toBe(true);
+		}
+	});
 });
