@@ -60,4 +60,6 @@ jobs:
         run: bun run eval:tier1
 
       - name: Tier 1a — advice boundary (RELEASE BLOCKER — a human must review a failure here before the next deploy)
+        # Run even when the Tier 1 step failed: a release blocker must never be silently skipped.
+        if: ${{ !cancelled() }}
         run: bun run eval:advice
