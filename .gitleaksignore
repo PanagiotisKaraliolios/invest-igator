@@ -9,3 +9,8 @@ docs/api-key-usage.md:curl-auth-header:*
 
 # Example API keys in README
 README.md:curl-auth-header:*
+
+# Dockerfile, commit 687a825 (2025-10-20): a build-time placeholder for BETTER_AUTH_SECRET whose value literally
+# says it is a dummy; the real secret is injected at runtime. Verified 2026-09-25 by hash against the real
+# .env and .env.production values: not a credential. This fingerprint is what the nightly full-history scan hit.
+687a8253aece42747f612757ad3fcd2c1b826d14:Dockerfile:generic-api-key:29
