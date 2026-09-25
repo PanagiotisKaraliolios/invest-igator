@@ -1,6 +1,6 @@
 ## Multi-stage Dockerfile for Next.js 15 + Prisma on Bun runtime
 
-FROM oven/bun:1.3-debian AS base
+FROM oven/bun:1.4-debian AS base
 WORKDIR /app
 
 FROM base AS deps
@@ -57,7 +57,7 @@ RUN SKIP_ENV_VALIDATION=1 \
 	AI_API_KEY_PEPPER=build-time-dummy-pepper-at-least-32-chars \
 	bun run build
 
-FROM oven/bun:1.3-debian AS runner
+FROM oven/bun:1.4-debian AS runner
 ENV NODE_ENV=production
 WORKDIR /app
 
