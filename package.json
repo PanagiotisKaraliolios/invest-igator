@@ -31,7 +31,7 @@
 		"@types/nodemailer": "^8.0.1",
 		"ai": "7.0.42",
 		"bcryptjs": "^3.0.3",
-		"better-auth": "^1.6.23",
+		"better-auth": "^1.6.25",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
 		"cmdk": "^1.1.1",
