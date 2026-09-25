@@ -2,6 +2,7 @@ import { generateText, type LanguageModel } from 'ai';
 import type { Secret } from '@/server/ai/crypto';
 import { applyGuardrails } from '@/server/ai/guardrails';
 import { safeProviderErrorMessage } from '@/server/ai/provider-errors';
+import { requestAbortSignal } from '@/server/ai/quota';
 import { type ByokConfig, buildByokModel as buildRawByokModel } from '@/server/ai/resolve-model';
 
 export type { ByokConfig } from '@/server/ai/resolve-model';
@@ -38,11 +39,14 @@ export function buildByokModel(config: ByokConfig, secret: Secret): LanguageMode
  *
  * Also catches `buildByokModel`'s synchronous config-validation throws (e.g. Azure given
  * both `resourceName` and `baseURL`) — those are just as much "this credential does not
- * work" as a network-level rejection, and surface through the identical `{ ok: false }` path.
+ * work" as a network-level rejection, and surface through the identical `{ ok: false }` path —
+ * as does an endpoint that never answers: the call is bounded by `REQUEST_TIMEOUT_MS`
+ * (`requestAbortSignal`), so a black-holed `baseURL` fails the save instead of hanging it.
  */
 export async function probeCredential(config: ByokConfig, secret: Secret): Promise<ProbeResult> {
 	try {
 		await generateText({
+			abortSignal: requestAbortSignal(),
 			maxOutputTokens: 16,
 			model: buildByokModel(config, secret),
 			prompt: 'ping',

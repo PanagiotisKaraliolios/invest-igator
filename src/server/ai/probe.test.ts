@@ -3,6 +3,8 @@ import { generateText } from 'ai';
 import { MockLanguageModelV4 } from 'ai/test';
 import { Secret } from '@/server/ai/crypto';
 import { MAX_OUTPUT_TOKENS, markUnguarded } from '@/server/ai/guardrails';
+import { REQUEST_TIMEOUT_MS } from '@/server/ai/quota';
+import { fakeRequestDeadlines, unansweredModel } from '@/server/ai/test-support/request-deadline';
 
 /**
  * probe.ts's OWN `buildByokModel` wraps whatever `resolve-model.ts`'s `buildByokModel` returns
@@ -86,5 +88,29 @@ describe('probe.ts guardrail attachment — BYOK cannot skip guardrails via the 
 
 		expect(result).toEqual({ ok: true });
 		expect(mockModel.doGenerateCalls.length).toBe(1);
+	});
+});
+
+describe('probe.ts request deadline — an endpoint that never answers cannot hang the save', () => {
+	test('probeCredential aborts the provider call once REQUEST_TIMEOUT_MS elapses, and reports ok: false', async () => {
+		const deadlines = fakeRequestDeadlines();
+		try {
+			const provider = unansweredModel();
+			mockModel = provider.model;
+			const pending = probeCredential(config, new Secret('sk-test-key'));
+			await provider.entered;
+
+			expect(deadlines.requestedMs()).toEqual([REQUEST_TIMEOUT_MS]);
+			const signal = provider.model.doGenerateCalls[0]?.abortSignal;
+			expect(signal?.aborted).toBe(false);
+
+			deadlines.fireAll();
+
+			expect(await pending).toEqual({ error: expect.stringContaining('TimeoutError'), ok: false });
+			expect(signal?.aborted).toBe(true);
+			expect((signal?.reason as DOMException).name).toBe('TimeoutError');
+		} finally {
+			deadlines.restore();
+		}
 	});
 });

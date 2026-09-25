@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import type { LanguageModelV4FinishReason, LanguageModelV4Usage } from '@ai-sdk/provider';
 import { MockLanguageModelV4 } from 'ai/test';
+import { REQUEST_TIMEOUT_MS } from '@/server/ai/quota';
+import { fakeRequestDeadlines, unansweredModel } from '@/server/ai/test-support/request-deadline';
 import { mapColumns } from './map-columns';
 
 /**
@@ -53,5 +55,32 @@ describe('mapColumns', () => {
 		expect(mapping.symbol).toBe(1);
 		expect(mapping.dateFormat).toBe('MDY_SLASH');
 		expect(mapping.sideMap).toEqual([{ from: 'B', to: 'BUY' }]);
+	});
+});
+
+describe('mapColumns request deadline', () => {
+	// A provider that accepts the import's mapping call and never answers must not hold the tRPC
+	// preview open forever: the call is aborted once REQUEST_TIMEOUT_MS elapses.
+	test('a provider that never answers is aborted once REQUEST_TIMEOUT_MS elapses', async () => {
+		const deadlines = fakeRequestDeadlines();
+		try {
+			const provider = unansweredModel();
+			const outcome = mapColumns(provider.model, ['Date', 'Ticker'], [['2026-01-15', 'AAPL']]).then(
+				() => null,
+				(error: unknown) => error
+			);
+			await provider.entered;
+
+			expect(deadlines.requestedMs()).toEqual([REQUEST_TIMEOUT_MS]);
+			const signal = provider.model.doGenerateCalls[0]?.abortSignal;
+			expect(signal?.aborted).toBe(false);
+
+			deadlines.fireAll();
+
+			expect(await outcome).toMatchObject({ name: 'TimeoutError' });
+			expect(signal?.aborted).toBe(true);
+		} finally {
+			deadlines.restore();
+		}
 	});
 });

@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 /** Blanks out line comments, block comments and string/template literals, preserving offsets. */
-function blankNonCode(source: string): string {
+export function blankNonCode(source: string): string {
 	const out = source.split('');
 	let i = 0;
 	while (i < source.length) {
@@ -49,7 +49,7 @@ function blankNonCode(source: string): string {
 }
 
 /** Returns the source slice of the balanced `{...}` starting at `open`, or null if unbalanced. */
-function matchBraces(source: string, open: number): string | null {
+export function matchBraces(source: string, open: number): string | null {
 	let depth = 0;
 	for (let i = open; i < source.length; i += 1) {
 		const c = source[i];

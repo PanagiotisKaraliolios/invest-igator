@@ -1,4 +1,5 @@
 import { generateObject, type LanguageModel } from 'ai';
+import { requestAbortSignal } from '@/server/ai/quota';
 import { type ColumnMapping, columnMappingSchema } from './schema';
 
 export const SAMPLE_ROWS = 8;
@@ -26,6 +27,8 @@ export function buildMapPrompt(rawHeader: string[], sampleRows: string[][]): str
 /**
  * Maps arbitrary broker columns → our schema. Sends ONLY the header + a small sample to the model.
  * Telemetry recording is OFF (recordInputs/recordOutputs=false): the CSV must never reach the sink.
+ * Bounded by `REQUEST_TIMEOUT_MS` (`requestAbortSignal`), so a provider that never answers fails
+ * the preview instead of holding the tRPC request open indefinitely.
  */
 export async function mapColumns(
 	model: LanguageModel,
@@ -33,6 +36,7 @@ export async function mapColumns(
 	sampleRows: string[][]
 ): Promise<ColumnMapping> {
 	const { object } = await generateObject({
+		abortSignal: requestAbortSignal(),
 		model,
 		prompt: buildMapPrompt(rawHeader, sampleRows.slice(0, SAMPLE_ROWS)),
 		schema: columnMappingSchema,

@@ -29,17 +29,42 @@ const DEFAULT_LIMIT_NANO_USD = 1_000_000_000n;
 export const ORPHAN_AGE_MS = 10 * 60 * 1000;
 
 /**
- * Every AI SDK call site (Task 10) MUST pass `abortSignal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)`
- * to `generateText`/`streamText`. Without an enforced upper bound on wall-clock time, a request
- * can still be running past `ORPHAN_AGE_MS`, at which point the sweeper (`sweepOrphanedReservations`)
- * releases its ceiling back to the pool — while the original request is STILL spending provider
- * money against it. A second request can then reserve and spend that same budget, so total spend
- * exceeds `limitNanoUsd`. Kept comfortably below `ORPHAN_AGE_MS` (not just under it) so that, even
- * accounting for clock skew and the sweeper's own polling interval, a request is guaranteed to be
- * dead (aborted client-side) well before its reservation is ever eligible for sweeping. See the
- * `REQUEST_TIMEOUT_MS < ORPHAN_AGE_MS` assertion in `prisma/ai-quota.test.ts`.
+ * Wall-clock ceiling on a whole AI SDK request. Without an enforced upper bound on wall-clock time,
+ * a request can still be running past `ORPHAN_AGE_MS`, at which point the sweeper
+ * (`sweepOrphanedReservations`) releases its ceiling back to the pool — while the original request
+ * is STILL spending provider money against it. A second request can then reserve and spend that
+ * same budget, so total spend exceeds `limitNanoUsd`. Kept comfortably below `ORPHAN_AGE_MS` (not
+ * just under it) so that, even accounting for clock skew and the sweeper's own polling interval, a
+ * request is guaranteed to be dead (aborted client-side) well before its reservation is ever
+ * eligible for sweeping. See the `REQUEST_TIMEOUT_MS < ORPHAN_AGE_MS` assertion in
+ * `prisma/ai-quota.test.ts`.
+ *
+ * ENFORCED, not just documented: every production AI SDK call passes
+ * `abortSignal: requestAbortSignal(...)` (below), which always carries this deadline —
+ * `chat/gateway.ts` (`streamText`, combined with the chat route's own `req.signal`),
+ * `import/map-columns.ts` (`generateObject`) and `probe.ts` (`generateText`). The BUILD GATE in
+ * `quota.test.ts` fails CI if any `generateText`/`streamText`/`generateObject`/`streamObject` call
+ * under `src/` (tests and the live evals in `evals/` excepted) does not, and each of those three
+ * call sites' own tests prove a provider call that hangs is aborted once this deadline fires.
  */
 export const REQUEST_TIMEOUT_MS = 5 * 60 * 1000;
+
+/**
+ * THE one way an AI SDK call gets its `abortSignal` — call sites pass
+ * `abortSignal: requestAbortSignal(callerSignal)`, never a bare caller signal and never nothing.
+ * The result always aborts once `REQUEST_TIMEOUT_MS` elapses; a caller's own signal (the chat
+ * route's `req.signal`: the user hitting "stop", or the client going away) is combined with it via
+ * `AbortSignal.any`, so whichever fires first aborts the request and its `reason` says which.
+ * Passing the caller's signal alone is the gap this closes: it only fires if the CLIENT gives up,
+ * and a client that stays connected to a provider stream that never finishes never trips it.
+ *
+ * Build a fresh one per request: `AbortSignal.timeout` starts its clock when it is created, so a
+ * signal hoisted to module scope would expire five minutes after boot and abort every later call.
+ */
+export function requestAbortSignal(callerSignal?: AbortSignal): AbortSignal {
+	const deadline = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
+	return callerSignal === undefined ? deadline : AbortSignal.any([callerSignal, deadline]);
+}
 
 /**
  * Creates the user's quota row if it is missing. `ON CONFLICT DO NOTHING` rather than a Prisma
