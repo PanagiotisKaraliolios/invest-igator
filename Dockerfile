@@ -64,12 +64,16 @@ WORKDIR /app
 # System deps
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 
-# Copy runtime artifacts
+# Copy runtime artifacts. They stay root-owned, so the unprivileged server can read its code
+# and dependencies but not rewrite them. The one exception is .next: `next start` writes the
+# /_next/image cache to .next/cache/images (and any ISR or fetch-cache entries under .next),
+# and a .next it cannot write turns that into EACCES plus an unhandled rejection per request.
+# Ownership is set on COPY, not with `RUN chown -R`, which would duplicate the whole layer.
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/next.config.js ./next.config.js
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next ./.next
+COPY --from=builder --chown=bun:bun /app/.next ./.next
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /app/src ./src
@@ -81,5 +85,10 @@ RUN chmod +x /entrypoint.sh
 
 EXPOSE 3000
 ENV PORT=3000
+
+# Drop root for the entrypoint (migrate + seed) and the server. `bun` (uid/gid 1000) ships
+# with oven/bun; its HOME, /home/bun, takes the Prisma CLI's update-check cache. Ofelia's
+# exec jobs ignore USER and default to root, so docker-compose.yml sets each job's user.
+USER bun
 
 CMD ["/entrypoint.sh"]
