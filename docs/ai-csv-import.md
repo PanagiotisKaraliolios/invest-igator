@@ -67,7 +67,10 @@ your own data, going to the provider you've configured, for the purpose of impor
 - **Unmappable required column** (`date`/`symbol`/`side`/`quantity`/`price`) — preview fails with
   a message naming the missing field rather than silently dropping rows.
 - **Model failure or bad structured output** — caught and surfaced as a single retryable
-  "couldn't read this statement, try again" error; the request never dies silently.
+  "couldn't read this statement, try again" error; the request never dies silently. The server
+  logs the error's name and message only, through the same redactor the BYOK credential screens
+  use (`safeProviderErrorMessage`), so an auth header, bearer token, `?key=` parameter or
+  `sk-…`/`AIza…` key that a provider echoes into its message never reaches the log.
 - **Per-row problems** (bad date, non-positive quantity/price, unsupported currency, unknown
   symbol) — the row is shown as `needs-fix` in the review table and excluded from the commit
   payload. Row status is computed server-side once, at preview time, and is not re-evaluated as

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { mapColumns, SAMPLE_ROWS } from '@/server/ai/import/map-columns';
 import { applyMapping, type ColumnMapping } from '@/server/ai/import/schema';
 import { modelSelectorSchema } from '@/server/ai/model-selector-schema';
+import { safeProviderErrorMessage } from '@/server/ai/provider-errors';
 import { resolveModel } from '@/server/ai/resolve-model';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
 import {
@@ -137,11 +138,11 @@ export const aiImportRouter = createTRPCRouter({
 			} catch (err) {
 				if (err instanceof TRPCError) throw err;
 				// NEVER log `err` as an object or `input.csv`: an AI-SDK error can carry the request
-				// body (the mapping prompt embeds the CSV header + sample rows). Log name+message only.
-				console.error(
-					'aiImport.preview failed:',
-					err instanceof Error ? `${err.name}: ${err.message}` : String(err)
-				);
+				// body (the mapping prompt embeds the CSV header + sample rows). Log name+message only,
+				// and REDACTED — a provider can echo the caller's key or auth header into the message.
+				// `null`: the decrypted BYOK key never leaves `resolveModel`, so only the
+				// credential-shaped pattern pass is available here.
+				console.error('aiImport.preview failed:', safeProviderErrorMessage(err, null));
 				throw new TRPCError({
 					code: 'BAD_REQUEST',
 					message: "Couldn't read this statement. Please try again."
