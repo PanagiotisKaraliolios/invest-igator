@@ -22,7 +22,10 @@ paths = [
   # AI-layer test fixtures: fake keys fed through the scrubber to assert it redacts them.
   '''src/server/ai/credential-config\.test\.ts''',
   '''src/server/ai/telemetry\.test\.ts''',
-  '''src/server/api/routers/ai-credentials\.test\.ts'''
+  '''src/server/api/routers/ai-credentials\.test\.ts''',
+  # Fake keys fed to the provider-error redactor and the AI-import log test, to prove they are scrubbed.
+  '''src/server/api/routers/ai-credentials-list-models\.test\.ts''',
+  '''src/server/api/routers/ai-import\.test\.ts'''
 ]
 regexes = [
   '''your_api_key_here''',
