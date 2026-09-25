@@ -69,8 +69,9 @@ your own data, going to the provider you've configured, for the purpose of impor
 - **Model failure or bad structured output** — caught and surfaced as a single retryable
   "couldn't read this statement, try again" error; the request never dies silently. The server
   logs the error's name and message only, through the same redactor the BYOK credential screens
-  use (`safeProviderErrorMessage`), so an auth header, bearer token, `?key=` parameter or
-  `sk-…`/`AIza…` key that a provider echoes into its message never reaches the log.
+  use (`safeProviderErrorMessage`) plus telemetry's `scrubSecrets`, so an auth header, bearer token,
+  `?key=` parameter, `sk-…`/`AIza…` key, or a key a self-hosted gateway echoes back in plain text
+  never reaches the log.
 - **Per-row problems** (bad date, non-positive quantity/price, unsupported currency, unknown
   symbol) — the row is shown as `needs-fix` in the review table and excluded from the commit
   payload. Row status is computed server-side once, at preview time, and is not re-evaluated as

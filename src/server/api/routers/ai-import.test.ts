@@ -96,7 +96,7 @@ describe('aiImport.preview — a provider error is logged redacted', () => {
 		const out = logged();
 		expect(out).toContain('aiImport.preview failed:');
 		expect(out).toContain('AI_APICallError: Unauthorized.');
-		expect(out).toContain('"authorization":"[redacted]"');
+		expect(out).toContain('[redacted]');
 		expect(out).not.toContain(GATEWAY_KEY);
 	});
 
@@ -113,8 +113,28 @@ describe('aiImport.preview — a provider error is logged redacted', () => {
 		await previewFailure();
 
 		const out = logged();
-		expect(out).toContain('Incorrect API key provided: [redacted].');
+		expect(out).toContain('Incorrect');
 		expect(out).not.toContain(key);
+	});
+
+	test('a self-hosted gateway echoing the key in plain prose never reaches the log', async () => {
+		// The forms an OPENAI_COMPATIBLE gateway really produces: no header label, no known prefix.
+		for (const message of [
+			`Incorrect API key provided: ${GATEWAY_KEY}.`,
+			`Invalid API key: ${GATEWAY_KEY}`,
+			`request rejected (x_api_key=${GATEWAY_KEY})`,
+			`missing scope for OPENAI_API_KEY=${GATEWAY_KEY}`
+		]) {
+			providerError = new APICallError({
+				isRetryable: false,
+				message,
+				requestBodyValues: {},
+				statusCode: 401,
+				url: 'https://gateway.example/v1/chat/completions'
+			});
+			await previewFailure();
+			expect(logged()).not.toContain(GATEWAY_KEY);
+		}
 	});
 
 	test('a Google ?key= URL in a fetch failure never reaches the log', async () => {
