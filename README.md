@@ -377,7 +377,7 @@ docker compose up -d
 - ⚠️ InfluxDB is **external by default** — point `INFLUXDB_URL` at your own instance. To run it inside the stack, uncomment the optional `influxdb` service in `docker-compose.yml` and set `INFLUXDB_URL=http://influxdb:8086`.
 - ⏰ Cron labels run `ingest-yahoo` daily at 02:15 UTC and `ingest-fx` at 06:00/18:00 UTC
 - 🔄 Migrations run automatically on container start
-- 🔒 The app runs as the unprivileged `bun` user (uid 1000), not root; only `.next` is writable by it. Each Ofelia job sets `user: bun` too, since Ofelia's job-exec defaults to root
+- 🔒 The app runs as the unprivileged `bun` user (uid 1000), not root; in /app only `.next` is writable by it (plus its own home directory and `/tmp`). Each Ofelia job sets `user: bun` too, since Ofelia's job-exec defaults to root
 
 **Stop and remove:**
 
